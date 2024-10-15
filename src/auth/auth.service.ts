@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { SignInAuthDto } from './dto/create-auth.dto';
+import { InjectModel } from '@nestjs/mongoose';
 
 @Injectable()
 export class AuthService {
-  create(signInAuthDto: SignInAuthDto) {
-    return 'This action adds a new auth';
-  }
+
+  constructor(
+    @InjectModel('User') private readonly userModel: Model<iUser>,
+    private readonly jwtService: JwtService,
+
+  ) {}
 
   findAll() {
     return `This action returns all auth`;

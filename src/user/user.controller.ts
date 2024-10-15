@@ -38,6 +38,16 @@ export class UserController {
       data: user,
     };
   }
+
+  @Get('findone/:email') 
+  async findOneByEmail(@Param('email') email: string) {
+    const user = await this.userService.findOneByEmail(email);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'User found',
+      data: user,
+    };
+  }
   
   @Get('find-all')
 async findAll() {

@@ -81,6 +81,20 @@ export class UserService {
     return user;
   }
 
+  async findOneByEmail(email: string): Promise<iUser> {
+    const user = await this.userModel.findOne({
+      email: email,
+      status: { $ne: UserStatus.DELETED }, 
+      deleted_at: null, 
+    }).exec();
+  
+    if (!user) {
+      throw new NotFoundException(`User with email ${email} not found or has been deleted.`);
+    }
+  
+    return user;
+  }
+  
 async findAll(): Promise<iUser[]> {
   const users = await this.userModel.find({
     status: { $ne: UserStatus.DELETED },
