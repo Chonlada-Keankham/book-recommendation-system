@@ -64,9 +64,11 @@ export class UserService {
   async findOneByEmail(email: string): Promise<iUser> {
     const user = await this.userModel.findOne({
       email: email,
-      status: { $ne: UserStatus.DELETED }, 
-      deleted_at: null, 
+      status: { $ne: UserStatus.DELETED },
+      deleted_at: null,
     }).exec();
+  
+    console.log('User found in database:', user); 
   
     if (!user) {
       throw new NotFoundException(`User with email ${email} not found or has been deleted.`);
