@@ -5,6 +5,7 @@ import { Model } from 'mongoose';
 import { UserStatus } from 'src/enum/user-status.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UserService {
