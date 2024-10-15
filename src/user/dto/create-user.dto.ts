@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsPhoneNumber, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsPhoneNumber, IsString, MinLength, Matches } from 'class-validator';
 import { UserRole } from 'src/enum/user-role.enum';
 
 export class CreateUserDto {
@@ -11,7 +11,7 @@ export class CreateUserDto {
   last_name: string;
 
   @IsNotEmpty()
-  @IsPhoneNumber(null)
+  @IsPhoneNumber('TH') // Example for Thailand
   phone: string;
 
   @IsNotEmpty()
@@ -20,7 +20,8 @@ export class CreateUserDto {
 
   @IsNotEmpty()
   @IsString()
-  @MinLength(6)
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  @Matches(/(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])/, { message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.' })
   password: string;
 
   @IsNotEmpty()
