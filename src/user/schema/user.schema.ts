@@ -38,12 +38,6 @@ export class User {
 
   @Prop({ enum: UserStatus, default: UserStatus.ACTIVE }) 
   status: UserStatus;
-
-  @Prop({ type: Date, default: Date.now })
-  created_at: Date;
-
-  @Prop({ type: Date, default: Date.now })
-  updated_at: Date;
   
   @Prop({ type: Date, default: null }) 
   deleted_at?: Date; 
@@ -64,9 +58,3 @@ UserSchema.methods.comparePassword = async function (password: string): Promise<
   return await bcrypt.compare(password, this.password);
 };
 
-UserSchema.pre<UserDocument>('save', function (next) {
-  if (!this.isModified('updated_at')) {
-    this.updated_at = new Date(); 
-  }
-  next();
-});
