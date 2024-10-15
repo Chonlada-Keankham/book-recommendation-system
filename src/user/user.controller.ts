@@ -19,17 +19,8 @@ export class UserController {
     };
   }
 
-  @Post('create-many')
-  async createMany(@Body() createUserDtos: CreateUserDto[]) {
-    const createdUsers = await this.userService.createMany(createUserDtos);
-    return {
-      statusCode: HttpStatus.CREATED,
-      message: 'Created Users Success',
-      data: createdUsers,
-    };
-  }
 
-  @Get('findone/:id')
+  @Get('find-one/:id')
   async findOneById(@Param('id') id: string) {
     const user = await this.userService.findOneById(id);
     return {
@@ -39,7 +30,7 @@ export class UserController {
     };
   }
 
-  @Get('findone/:email') 
+  @Get('find-email/:email') 
   async findOneByEmail(@Param('email') email: string) {
     const user = await this.userService.findOneByEmail(email);
     return {
@@ -76,10 +67,6 @@ async findAll() {
   @HttpCode(HttpStatus.NO_CONTENT) 
   async deleteById(@Param('id') id: string) {
     await this.userService.deleteById(id);
-    return {
-      statusCode: HttpStatus.NO_CONTENT,
-      message: 'User deleted successfully',
-    };
   }
 
   @Delete('soft-delete/:id')

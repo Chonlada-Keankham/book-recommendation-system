@@ -2,6 +2,7 @@ import { UserRole } from "src/enum/user-role.enum";
 import { UserStatus } from "src/enum/user-status.enum";
 
 export interface iUser {
+    _id?: string;
     first_name: string;
     last_name: string;
     phone: string;
@@ -13,4 +14,5 @@ export interface iUser {
     created_at: Date;
     updated_at: Date; 
     deleted_at?: Date;
+    comparePassword(password: string): Promise<boolean>;
 }
