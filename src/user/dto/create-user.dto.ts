@@ -11,7 +11,7 @@ export class CreateUserDto {
   last_name: string;
 
   @IsNotEmpty()
-  @IsPhoneNumber('TH') // Example for Thailand
+  @IsPhoneNumber('TH') 
   phone: string;
 
   @IsNotEmpty()

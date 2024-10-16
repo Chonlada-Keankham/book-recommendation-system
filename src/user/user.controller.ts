@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Res, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -7,20 +7,24 @@ import { iUser } from './interface/user.interface';
 
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService,
 
-@Post('create-one')
-@ApiOperation({ summary: 'Create a new user' })
-@ApiResponse({ status: HttpStatus.CREATED, description: 'User created successfully.' })
-async createOne(@Body() createUserDto: CreateUserDto): Promise<{ statusCode: number; message: string; data: iUser }> {
+  ) { }
+
+  @Post('create-one')
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiResponse({ status: HttpStatus.CREATED, description: 'User created successfully.' })
+  async createOne(@Body() createUserDto: CreateUserDto): Promise<{ statusCode: number; message: string; data: iUser }> {
     const createdUser = await this.userService.createOne(createUserDto);
     return {
-        statusCode: HttpStatus.CREATED,
-        message: 'Created User Success',
-        data: createdUser, 
+      statusCode: HttpStatus.CREATED,
+      message: 'Created User Success',
+      data: createdUser,
     };
-}
-  
+  }
+
+
+
   @Get('find-one/:id')
   @ApiOperation({ summary: 'Find a user by ID' })
   async findOneById(@Param('id') id: string) {

@@ -14,5 +14,5 @@ export interface iUser {
     created_at: Date;
     updated_at: Date; 
     deleted_at?: Date;
-    comparePassword(password: string): Promise<boolean>;
+   // comparePassword(password: string): Promise<boolean>;
 }

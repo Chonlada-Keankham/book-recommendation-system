@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { iUser } from './interface/user.interface';
 import { Model } from 'mongoose';
@@ -6,19 +6,23 @@ import { UserStatus } from 'src/enum/user-status.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcryptjs';
+import { AuthService } from 'src/auth/auth.service';
 
 @Injectable()
 export class UserService {
-  private readonly SALT_ROUNDS = Number(process.env.SALT_ROUNDS) || 10;
+  private readonly SALT_ROUNDS: number = Number(process.env.SALT_ROUNDS) || 10;
 
-  constructor(@InjectModel('User') private readonly userModel: Model<iUser>) {}
+  constructor(
+    @InjectModel('User') 
+    private readonly userModel: Model<iUser>,
+  ) {}
 
-  private async checkUserExists(createUserDto: CreateUserDto): Promise<void> {
+  private async checkUserExists(userDto: Partial<CreateUserDto>): Promise<void> {
     const existingUser = await this.userModel.findOne({
       $or: [
-        { email: createUserDto.email },
-        { username: createUserDto.username },
-        { phone: createUserDto.phone },
+        { email: userDto.email },
+        { username: userDto.username },
+        { phone: userDto.phone },
       ],
     });
 
@@ -26,6 +30,7 @@ export class UserService {
       throw new ConflictException('Email, username, or phone already exists.');
     }
   }    
+
   
   async createOne(createUserDto: CreateUserDto): Promise<iUser> {
     await this.checkUserExists(createUserDto);
@@ -43,10 +48,9 @@ export class UserService {
   }
 
   private async hashPassword(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt(this.SALT_ROUNDS);
-    return await bcrypt.hash(password, salt);
+    return bcrypt.hash(password, this.SALT_ROUNDS);
   }
-
+  
   async findOneById(id: string): Promise<iUser> {
     const user = await this.userModel.findOne({
       _id: id,
@@ -62,21 +66,26 @@ export class UserService {
   }
 
   async findOneByEmail(email: string): Promise<iUser> {
-    const user = await this.userModel.findOne({
-      email: email,
-      status: { $ne: UserStatus.DELETED },
-      deleted_at: null,
-    }).exec();
-  
-    console.log('User found in database:', user); 
-  
-    if (!user) {
-      throw new NotFoundException(`User with email ${email} not found or has been deleted.`);
+    try {
+        const user = await this.userModel.findOne({
+            email,
+            status: { $ne: UserStatus.DELETED },
+            deleted_at: null,
+        }).exec();
+
+        console.log('User found in database:', user); 
+
+        if (!user) {
+            throw new NotFoundException('User not found or has been deleted.');
+        }
+
+        return user; 
+    } catch (error) {
+        console.error('Error finding user by email:', error);
+        throw new InternalServerErrorException('Error retrieving user from the database');
     }
-  
-    return user;
-  }
-  
+}
+
   async findAll(): Promise<iUser[]> {
     const users = await this.userModel.find({
       status: { $ne: UserStatus.DELETED },
@@ -97,17 +106,7 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
-    const existingUser = await this.userModel.findOne({
-      $or: [
-        { email: updateUserDto.email, _id: { $ne: userId } },
-        { username: updateUserDto.username, _id: { $ne: userId } },
-        { phone: updateUserDto.phone, _id: { $ne: userId } },
-      ],
-    });
-
-    if (existingUser) {
-      throw new ConflictException('Email, username, or phone already exists.');
-    }
+    await this.checkUserExists(updateUserDto);
 
     Object.assign(user, updateUserDto);
     user.updated_at = new Date();
@@ -116,7 +115,7 @@ export class UserService {
       user.password = await this.hashPassword(updateUserDto.password); // Hash new password
     }
 
-    return user.save();
+    return await user.save(); 
   }
   
   async softDelete(userId: string): Promise<iUser> {
