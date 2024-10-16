@@ -6,7 +6,6 @@ import { UserStatus } from 'src/enum/user-status.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcryptjs';
-import { AuthService } from 'src/auth/auth.service';
 
 @Injectable()
 export class UserService {
@@ -27,30 +26,37 @@ export class UserService {
     });
 
     if (existingUser) {
-      throw new ConflictException('Email, username, or phone already exists.');
+      let errorMessage = 'Email, username, or phone already exists.';
+      if (existingUser.email === userDto.email) {
+        errorMessage = 'Email already exists.';
+      } else if (existingUser.username === userDto.username) {
+        errorMessage = 'Username already exists.';
+      } else if (existingUser.phone === userDto.phone) {
+        errorMessage = 'Phone number already exists.';
+      }
+      throw new ConflictException(errorMessage);
     }
-  }    
+  }
 
-  
   async createOne(createUserDto: CreateUserDto): Promise<iUser> {
     await this.checkUserExists(createUserDto);
-  
+
     const hashedPassword = await this.hashPassword(createUserDto.password);
-  
+
     const newUser = new this.userModel({
       ...createUserDto,
-      password: hashedPassword, 
+      password: hashedPassword,
       status: UserStatus.ACTIVE,
       deleted_at: null,
     });
-  
+
     return await newUser.save();
   }
 
   private async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, this.SALT_ROUNDS);
-  }
-  
+  }  
+
   async findOneById(id: string): Promise<iUser> {
     const user = await this.userModel.findOne({
       _id: id,
@@ -112,7 +118,7 @@ export class UserService {
     user.updated_at = new Date();
 
     if (updateUserDto.password) {
-      user.password = await this.hashPassword(updateUserDto.password); // Hash new password
+      user.password = await this.hashPassword(updateUserDto.password); 
     }
 
     return await user.save(); 

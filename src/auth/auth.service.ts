@@ -15,25 +15,33 @@ export class AuthService {
     const user = await this.userService.findOneByEmail(email);
 
     if (!user) {
-      console.log('User not found with email:', email);
-      throw new UnauthorizedException('Invalid credentials');
+        console.log('User not found with email:', email);
+        throw new UnauthorizedException('Invalid credentials');
     }
 
-    console.log('User found:', user);
-    console.log('Input password:', password);
-    console.log('Hashed password from DB:', user.password);
+    console.log('User found in database:', user);
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
+    console.log('Input password:', password);
+    console.log('Hashed password from DB:', user.password);
     console.log('Is password valid:', isPasswordValid);
+
     if (!isPasswordValid) {
-      console.log('Password mismatch for user:', user.email);
-      throw new UnauthorizedException('Invalid credentials');
+        console.log('Password mismatch for user:', user.email);
+        throw new UnauthorizedException('Invalid credentials');
     }
 
     return user;
+}
+
+  async login(email: string, password: string): Promise<{ access_token: string }> {
+    console.log('Login attempt with email:', email);
+    const user = await this.validateUser(email, password);
+
+    const payload = { email: user.email, sub: user._id, role: user.role };
+    console.log('Payload for JWT:', payload);
+
+    const accessToken = this.jwtService.sign(payload);
+    return { access_token: accessToken };
   }
-
-
-
 }
