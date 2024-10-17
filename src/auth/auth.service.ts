@@ -1,46 +1,46 @@
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from './../user/user.service';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { LoginAuthDto } from './dto/login-auth.dto';
 import { iUser } from 'src/user/interface/user.interface';
-import * as bcrypt from 'bcryptjs';
+import { hashPassword, comparePassword } from 'src/utils/hash.util'; // นำเข้า comparePassword
 
 @Injectable()
 export class AuthService {
+
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-  ) { }
+    private readonly SALT_ROUNDS: number
+  ) { 
+    this.SALT_ROUNDS = Number(process.env.SALT_ROUNDS) || 10;
+  }
 
-  async validateUser(email: string, password: string): Promise<iUser> {
+  async hashPassword(password: string): Promise<string> {
+    return await hashPassword(password, this.SALT_ROUNDS); // ส่ง SALT_ROUNDS
+  }
+  
+  async validateUser(loginAuthDto: LoginAuthDto): Promise<iUser> {
+    const { email, password } = loginAuthDto; 
     const user = await this.userService.findOneByEmail(email);
+    console.log("User found in database:", user);
 
     if (!user) {
-        console.log('User not found with email:', email);
         throw new UnauthorizedException('Invalid credentials');
     }
 
-    console.log('User found in database:', user);
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log('Input password:', password);
-    console.log('Hashed password from DB:', user.password);
-    console.log('Is password valid:', isPasswordValid);
+    const isPasswordValid = await comparePassword(password, user.password); // ใช้ comparePassword
+    console.log("Password valid:", isPasswordValid);
 
     if (!isPasswordValid) {
-        console.log('Password mismatch for user:', user.email);
         throw new UnauthorizedException('Invalid credentials');
     }
 
     return user;
-}
+  }
 
-  async login(email: string, password: string): Promise<{ access_token: string }> {
-    console.log('Login attempt with email:', email);
-    const user = await this.validateUser(email, password);
-
+  async login(user: iUser): Promise<{ access_token: string }> {
     const payload = { email: user.email, sub: user._id, role: user.role };
-    console.log('Payload for JWT:', payload);
-
     const accessToken = this.jwtService.sign(payload);
     return { access_token: accessToken };
   }
