@@ -1,11 +1,11 @@
-import { ConflictException, forwardRef, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { iUser } from './interface/user.interface';
 import { Model } from 'mongoose';
 import { UserStatus } from 'src/enum/user-status.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-
+import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UserService {
   constructor(
@@ -43,16 +43,22 @@ export class UserService {
 
   async createOne(createUserDto: CreateUserDto): Promise<iUser> {
     await this.checkUserExists(createUserDto);
-    const hashedPassword = await this.authService.hashPassword(createUserDto.password);
+  
+    // เข้ารหัสรหัสผ่าน
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(createUserDto.password, saltRounds);
+  
     const newUser = new this.userModel({
       ...createUserDto,
-      password: hashedPassword,
+      password: hashedPassword,  // เก็บรหัสผ่านที่เข้ารหัส
       status: UserStatus.ACTIVE,
       deleted_at: null,
     });
-    return await newUser.save();
+  
+    return await newUser.save(); // ใช้ await ที่นี่ต้องให้ฟังก์ชันเป็น async
   }
 
+  
   async findOneById(id: string): Promise<iUser> {
     const user = await this.userModel.findOne({
       _id: id,
@@ -114,7 +120,6 @@ export class UserService {
     user.updated_at = new Date();
 
     if (updateUserDto.password) {
-      user.password = await this.authService.hashPassword(updateUserDto.password);
     }
 
     return await user.save();
