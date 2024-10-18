@@ -16,7 +16,6 @@ export class AuthService {
   async validateUser(loginAuthDto: LoginAuthDto): Promise<iUser> {
     const { email, password } = loginAuthDto;
 
-    // Find user by email
     const user = await this.userService.findOneByEmail(email);
     if (!user) {
       console.error("User not found with email:", email);
@@ -26,7 +25,6 @@ export class AuthService {
     console.log("Password from request:", password);
     console.log("Password from database:", user.password);
 
-    // Compare password using bcrypt
     const isPasswordMatching = await bcrypt.compare(password, user.password);
     console.log("Password match result:", isPasswordMatching);
 
@@ -37,9 +35,18 @@ export class AuthService {
 
     return user;
   }
-  async login(user: iUser): Promise<{ access_token: string }> {
+
+  async login(user: iUser): Promise<{ access_token: string; refresh_token: string }> {
     const payload = { email: user.email, sub: user._id, role: user.role };
     const accessToken = this.jwtService.sign(payload);
-    return { access_token: accessToken };
+    const refreshToken = this.jwtService.sign({ sub: user._id }, { expiresIn: '7d' }); 
+    return { access_token: accessToken, refresh_token: refreshToken };
   }
+
+  async refreshAccessToken(refreshToken: string): Promise<{ access_token: string }> {
+    const payload = this.jwtService.verify(refreshToken); 
+    const user = await this.userService.findOneById(payload.sub); 
+    return this.login(user); 
+}
+
 }

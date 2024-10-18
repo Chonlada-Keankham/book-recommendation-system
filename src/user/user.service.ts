@@ -44,18 +44,17 @@ export class UserService {
   async createOne(createUserDto: CreateUserDto): Promise<iUser> {
     await this.checkUserExists(createUserDto);
   
-    // เข้ารหัสรหัสผ่าน
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(createUserDto.password, saltRounds);
   
     const newUser = new this.userModel({
       ...createUserDto,
-      password: hashedPassword,  // เก็บรหัสผ่านที่เข้ารหัส
+      password: hashedPassword,  
       status: UserStatus.ACTIVE,
       deleted_at: null,
     });
   
-    return await newUser.save(); // ใช้ await ที่นี่ต้องให้ฟังก์ชันเป็น async
+    return await newUser.save(); 
   }
 
   
