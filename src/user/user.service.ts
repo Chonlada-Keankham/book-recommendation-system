@@ -6,6 +6,7 @@ import { UserStatus } from 'src/enum/user-status.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
+import { UserRole } from 'src/enum/user-role.enum';
 @Injectable()
 export class UserService {
   constructor(
@@ -42,21 +43,26 @@ export class UserService {
   }
 
   async createOne(createUserDto: CreateUserDto): Promise<iUser> {
-    await this.checkUserExists(createUserDto);
+    try {
+      await this.checkUserExists(createUserDto);
   
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(createUserDto.password, saltRounds);
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(createUserDto.password, saltRounds);
   
-    const newUser = new this.userModel({
-      ...createUserDto,
-      password: hashedPassword,  
-      status: UserStatus.ACTIVE,
-      deleted_at: null,
-    });
+      const newUser = new this.userModel({
+        ...createUserDto,
+        password: hashedPassword,  
+        status: UserStatus.ACTIVE,
+        deleted_at: null,
+        role: UserRole.MEMBER,
+      });
   
-    return await newUser.save(); 
+      return await newUser.save(); 
+    } catch (error) {
+      throw new Error(`User creation failed: ${error.message}`);
+    }
   }
-
+    
   
   async findOneById(id: string): Promise<iUser> {
     const user = await this.userModel.findOne({
@@ -108,22 +114,23 @@ export class UserService {
 
   async updateOne(userId: string, updateUserDto: UpdateUserDto): Promise<iUser> {
     const user = await this.userModel.findById(userId);
-
+  
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
+  
     await this.checkUserExists(updateUserDto, userId);
-
+  
     Object.assign(user, updateUserDto);
     user.updated_at = new Date();
-
+  
     if (updateUserDto.password) {
+      user.password = await bcrypt.hash(updateUserDto.password, 10); 
     }
-
+  
     return await user.save();
   }
-
+  
   async softDelete(userId: string): Promise<iUser> {
     const user = await this.userModel.findById(userId);
 

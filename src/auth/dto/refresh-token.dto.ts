@@ -1,6 +1,8 @@
-import { IsString } from 'class-validator';
+import { IsNotEmpty, IsString, Length } from 'class-validator';
 
 export class RefreshTokenDto {
-  @IsString()
+  @IsNotEmpty({ message: 'Refresh token is required.' })
+  @IsString({ message: 'Refresh token must be a string.' })
+  @Length(1, 255, { message: 'Refresh token must be between 1 and 255 characters.' }) // Adjust length as needed
   refresh_token: string;
 }
