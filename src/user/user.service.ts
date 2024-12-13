@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { UserRole } from 'src/enum/user-role.enum';
 @Injectable()
 export class UserService {
+  
   constructor(
     @InjectModel('User')
     private readonly userModel: Model<iUser>,
