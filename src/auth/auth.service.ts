@@ -14,6 +14,7 @@ export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
+    
   ) { }
 
   async validateUser(loginAuthDto: LoginAuthDto): Promise<iUser> {
