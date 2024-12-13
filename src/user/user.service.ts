@@ -44,14 +44,14 @@ export class UserService {
 
   async createOne(createUserDto: CreateUserDto): Promise<iUser> {
     try {
-      await this.checkUserExists(createUserDto);
-  
+      await this.checkUserExists(createUserDto); 
+      
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(createUserDto.password, saltRounds);
-  
+      
       const newUser = new this.userModel({
         ...createUserDto,
-        password: hashedPassword,  
+        password: hashedPassword,
         status: UserStatus.ACTIVE,
         deleted_at: null,
         role: UserRole.MEMBER,
@@ -59,10 +59,13 @@ export class UserService {
   
       return await newUser.save(); 
     } catch (error) {
-      throw new Error(`User creation failed: ${error.message}`);
+      if (error.code === 11000) {  
+        throw new ConflictException('User with this email or username already exists.');
+      }
+      console.error('User creation failed:', error); 
+      throw new InternalServerErrorException(`User creation failed: ${error.message}`);
     }
-  }
-    
+  }    
   
   async findOneById(id: string): Promise<iUser> {
     const user = await this.userModel.findOne({
