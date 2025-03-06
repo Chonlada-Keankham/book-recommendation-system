@@ -1,11 +1,9 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { ForgotPasswordDto } from './dto/forgot-pass-auth.dto';
-import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
-
+import { RefreshTokenDto } from './dto/refresh-token-auth.dto';
+import { RequestPasswordResetDto } from './dto/request-pass-auth.dto';
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -17,7 +15,12 @@ export class AuthController {
   async login(@Body() loginAuthDto: LoginAuthDto) {
     try {
       const user = await this.authService.validateUser(loginAuthDto);
-      return this.authService.login(user);
+      const tokens = await this.authService.login(user);
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Login successful',
+        data: tokens,
+      };
     } catch (error) {
       throw new UnauthorizedException({
         statusCode: 401,
@@ -27,28 +30,46 @@ export class AuthController {
     }
   }
 
-  @Post('forgot-password')
-  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
-    await this.authService.forgotPassword(forgotPasswordDto);
-    return { message: 'Password reset token generated and sent via email' };
-  }
-
-  @Post('reset-password/:token')
-  async resetPassword(@Param('token') token: string, @Body() resetPasswordDto: ResetPasswordDto) {
-    return this.authService.resetPassword(resetPasswordDto);
-  }
-
   @Post('refresh')
-  @UseGuards(JwtAuthGuard)
   async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
-    return this.authService.refreshAccessToken(refreshTokenDto);
+    try {
+      const tokens = await this.authService.refreshAccessToken(refreshTokenDto);
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Access token refreshed successfully',
+        data: tokens,
+      };
+    } catch (error) {
+      throw new UnauthorizedException({
+        statusCode: 401,
+        message: 'Invalid or expired refresh token',
+        error: 'Unauthorized',
+      });
+    }
   }
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() request): Promise<any> {
-    return request.user;
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'User profile fetched successfully',
+      data: request.user,
+    };
   }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
+    const response = await this.authService.sendPasswordResetLink(requestPasswordResetDto);
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: response.message, 
+      resetLink: response.resetLink,
+    };
+  }
+
+  
 }
 
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query, Res, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -49,15 +49,16 @@ export class UserController {
 
   @Get('find-all')
   @ApiOperation({ summary: 'Find all users' })
-  async findAll() {
-    const users = await this.userService.findAll();
+  async findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
+    const result = await this.userService.findAll(page, limit);
     return {
       statusCode: HttpStatus.OK,
       message: 'Users found',
-      data: users,
+      data: result.users,
+      total: result.total,
     };
   }
-
+  
   @Put('update-one/:id')
   @ApiOperation({ summary: 'Update a user by ID' })
   async updateOne(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
@@ -77,9 +78,10 @@ export class UserController {
     return {
       statusCode: HttpStatus.NO_CONTENT,
       message: 'User deleted successfully',
+      data: null,
     };
   }
-
+  
   @Delete('soft-delete/:id')
   @ApiOperation({ summary: 'Soft delete a user by ID' })
   async softDelete(@Param('id') id: string) {

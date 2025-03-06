@@ -7,49 +7,42 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
 import { UserRole } from 'src/enum/user-role.enum';
+import { UserDocument } from './schema/user.schema';
 @Injectable()
 export class UserService {
-  
+
   constructor(
     @InjectModel('User')
     private readonly userModel: Model<iUser>,
   ) { }
 
-  private async checkUserExists(userDto: Partial<CreateUserDto>, userId?: string): Promise<void> {
-    const query: any = {
-      $or: [
-        { email: userDto.email },
-        { username: userDto.username },
-        { phone: userDto.phone },
-      ],
-    };
-
-    if (userId) {
-      query._id = { $ne: userId };
+  async checkUserExists(updateUserDto: UpdateUserDto, userId?: string): Promise<void> {
+    const filter = { _id: { $ne: userId } };
+    if (updateUserDto.email) {
+      filter['email'] = updateUserDto.email;
     }
-
-    const existingUser = await this.userModel.findOne(query).exec();
-
-    if (existingUser) {
-      let errorMessage = 'Email, username, or phone already exists.';
-      if (existingUser.email === userDto.email) {
-        errorMessage = 'Email already exists.';
-      } else if (existingUser.username === userDto.username) {
-        errorMessage = 'Username already exists.';
-      } else if (existingUser.phone === userDto.phone) {
-        errorMessage = 'Phone number already exists.';
-      }
-      throw new ConflictException(errorMessage);
+    if (updateUserDto.username) {
+      filter['username'] = updateUserDto.username;
     }
+  
+    const user = await this.userModel.findOne(filter);
+    if (user) {
+      throw new ConflictException('User with this email or username already exists.');
+    }
+  }
+  
+  async hashPassword(password: string): Promise<string> {
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    return hashedPassword;
   }
 
   async createOne(createUserDto: CreateUserDto): Promise<iUser> {
     try {
-      await this.checkUserExists(createUserDto); 
-      
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(createUserDto.password, saltRounds);
-      
+      await this.checkUserExists(createUserDto);
+
+      const hashedPassword = await this.hashPassword(createUserDto.password);
+
       const newUser = new this.userModel({
         ...createUserDto,
         password: hashedPassword,
@@ -57,18 +50,18 @@ export class UserService {
         deleted_at: null,
         role: UserRole.MEMBER,
       });
-  
-      return await newUser.save(); 
+
+      return await newUser.save();
     } catch (error) {
-      if (error.code === 11000) {  
+      if (error.code === 11000) {
         throw new ConflictException('User with this email or username already exists.');
       }
-      console.error('User creation failed:', error); 
+      console.error('User creation failed:', error);
       throw new InternalServerErrorException(`User creation failed: ${error.message}`);
     }
-  }    
-  
-  async findOneById(id: string): Promise<iUser> {
+  }
+
+  async findOneById(id: string): Promise<UserDocument> {
     const user = await this.userModel.findOne({
       _id: id,
       status: { $ne: UserStatus.DELETED },
@@ -103,51 +96,69 @@ export class UserService {
     }
   }
 
-  async findAll(): Promise<iUser[]> {
-    const users = await this.userModel.find({
+  async findAll(page: number = 1, limit: number = 10): Promise<{ users: iUser[], total: number }> {
+    const skip = (page - 1) * limit;
+    const total = await this.userModel.countDocuments({
       status: { $ne: UserStatus.DELETED },
       deleted_at: null,
-    }).exec();
-
-    if (users.length === 0) {
-      throw new NotFoundException(`No users found.`);
-    }
-
-    return users;
+    });
+  
+    const users = await this.userModel.find(
+      { status: { $ne: UserStatus.DELETED }, deleted_at: null },
+    )
+    .skip(skip)
+    .limit(limit)
+    .exec();
+  
+    return { users, total };
   }
-
+  
   async updateOne(userId: string, updateUserDto: UpdateUserDto): Promise<iUser> {
     const user = await this.userModel.findById(userId);
-  
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
-  
+
     await this.checkUserExists(updateUserDto, userId);
-  
+
     Object.assign(user, updateUserDto);
     user.updated_at = new Date();
-  
+
     if (updateUserDto.password) {
-      user.password = await bcrypt.hash(updateUserDto.password, 10); 
+      user.password = await bcrypt.hash(updateUserDto.password, 10);
+    }
+
+    return await user.save();
+  }
+
+  async updatePassword(userId: string, hashedPassword: string): Promise<void> {
+    const user = await this.userModel.findById(userId);
+  
+    if (!user || user.status === UserStatus.DELETED) {
+      throw new NotFoundException('User not found or has been deleted.');
     }
   
-    return await user.save();
+    await this.userModel.findByIdAndUpdate(userId, { password: hashedPassword });
   }
   
   async softDelete(userId: string): Promise<iUser> {
     const user = await this.userModel.findById(userId);
-
+  
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
+  
+    if (user.status === UserStatus.DELETED) {
+      throw new ConflictException('User is already deleted');
+    }
+  
     user.status = UserStatus.DELETED;
     user.deleted_at = new Date();
-
+  
     return user.save();
   }
-
+  
   async deleteById(userId: string): Promise<void> {
     const user = await this.userModel.findById(userId);
 
