@@ -4,6 +4,7 @@ import { LoginAuthDto } from './dto/login-auth.dto';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { RefreshTokenDto } from './dto/refresh-token-auth.dto';
 import { RequestPasswordResetDto } from './dto/request-pass-auth.dto';
+import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -64,12 +65,20 @@ export class AuthController {
 
     return {
       statusCode: HttpStatus.OK,
-      message: response.message, 
+      message: response.message,
       resetLink: response.resetLink,
     };
   }
 
-  
+  @Post('reset-password')
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    const response = await this.authService.resetPassword(resetPasswordDto);
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: response.message,
+    };
+  }
 }
 
 

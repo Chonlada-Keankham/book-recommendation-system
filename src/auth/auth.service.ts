@@ -100,14 +100,14 @@ export class AuthService {
         throw new NotFoundException('User not found');
       }
   
-      user.password = await bcrypt.hash(newPassword, 10);
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
   
-      await user.save();
+      await this.userService.updatePassword(user._id, hashedPassword);
   
       return { message: 'Password updated successfully' };
     } catch (error) {
       throw new BadRequestException('Invalid or expired token');
     }
   }
-    
+      
 }

@@ -115,33 +115,48 @@ export class UserService {
   
   async updateOne(userId: string, updateUserDto: UpdateUserDto): Promise<iUser> {
     const user = await this.userModel.findById(userId);
-
+  
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
+  
     await this.checkUserExists(updateUserDto, userId);
-
-    Object.assign(user, updateUserDto);
-    user.updated_at = new Date();
-
-    if (updateUserDto.password) {
-      user.password = await bcrypt.hash(updateUserDto.password, 10);
+  
+    const updatedUser = await this.userModel.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          ...updateUserDto,
+          updated_at: new Date(),
+          password: updateUserDto.password ? await bcrypt.hash(updateUserDto.password, 10) : user.password,
+        },
+      },
+    );
+  
+    if (updatedUser.modifiedCount === 0) {
+      throw new InternalServerErrorException('Failed to update user');
     }
-
-    return await user.save();
+  
+    return await this.userModel.findById(userId);
   }
-
+  
   async updatePassword(userId: string, hashedPassword: string): Promise<void> {
     const user = await this.userModel.findById(userId);
-  
+    
     if (!user || user.status === UserStatus.DELETED) {
       throw new NotFoundException('User not found or has been deleted.');
     }
   
-    await this.userModel.findByIdAndUpdate(userId, { password: hashedPassword });
-  }
+    const result = await this.userModel.updateOne(
+      { _id: userId },
+      { $set: { password: hashedPassword } }
+    );
   
+    if (result.modifiedCount === 0) {
+      throw new InternalServerErrorException('Password update failed');
+    }
+  }
+    
   async softDelete(userId: string): Promise<iUser> {
     const user = await this.userModel.findById(userId);
   
