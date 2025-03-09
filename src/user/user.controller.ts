@@ -23,8 +23,6 @@ export class UserController {
     };
   }
 
-
-
   @Get('find-one/:id')
   @ApiOperation({ summary: 'Find a user by ID' })
   async findOneById(@Param('id') id: string) {
