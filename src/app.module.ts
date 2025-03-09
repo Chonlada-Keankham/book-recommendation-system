@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { databaseConfig } from './config/database.config';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
+import { BookModule } from './book/book.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { AuthModule } from './auth/auth.module';
     MongooseModule.forRoot(databaseConfig.uri),
     UserModule,
     AuthModule,
+    BookModule,
   ],
   controllers: [AppController],
   providers: [AppService],
