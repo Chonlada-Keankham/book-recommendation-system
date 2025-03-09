@@ -1,9 +1,9 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query, Res, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { iUser } from './interface/user.interface';
+import { RegisterUserDto } from './dto/register-user.dto';
 
 @Controller('user')
 export class UserController {
@@ -11,11 +11,11 @@ export class UserController {
 
   ) { }
 
-  @Post('create-one')
+  @Post('register-user')
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'User created successfully.' })
-  async createOne(@Body() createUserDto: CreateUserDto): Promise<{ statusCode: number; message: string; data: iUser }> {
-    const createdUser = await this.userService.createOne(createUserDto);
+  async createOne(@Body() registerUserDto:RegisterUserDto): Promise<{ statusCode: number; message: string; data: iUser }> {
+    const createdUser = await this.userService.register(registerUserDto);
     return {
       statusCode: HttpStatus.CREATED,
       message: 'Created User Success',

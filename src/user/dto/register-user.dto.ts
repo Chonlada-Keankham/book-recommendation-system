@@ -1,7 +1,7 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsNotEmpty, IsString, MinLength, Matches, Length } from 'class-validator';
 
-export class CreateUserDto {
+export class RegisterUserDto {
   
   @IsNotEmpty({ message: 'First name is required.' })
   @IsString()

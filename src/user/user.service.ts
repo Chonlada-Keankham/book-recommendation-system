@@ -2,12 +2,12 @@ import { ConflictException, Injectable, InternalServerErrorException, NotFoundEx
 import { InjectModel } from '@nestjs/mongoose';
 import { iUser } from './interface/user.interface';
 import { Model } from 'mongoose';
-import { UserStatus } from 'src/enum/user-status.enum';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
 import { UserRole } from 'src/enum/user-role.enum';
 import { UserDocument } from './schema/user.schema';
+import { RegisterUserDto } from './dto/register-user.dto';
+import { Status } from 'src/enum/status.enum';
 @Injectable()
 export class UserService {
 
@@ -37,16 +37,16 @@ export class UserService {
     return hashedPassword;
   }
 
-  async createOne(createUserDto: CreateUserDto): Promise<iUser> {
+  async register (registerUserDto: RegisterUserDto): Promise<iUser> {
     try {
-      await this.checkUserExists(createUserDto);
+      await this.checkUserExists(registerUserDto);
 
-      const hashedPassword = await this.hashPassword(createUserDto.password);
+      const hashedPassword = await this.hashPassword(registerUserDto.password);
 
       const newUser = new this.userModel({
-        ...createUserDto,
+        ...registerUserDto,
         password: hashedPassword,
-        status: UserStatus.ACTIVE,
+        status: Status.ACTIVE,
         deleted_at: null,
         role: UserRole.MEMBER,
       });
@@ -64,7 +64,7 @@ export class UserService {
   async findOneById(id: string): Promise<UserDocument> {
     const user = await this.userModel.findOne({
       _id: id,
-      status: { $ne: UserStatus.DELETED },
+      status: { $ne: Status.DELETED },
       deleted_at: null,
     }).exec();
 
@@ -79,7 +79,7 @@ export class UserService {
     try {
       const user = await this.userModel.findOne({
         email,
-        status: { $ne: UserStatus.DELETED },
+        status: { $ne: Status.DELETED },
         deleted_at: null,
       }).exec();
 
@@ -99,12 +99,12 @@ export class UserService {
   async findAll(page: number = 1, limit: number = 10): Promise<{ users: iUser[], total: number }> {
     const skip = (page - 1) * limit;
     const total = await this.userModel.countDocuments({
-      status: { $ne: UserStatus.DELETED },
+      status: { $ne: Status.DELETED },
       deleted_at: null,
     });
   
     const users = await this.userModel.find(
-      { status: { $ne: UserStatus.DELETED }, deleted_at: null },
+      { status: { $ne: Status.DELETED }, deleted_at: null },
     )
     .skip(skip)
     .limit(limit)
@@ -143,7 +143,7 @@ export class UserService {
   async updatePassword(userId: string, hashedPassword: string): Promise<void> {
     const user = await this.userModel.findById(userId);
     
-    if (!user || user.status === UserStatus.DELETED) {
+    if (!user || user.status === Status.DELETED) {
       throw new NotFoundException('User not found or has been deleted.');
     }
   
@@ -164,11 +164,11 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
   
-    if (user.status === UserStatus.DELETED) {
+    if (user.status === Status.DELETED) {
       throw new ConflictException('User is already deleted');
     }
   
-    user.status = UserStatus.DELETED;
+    user.status = Status.DELETED;
     user.deleted_at = new Date();
   
     return user.save();

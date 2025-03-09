@@ -1,5 +1,5 @@
+import { Status } from "src/enum/status.enum";
 import { UserRole } from "src/enum/user-role.enum";
-import { UserStatus } from "src/enum/user-status.enum";
 
 export interface iUser {
     _id?: string;
@@ -10,7 +10,7 @@ export interface iUser {
     password: string;
     username: string;
     role: UserRole;
-    status: UserStatus;
+    status: Status;
     created_at: Date;
     updated_at: Date; 
     deleted_at?: Date;

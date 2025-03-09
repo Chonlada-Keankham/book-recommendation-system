@@ -6,10 +6,10 @@ import { iUser } from 'src/user/interface/user.interface';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import { RefreshTokenDto } from './dto/refresh-token-auth.dto';
-import { UserStatus } from 'src/enum/user-status.enum';
 import * as jwt from 'jsonwebtoken';
 import { RequestPasswordResetDto } from './dto/request-pass-auth.dto';
 import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
+import { Status } from 'src/enum/status.enum';
 
 @Injectable()
 export class AuthService {
@@ -46,7 +46,7 @@ export class AuthService {
       const payload = this.jwtService.verify(refreshTokenDto.refresh_token);
 
       const user = await this.userService.findOneById(payload.sub);
-      if (!user || user.status === UserStatus.DELETED) {
+      if (!user || user.status === Status.DELETED) {
         throw new UnauthorizedException('User not found or is deleted');
       }
 

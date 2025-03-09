@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Document } from "mongoose";
+import { Status } from "src/enum/status.enum";
 import { UserRole } from "src/enum/user-role.enum";
-import { UserStatus } from "src/enum/user-status.enum"; 
 
 @Schema({ timestamps: true })
 export class User {
@@ -35,8 +35,8 @@ export class User {
   @Prop({ enum: UserRole, required: true })
   role: UserRole;
 
-  @Prop({ enum: UserStatus, default: UserStatus.ACTIVE }) 
-  status: UserStatus;
+  @Prop({ enum: Status, default: Status.ACTIVE }) 
+  status: Status;
   
   @Prop({ type: Date, default: null }) 
   deleted_at?: Date; 
