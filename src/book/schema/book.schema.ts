@@ -10,7 +10,7 @@ export class Book {
   @Prop({ required: true })
   book_en: string;
 
-  @Prop({ required: true })
+  @Prop({ required: false })
   img: string;
 
   @Prop({ required: true })

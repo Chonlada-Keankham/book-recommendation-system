@@ -14,24 +14,53 @@ export class BookService {
   ) { }
 
   async createOne(createBookDto: CreateBookDto): Promise<iBook> {
+    const existingBook = await this.bookModel.findOne({
+      $or: [
+        { book_th: createBookDto.book_th },  
+        { book_en: createBookDto.book_en }   
+      ]
+    });
+  
+    if (existingBook) {
+      throw new Error('หนังสือเล่มนี้มีอยู่แล้วในระบบ');
+    }
+  
     const newBook = new this.bookModel({
       ...createBookDto,
       deleted_at: null,
       status: Status.ACTIVE,
     });
+  
     return await newBook.save();
   }
-
-  async createMany(createBookDtos: CreateBookDto[]): Promise<iBook[]> {
-    const booksToInsert = createBookDtos.map(dto => ({
+  
+  async createMany(createBookDto: CreateBookDto[]): Promise<iBook[]> {
+    const booksInDb = await this.bookModel.find({
+      $or: createBookDto.map(dto => ({
+        $or: [
+          { book_th: dto.book_th },
+          { book_en: dto.book_en }
+        ]
+      }))
+    });
+  
+    const existingBookTitles = booksInDb.map(book => book.book_th); 
+  
+    const booksToInsert = createBookDto.filter(dto => 
+      !existingBookTitles.includes(dto.book_th) && !existingBookTitles.includes(dto.book_en)
+    ).map(dto => ({
       ...dto,
       deleted_at: null,
       status: Status.ACTIVE,
     }));
-
-    return await this.bookModel.insertMany(booksToInsert);
+  
+    if (booksToInsert.length > 0) {
+      return await this.bookModel.insertMany(booksToInsert);
+    } else {
+      throw new Error('ไม่มีหนังสือที่สามารถเพิ่มได้ เนื่องจากทั้งหมดมีอยู่ในระบบแล้ว');
+    }
   }
-
+  
   async findOneById(id: string): Promise<iBook> {
     const book = await this.bookModel.findOne({
       _id: id,
