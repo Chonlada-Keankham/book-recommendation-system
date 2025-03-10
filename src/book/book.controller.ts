@@ -59,6 +59,37 @@ export class BookController {
     };
   }
   
+  @Get('/search')
+  @ApiOperation({ summary: 'Find all books with filters' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Books found.' })
+  async searchBooks(
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+    @Query('category') category?: string,
+    @Query('author') author?: string,
+    @Query('minViews') minViews?: number,
+    @Query('maxViews') maxViews?: number,
+  ): Promise<{ statusCode: number; message: string; data: iBook[]; total: number }> {
+    const pageNumber = parseInt(page as any, 10);
+    const limitNumber = parseInt(limit as any, 10);
+    
+    const result = await this.bookService.searchBooks(
+      category ? category : undefined, 
+      author ? author : undefined, 
+      minViews, 
+      maxViews, 
+      pageNumber, 
+      limitNumber
+    );
+    
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Books found',
+      data: result.books,
+      total: result.total,
+    };
+  }
+        
   @Put('update-one/:id')
   @ApiOperation({ summary: 'Update a book by ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Book updated successfully.' })

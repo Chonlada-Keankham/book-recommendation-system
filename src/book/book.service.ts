@@ -22,7 +22,7 @@ export class BookService {
     });
   
     if (existingBook) {
-      throw new Error('หนังสือเล่มนี้มีอยู่แล้วในระบบ');
+      throw new Error('This book is already in the system.');
     }
   
     const newBook = new this.bookModel({
@@ -57,7 +57,7 @@ export class BookService {
     if (booksToInsert.length > 0) {
       return await this.bookModel.insertMany(booksToInsert);
     } else {
-      throw new Error('ไม่มีหนังสือที่สามารถเพิ่มได้ เนื่องจากทั้งหมดมีอยู่ในระบบแล้ว');
+      throw new Error('There are no books that can be added as they are all already in the system.');
     }
   }
   
@@ -131,4 +131,43 @@ export class BookService {
     await this.bookModel.deleteOne({ _id: bookId });
     return true;
   }
+
+  async searchBooks(
+    category?: string, 
+    author?: string, 
+    minViews?: number, 
+    maxViews?: number, 
+    page: number = 1, 
+    limit: number = 10
+  ): Promise<{ books: iBook[], total: number }> {
+    const filter: any = {
+      status: { $ne: Status.DELETED }, 
+      deleted_at: null,
+    };
+  
+    if (category) {
+      filter.category = category;
+    }
+  
+    if (author) {
+      filter.author = new RegExp(author, 'i'); 
+    }
+  
+    if (minViews !== undefined || maxViews !== undefined) {
+      filter.view = {};
+      if (minViews !== undefined) filter.view.$gte = minViews;
+      if (maxViews !== undefined) filter.view.$lte = maxViews;
+    }
+  
+    const skip = (page - 1) * limit;
+    const total = await this.bookModel.countDocuments(filter);
+    const books = await this.bookModel.find(filter)
+      .sort({ view: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec();
+  
+    return { books, total };
+  }
+    
 }
