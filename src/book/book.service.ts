@@ -1,10 +1,11 @@
 import { InjectModel } from '@nestjs/mongoose';
 import { ConflictException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { Model } from 'mongoose';
+import { Model, PipelineStage } from 'mongoose';
 import { iBook } from './interface/book.interface';
 import { CreateBookDto } from './dto/create-book.dto';
 import { Status } from 'src/enum/status.enum';
 import { UpdateBookDto } from './dto/update-book.dto';
+import { BookCategory } from 'src/enum/book-category.enum';
 
 @Injectable()
 export class BookService {
@@ -106,6 +107,37 @@ export class BookService {
     return await this.bookModel.findByIdAndUpdate(bookId, updatedBookDto, { new: true });
   }
 
+  async updateCoverImage(bookId: string, img: string): Promise<iBook> {
+    const book = await this.bookModel.findById(bookId);
+  
+    if (!book) {
+      throw new NotFoundException('Book not found');
+    }
+  
+    book.img = img;
+  
+    return await book.save();
+  }
+
+  async updateView (bookId: string): Promise<iBook> {
+    try {
+      const updatedBook = await this.bookModel.findByIdAndUpdate(
+        bookId,
+        { $inc: { view: 1 } }, 
+        { new: true } 
+      ).exec();
+
+      if (!updatedBook) {
+        throw new NotFoundException(`Book with ID "${bookId}" not found`);
+      }
+
+      return updatedBook;
+    } catch (error) {
+      console.error(`Error updating views for book with ID "${bookId}":`, error);
+      throw new NotFoundException('Failed to update views for book');
+    }
+  }  
+
   async softDelete(bookId: string): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
 
@@ -137,51 +169,52 @@ export class BookService {
     author?: string,
     minViews?: number,
     maxViews?: number,
-    page: number = 1,
-    limit: number = 10
+    pageNumber: number = 1,
+    limitNumber: number = 10
   ): Promise<{ data: iBook[]; total: number }> {
-    try {
-      const filter: any = {
-        status: { $ne: Status.DELETED },
-        deleted_at: null,
-      };
+    const skip = (pageNumber - 1) * limitNumber;
 
-      if (category) {
-        filter.category = category;
-      }
+    const aggregation: PipelineStage[] = [];
 
-      if (author) {
-        filter.author = new RegExp(author, 'i');
-      }
-
-      const aggregation = [];
-
-      if (minViews !== undefined || maxViews !== undefined) {
-        const matchStage: any = { $match: {} };
-
-        if (minViews !== undefined) matchStage.$match.view = { $gte: minViews };
-        if (maxViews !== undefined) matchStage.$match.view = { $lte: maxViews };
-
-        aggregation.push(matchStage);
-      }
-
-      aggregation.push({ $sort: { view: -1 } });
-
-      const skip = (page - 1) * limit;
-      aggregation.push({ $skip: skip });
-      aggregation.push({ $limit: limit });
-
-      const books = await this.bookModel.aggregate(aggregation);
-
-      const total = await this.bookModel.countDocuments(filter);
-
-      return {
-        data: books,
-        total: total,
-      };
-    } catch (error) {
-      console.error('Error in depthSearch:', error);
-      throw error;
+    if (category) {
+      aggregation.push({ $match: { category } });
     }
+    if (author) {
+      aggregation.push({ $match: { author } });
+    }
+    if (minViews !== undefined || maxViews !== undefined) {
+      const viewFilter: any = {};
+      if (minViews !== undefined) viewFilter.$gte = minViews;
+      if (maxViews !== undefined) viewFilter.$lte = maxViews;
+      aggregation.push({ $match: { view: viewFilter } });
+    }
+
+    const totalAggregation = [...aggregation, { $count: "total" }];
+    const totalResult = await this.bookModel.aggregate(totalAggregation);
+    const total = totalResult.length > 0 ? totalResult[0].total : 0;
+
+    aggregation.push({ $sort: { view: -1 } } as PipelineStage);
+    aggregation.push({ $skip: skip } as PipelineStage);
+    aggregation.push({ $limit: limitNumber } as PipelineStage);
+
+    const books = await this.bookModel.aggregate(aggregation);
+
+    return { data: books, total };
   }
+
+  async recLetGuest (category: BookCategory, bookId: string): Promise<iBook[]> {
+    const books = await this.bookModel.find({
+      category: category,
+      _id: { $ne: bookId }, 
+      status: { $ne: Status.DELETED },
+      deleted_at: null
+    })
+    .sort({ view: -1 }) 
+    .limit(5)  
+    .exec();
+  
+    return books;
+  }
+  
+  
 }
