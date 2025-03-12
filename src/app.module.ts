@@ -7,6 +7,7 @@ import { databaseConfig } from './config/database.config';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { BookModule } from './book/book.module';
+import { CommentModule } from './comment/comment.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { BookModule } from './book/book.module';
     UserModule,
     AuthModule,
     BookModule,
+    CommentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
