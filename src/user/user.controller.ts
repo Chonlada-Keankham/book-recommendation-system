@@ -11,7 +11,7 @@ export class UserController {
 
   ) { }
 
-  @Post('register-user')
+  @Post('/register-user')
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'User created successfully.' })
   async createOne(@Body() registerUserDto:RegisterUserDto): Promise<{ statusCode: number; message: string; data: iUser }> {
@@ -23,7 +23,7 @@ export class UserController {
     };
   }
 
-  @Get('find-one/:id')
+  @Get('/find-one/:id')
   @ApiOperation({ summary: 'Find a user by ID' })
   async findOneById(@Param('id') id: string) {
     const user = await this.userService.findOneById(id);
@@ -34,7 +34,7 @@ export class UserController {
     };
   }
 
-  @Get('find-email/:email')
+  @Get('/find-email/:email')
   @ApiOperation({ summary: 'Find a user by email' })
   async findOneByEmail(@Param('email') email: string) {
     const user = await this.userService.findOneByEmail(email);
@@ -45,7 +45,7 @@ export class UserController {
     };
   }
 
-  @Get('find-all')
+  @Get('/find-all')
   @ApiOperation({ summary: 'Find all users' })
   async findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
     const result = await this.userService.findAll(page, limit);
@@ -57,7 +57,7 @@ export class UserController {
     };
   }
   
-  @Put('update-one/:id')
+  @Put('/update-one/:id')
   @ApiOperation({ summary: 'Update a user by ID' })
   async updateOne(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     const updatedUser = await this.userService.updateOne(id, updateUserDto);
@@ -68,7 +68,7 @@ export class UserController {
     };
   }
 
-  @Delete('delete-one/:id')
+  @Delete('/delete-one/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a user by ID' })
   async deleteById(@Param('id') id: string) {

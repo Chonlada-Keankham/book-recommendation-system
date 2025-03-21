@@ -7,19 +7,24 @@ export class Comment {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   user: Types.ObjectId; 
 
-  @Prop({ type: String, required: true })
-  username: string; 
-
   @Prop({ type: Types.ObjectId, ref: 'Book', required: true })
   book: Types.ObjectId; 
-  @Prop({ type: String, required: true })
-  content: string; 
+  @Prop({ 
+    type: [
+      {
+        content: { type: String, required: true },
+        created_at: { type: Date, default: Date.now }
+      }
+    ],
+    default: []
+  })
+  comments: { content: string; created_at: Date }[]; 
 
   @Prop({ enum: Status, default: Status.ACTIVE })
   status: Status; 
 
   @Prop({ type: Date, default: null })
-  deleted_at?: Date; 
+  deleted_at?: Date;
 }
 
 export type CommentDocument = Comment & Document;

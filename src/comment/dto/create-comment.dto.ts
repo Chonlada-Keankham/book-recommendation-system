@@ -6,17 +6,13 @@ export class CreateCommentDto {
     @IsMongoId({ message: 'Invalid user ID format.' })
     user: string;  
 
-    @IsNotEmpty({ message: 'Username is required.' })
-    @IsString({ message: 'Username must be a string.' })
-    username: string;  
-
     @IsNotEmpty({ message: 'Book is required.' })
     @IsMongoId({ message: 'Invalid book ID format.' })
     book: string; 
 
     @IsNotEmpty({ message: 'Content is required.' })
     @IsString({ message: 'Content must be a string.' })
-    content: string;  t
+    content: string;  
 
     @IsOptional()
     @IsEnum(Status, { message: 'Invalid status.' })
