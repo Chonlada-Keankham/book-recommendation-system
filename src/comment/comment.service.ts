@@ -1,4 +1,4 @@
-import { ConflictException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { iComment, iCommentItem } from './interface/comment.interface';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { Status } from 'src/enum/status.enum';
