@@ -7,9 +7,9 @@ dotenv.config();
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: 'http://172.22.160.1:3000', 
-    methods: 'GET,POST,PUT,DELETE',
-    credentials: true, 
+    origin: [
+      'http://localhost:3000', 
+    ], credentials: true,
   });
   await app.listen(5000, '0.0.0.0');
 }
