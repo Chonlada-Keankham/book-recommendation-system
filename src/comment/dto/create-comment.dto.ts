@@ -13,5 +13,5 @@ export class CreateCommentDto {
 
   @IsString({ message: 'Content must be a string.' })
   @IsOptional()  
-  content?: string;  
+  content: string;  
 }

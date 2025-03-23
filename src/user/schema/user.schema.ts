@@ -32,7 +32,7 @@ export class User {
   @Prop({ required: true, unique: true })
   username: string;
 
-  @Prop({ enum: UserRole, required: true })
+  @Prop({ enum: UserRole, required: true, default: UserRole.MEMBER })
   role: UserRole;
 
   @Prop({ enum: Status, default: Status.ACTIVE }) 

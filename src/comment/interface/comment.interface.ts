@@ -9,9 +9,13 @@ export interface iComment {
     comments: {
       content: string;
       created_at: Date;
+      updated_at: Date; 
+      deleted_at?: Date;
+      
     }[];
   }[];
   status: Status;
   created_at: Date;
-  updated_at: Date;
+  updated_at: Date; 
+  deleted_at?: Date;
 }

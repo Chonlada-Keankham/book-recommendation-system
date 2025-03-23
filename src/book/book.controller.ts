@@ -12,7 +12,7 @@ export class BookController {
 
   ) {}
 
- @Post('create-one')
+ @Post('/create-one')
   @ApiOperation({ summary: 'Create a new book' })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'Book created successfully.' })
   async createOne(@Body() createBookDto: CreateBookDto): Promise<{ statusCode: number; message: string; data: iBook }> {

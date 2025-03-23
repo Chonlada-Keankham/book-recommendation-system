@@ -29,7 +29,6 @@ export class BookService {
     const newBook = new this.bookModel({
       ...createBookDto,
       deleted_at: null,
-      status: Status.ACTIVE,
     });
 
     return await newBook.save();

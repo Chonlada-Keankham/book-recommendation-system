@@ -12,7 +12,6 @@ export class Comment {
       user: { type: Types.ObjectId, ref: 'User', required: true }, 
       comments: [{
         content: { type: String, required: true }, 
-        created_at: { type: Date, default: Date.now }, 
       }]
     }],
     required: true
@@ -21,18 +20,14 @@ export class Comment {
     user: Types.ObjectId; 
     comments: {
       content: string; 
-      created_at: Date;
     }[];
   }[];
 
   @Prop({ enum: Status, default: Status.ACTIVE })
   status: Status; 
 
-  @Prop({ type: Date, default: Date.now })
-  created_at: Date;
-
-  @Prop({ type: Date, default: Date.now })
-  updated_at: Date;
+  @Prop({ type: Date, default: null }) 
+  deleted_at?: Date; 
 }
 
 export type CommentDocument = Comment & Document;

@@ -45,9 +45,7 @@ export class UserService {
       const newUser = new this.userModel({
         ...registerUserDto,
         password: hashedPassword,
-        status: Status.ACTIVE,
         deleted_at: null,
-        role: UserRole.MEMBER,
       });
 
       return await newUser.save();
