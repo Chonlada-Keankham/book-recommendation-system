@@ -1,26 +1,17 @@
-import { IsEnum, IsMongoId, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { Status } from 'src/enum/status.enum';
+import { IsMongoId, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Types } from 'mongoose';
 
 export class CreateCommentDto {
-    @IsNotEmpty({ message: 'User is required.' })
-    @IsMongoId({ message: 'Invalid user ID format.' })
-    user: string;
 
-    @IsNotEmpty({ message: 'Book is required.' })
-    @IsMongoId({ message: 'Invalid book ID format.' })
-    book: string;
+  @IsNotEmpty({ message: 'Book is required.' })
+  @IsMongoId({ message: 'Book ID must be a valid ObjectId.' })
+  book: Types.ObjectId;  
 
-    @IsNotEmpty({ message: 'Content is required.' })
-    @IsString({ message: 'Content must be a string.' })
-    content: string;
+  @IsNotEmpty({ message: 'User is required.' })
+  @IsMongoId({ message: 'User ID must be a valid ObjectId.' })
+  user: Types.ObjectId;  
 
-    @IsOptional()
-    @IsEnum(Status, { message: 'Invalid status.' })
-
-    status: Status = Status.ACTIVE;
-    @IsOptional()
-
-    @IsString({ message: 'Deleted date must be a string.' })
-    deleted_at?: string;  
+  @IsString({ message: 'Content must be a string.' })
+  @IsOptional()  
+  content?: string;  
 }
-

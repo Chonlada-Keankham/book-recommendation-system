@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 import { Status } from 'src/enum/status.enum';
+
 @Schema({ timestamps: true })
 export class Comment {
   @Prop({ type: Types.ObjectId, ref: 'Book', required: true })

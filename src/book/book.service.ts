@@ -4,8 +4,8 @@ import { Model, PipelineStage } from 'mongoose';
 import { iBook } from './interface/book.interface';
 import { CreateBookDto } from './dto/create-book.dto';
 import { Status } from 'src/enum/status.enum';
-import { UpdateBookDto } from './dto/update-book.dto';
 import { BookCategory } from 'src/enum/book-category.enum';
+import { UpdateBookDto } from './dto/update-book.dto';
 
 @Injectable()
 export class BookService {
