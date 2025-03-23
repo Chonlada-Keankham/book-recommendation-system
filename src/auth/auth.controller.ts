@@ -5,6 +5,9 @@ import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { RefreshTokenDto } from './dto/refresh-token-auth.dto';
 import { RequestPasswordResetDto } from './dto/request-pass-auth.dto';
 import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
+import { ApiTags } from '@nestjs/swagger';
+
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -12,7 +15,7 @@ export class AuthController {
 
   ) { }
 
-  @Post('login')
+  @Post('/login')
   async login(@Body() loginAuthDto: LoginAuthDto) {
     try {
       const user = await this.authService.validateUser(loginAuthDto);
@@ -31,7 +34,7 @@ export class AuthController {
     }
   }
 
-  @Post('refresh')
+  @Post('/refresh')
   async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
     try {
       const tokens = await this.authService.refreshAccessToken(refreshTokenDto);
@@ -49,7 +52,7 @@ export class AuthController {
     }
   }
 
-  @Get('profile')
+  @Get('/profile')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() request): Promise<any> {
     return {
@@ -59,7 +62,7 @@ export class AuthController {
     };
   }
 
-  @Post('forgot-password')
+  @Post('/forgot-password')
   async forgotPassword(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
     const response = await this.authService.sendPasswordResetLink(requestPasswordResetDto);
 
@@ -70,7 +73,7 @@ export class AuthController {
     };
   }
 
-  @Post('reset-password')
+  @Post('/reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     const response = await this.authService.resetPassword(resetPasswordDto);
 

@@ -1,18 +1,20 @@
 import { Status } from 'src/enum/status.enum';
 
+
 export interface iCommentItem {
   content: string;
   created_at: Date;
 }
 
+export interface iUserComment {
+  user: string;
+  comments: iCommentItem[];
+}
+
 export interface iComment {
-  _id?: string; 
-  user: string; 
-  book: string; 
-  comments: iCommentItem[];  
-  status: Status; 
-  created_at?: Date; 
-  updated_at?: Date; 
-  deleted_at?: Date; 
-  username?: string;
+  book: string;
+  users: iUserComment[];
+  status: Status;
+  created_at?: Date;
+  updated_at?: Date;
 }
