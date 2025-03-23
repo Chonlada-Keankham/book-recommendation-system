@@ -1,21 +1,16 @@
-import { Types } from 'mongoose';
-import { Status } from 'src/enum/status.enum';
-
+import { ObjectId } from 'mongoose';
 
 export interface iComment {
-  book: Types.ObjectId;
+  book: ObjectId;
+  status: string;
+  deleted_at?: Date; 
   users: {
-    user: Types.ObjectId;
+    user: ObjectId;
     comments: {
       content: string;
       created_at: Date;
-      updated_at: Date; 
-      deleted_at?: Date;
-      
+      updated_at: Date;
+      deleted_at?: Date; 
     }[];
   }[];
-  status: Status;
-  created_at: Date;
-  updated_at: Date; 
-  deleted_at?: Date;
 }

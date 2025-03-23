@@ -16,7 +16,7 @@ export class CommentController {
   @ApiOperation({ summary: 'Create a new comment' })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'Comment created successfully.' })
   async createOne(@Body() createCommentDto: CreateCommentDto): Promise<{ statusCode: number; message: string; data: iComment }> {
-    const createdComment = await this.commentService.createOne(createCommentDto);
+    const createdComment = await this.commentService.createComment(createCommentDto);
     return {
       statusCode: HttpStatus.CREATED,
       message: 'Created Comment Success',
