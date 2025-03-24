@@ -83,18 +83,20 @@ export class AuthController {
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     try {
       const response = await this.authService.resetPassword(resetPasswordDto);
-
+  
       return {
         statusCode: HttpStatus.OK,
         message: response.message,
       };
     } catch (error) {
+      console.error('Error during password reset:', error);
+      
       return {
         statusCode: HttpStatus.BAD_REQUEST,
         message: error.message || 'Failed to reset password',
       };
     }
   }
-}
+  }
 
 

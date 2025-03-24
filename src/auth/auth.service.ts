@@ -1,9 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from './../user/user.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { iUser } from 'src/user/interface/user.interface';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { ConfigService } from '@nestjs/config';
 import { RefreshTokenDto } from './dto/refresh-token-auth.dto';
 import * as jwt from 'jsonwebtoken';
@@ -78,9 +78,9 @@ export class AuthService {
       throw new NotFoundException('User with this email not found');
     }
 
-    const resetToken = this.jwtService.sign({ email }, { expiresIn: '1h' });
+    const resetToken = this.jwtService.sign({ email }, { expiresIn: '12h' });
 
-    const resetLink = `${this.configService.get('FRONTEND_URL')}/reset-password?token=${resetToken}`;
+    const resetLink = resetToken
 
     return {
       message: 'Password reset link generated successfully',
@@ -89,31 +89,38 @@ export class AuthService {
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const { token, newPassword } = resetPasswordDto;
+
     try {
-        const { token, newPassword } = resetPasswordDto;
+      // ตรวจสอบ token ว่ายังไม่หมดอายุและถูกต้อง
+      const decoded = this.jwtService.verify(token);  // token ที่ส่งมา
+      console.log(decoded); // ดูข้อมูลที่ถูก decode ออกมา
 
-        console.log("Received Token:", token);
-        const decoded = this.jwtService.verify(token);
-        console.log("Decoded Token:", decoded);
+      const user = await this.userService.findOneByEmail(decoded.email);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
 
-        const user = await this.userService.findOneByEmail(decoded.email);
-        if (!user) {
-            throw new NotFoundException('User not found');
-        }
-        console.log("User found:", user);
+      // ทำการเปลี่ยนรหัสผ่านใหม่
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await this.userService.updatePassword(user._id, hashedPassword);
 
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        console.log("Hashed Password:", hashedPassword);
+      // สร้าง Access Token ใหม่และส่งให้ผู้ใช้
+      const newAccessToken = this.jwtService.sign({ email: user.email, sub: user._id, role: user.role }, { expiresIn: '1h' });
 
-        await this.userService.updatePassword(user._id, hashedPassword);
+      return {
+        message: 'Password reset successful',
+        access_token: newAccessToken // ส่ง Access Token ใหม่กลับไป
+      };
 
-        const updatedUser = await this.userService.findOneById(user._id);
-        console.log("Updated User Password:", updatedUser.password);
-
-        return { message: 'Password updated successfully' };
     } catch (error) {
-        console.error("Reset Password Error:", error);
-        throw new BadRequestException('Invalid or expired token');
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new BadRequestException('Token has expired');
+      }
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new BadRequestException('Invalid token');
+      }
+      throw new BadRequestException(error.message || 'An error occurred during password reset');
     }
-}
+  }
 }
