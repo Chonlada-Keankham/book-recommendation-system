@@ -23,14 +23,22 @@ export class Comment {
           {
             content: { type: String, required: true },
             created_at: { type: Date, default: Date.now },
-            updated_at: { type: Date, default: Date.now, required: true },
-            deleted_at: { type: Date },
-          },
+            updated_at: { type: Date, default: Date.now },
+            deleted_at: Date,
+          }
         ],
-      },
-    ],
+      }
+    ]
   })
-  users: { user: MongooseSchema.Types.ObjectId; comments: { content: string; created_at: Date; updated_at: Date; deleted_at?: Date }[] }[];
+  users: { 
+    user: MongooseSchema.Types.ObjectId;
+    comments: { 
+      content: string;
+      created_at: Date;
+      updated_at: Date;
+      deleted_at?: Date;
+    }[];
+  }[];
 }
 
 export type CommentDocument = Comment & Document;

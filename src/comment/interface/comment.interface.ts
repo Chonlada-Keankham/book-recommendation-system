@@ -1,16 +1,16 @@
-import { ObjectId } from 'mongoose';
+import { Types } from 'mongoose';
 
 export interface iComment {
-  book: ObjectId;
+  book: Types.ObjectId;  
   status: string;
   deleted_at?: Date; 
   users: {
-    user: ObjectId;
+    user: Types.ObjectId;  
     comments: {
       content: string;
       created_at: Date;
       updated_at: Date;
       deleted_at?: Date; 
-    }[];
-  }[];
+    }[]; 
+  }[]; 
 }
