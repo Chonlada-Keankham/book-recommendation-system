@@ -1,3 +1,5 @@
+import { UserService } from 'src/user/user.service';
+import { ConfigService } from '@nestjs/config';
 import { Body, Controller, Get, HttpStatus, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
@@ -6,12 +8,16 @@ import { RefreshTokenDto } from './dto/refresh-token-auth.dto';
 import { RequestPasswordResetDto } from './dto/request-pass-auth.dto';
 import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { JwtService } from '@nestjs/jwt';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
+    private readonly userService: UserService,
+    private readonly configService: ConfigService,
 
   ) { }
 
@@ -75,12 +81,19 @@ export class AuthController {
 
   @Post('/reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    const response = await this.authService.resetPassword(resetPasswordDto);
+    try {
+      const response = await this.authService.resetPassword(resetPasswordDto);
 
-    return {
-      statusCode: HttpStatus.OK,
-      message: response.message,
-    };
+      return {
+        statusCode: HttpStatus.OK,
+        message: response.message,
+      };
+    } catch (error) {
+      return {
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: error.message || 'Failed to reset password',
+      };
+    }
   }
 }
 

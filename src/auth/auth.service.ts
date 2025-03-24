@@ -83,31 +83,37 @@ export class AuthService {
     const resetLink = `${this.configService.get('FRONTEND_URL')}/reset-password?token=${resetToken}`;
 
     return {
-      message: 'Password reset link sent successfully',
+      message: 'Password reset link generated successfully',
       resetLink,
     };
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     try {
-      const { token, newPassword } = resetPasswordDto; 
-  
-      const decoded = this.jwtService.verify(token); 
-  
-      const user = await this.userService.findOneByEmail(decoded.email);
-  
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
-  
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-  
-      await this.userService.updatePassword(user._id, hashedPassword);
-  
-      return { message: 'Password updated successfully' };
+        const { token, newPassword } = resetPasswordDto;
+
+        console.log("Received Token:", token);
+        const decoded = this.jwtService.verify(token);
+        console.log("Decoded Token:", decoded);
+
+        const user = await this.userService.findOneByEmail(decoded.email);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+        console.log("User found:", user);
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        console.log("Hashed Password:", hashedPassword);
+
+        await this.userService.updatePassword(user._id, hashedPassword);
+
+        const updatedUser = await this.userService.findOneById(user._id);
+        console.log("Updated User Password:", updatedUser.password);
+
+        return { message: 'Password updated successfully' };
     } catch (error) {
-      throw new BadRequestException('Invalid or expired token');
+        console.error("Reset Password Error:", error);
+        throw new BadRequestException('Invalid or expired token');
     }
-  }
-      
+}
 }

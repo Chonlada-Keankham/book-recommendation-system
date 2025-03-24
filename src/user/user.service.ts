@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { iUser } from './interface/user.interface';
 import { Model } from 'mongoose';
@@ -139,9 +139,8 @@ export class UserService {
 
   async updatePassword(userId: string, hashedPassword: string): Promise<void> {
     const user = await this.userModel.findById(userId);
-
-    if (!user || user.status === Status.DELETED) {
-      throw new NotFoundException('User not found or has been deleted.');
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
 
     const result = await this.userModel.updateOne(
@@ -150,7 +149,7 @@ export class UserService {
     );
 
     if (result.modifiedCount === 0) {
-      throw new InternalServerErrorException('Password update failed');
+      throw new BadRequestException('Failed to update password');
     }
   }
 

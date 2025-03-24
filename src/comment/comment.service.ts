@@ -143,7 +143,7 @@ export class CommentService {
       }
   
       const commentIndex = userComments.comments.findIndex(
-        comment => comment._id.toString() === commentId.toString()  // ใช้ commentId ที่ได้รับ
+        comment => comment._id.toString() === commentId.toString()  
       );
       
       if (commentIndex === -1) {
@@ -165,38 +165,55 @@ export class CommentService {
   }
                
   async softDelete(bookId: string, userId: string): Promise<iComment> {
-    const comment = await this.commentModel.findOne({
-      'book': bookId,
-      'users.user': userId,
-      'status': { $ne: Status.DELETED },
-      deleted_at: null,
-    });
+    try {
+      const user = await this.userService.findOneById(userId);
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
 
-    if (!comment) {
-      throw new NotFoundException('Comment not found.');
+      const comment = await this.commentModel.findOne({
+        'book': bookId,
+        'users.user': userId,
+        'status': { $ne: Status.DELETED },
+        deleted_at: null,
+      });
+
+      if (!comment) {
+        throw new NotFoundException('Comment not found or already deleted.');
+      }
+
+      comment.deleted_at = new Date();
+      await comment.save();
+      return comment;
+    } catch (error) {
+      throw new HttpException('Failed to soft delete comment.', HttpStatus.INTERNAL_SERVER_ERROR);
     }
-
-    comment.deleted_at = new Date();
-
-    return await comment.save();
   }
 
   async deleteById(bookId: string, userId: string): Promise<boolean> {
-    const comment = await this.commentModel.findOne({
-      'book': bookId,
-      'users.user': userId,
-    });
+    try {
+      const user = await this.userService.findOneById(userId);
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
 
-    if (!comment) {
-      throw new NotFoundException('Comment not found.');
+      const comment = await this.commentModel.findOne({
+        'book': bookId,
+        'users.user': userId,
+      });
+
+      if (!comment) {
+        throw new NotFoundException('Comment not found.');
+      }
+
+      await this.commentModel.deleteOne({
+        'book': bookId,
+        'users.user': userId,
+      });
+
+      return true;
+    } catch (error) {
+      throw new HttpException('Failed to delete comment.', HttpStatus.INTERNAL_SERVER_ERROR);
     }
-
-    await this.commentModel.deleteOne({
-      'book': bookId,
-      'users.user': userId,
-    });
-
-    return true;
   }
-
 }

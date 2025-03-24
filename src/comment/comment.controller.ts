@@ -63,17 +63,21 @@ export class CommentController {
       data: updatedComment,
     };
   }
-  
+
   @Delete('/soft-delete/:bookId/:userId')
   @ApiOperation({ summary: 'Soft delete a comment by book and user ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Comment soft deleted successfully.' })
   async softDelete(@Param('bookId') bookId: string, @Param('userId') userId: string) {
-    const softDeletedComment = await this.commentService.softDelete(bookId, userId);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Comment soft deleted successfully',
-      data: softDeletedComment,
-    };
+    try {
+      const softDeletedComment = await this.commentService.softDelete(bookId, userId);
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Comment soft deleted successfully',
+        data: softDeletedComment,
+      };
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+    }
   }
 
   @Delete('/delete/:bookId/:userId')
@@ -81,11 +85,15 @@ export class CommentController {
   @ApiOperation({ summary: 'Delete a comment by book and user ID' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Comment deleted successfully.' })
   async deleteOne(@Param('bookId') bookId: string, @Param('userId') userId: string) {
-    await this.commentService.deleteById(bookId, userId);
-    return {
-      statusCode: HttpStatus.NO_CONTENT,
-      message: 'Comment deleted successfully',
-      data: null,
-    };
+    try {
+      await this.commentService.deleteById(bookId, userId);
+      return {
+        statusCode: HttpStatus.NO_CONTENT,
+        message: 'Comment deleted successfully',
+        data: null,
+      };
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+    }
   }
 }
