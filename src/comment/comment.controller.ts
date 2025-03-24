@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpException, HttpStatus, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpException, HttpStatus, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -49,20 +49,19 @@ export class CommentController {
     };
   }
 
-  @Put('/update-comment/:bookId/:userId')
-  @ApiOperation({ summary: 'Update a comment by book and user ID' })
+  @Patch('/update-comment/:commentId')
+  @ApiOperation({ summary: 'Update a comment by ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Comment updated successfully.' })
-  async updateOne(
-    @Param('bookId') bookId: string,
-    @Param('userId') userId: string,
-    @Body() updateCommentDto: UpdateCommentDto
+  async updateComment(
+    @Param('commentId') commentId: string,
+    @Body() updateCommentDto: UpdateCommentDto,
   ) {
-      const updatedComment = await this.commentService.updateComment(bookId, userId, updateCommentDto);
-      return {
-        statusCode: HttpStatus.OK,
-        message: 'Comment updated successfully',
-        data: updatedComment,
-      };
+    const updatedComment = await this.commentService.updateComment(commentId, updateCommentDto);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Comment updated successfully',
+      data: updatedComment,
+    };
   }
   
   @Delete('/soft-delete/:bookId/:userId')

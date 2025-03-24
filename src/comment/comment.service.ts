@@ -3,7 +3,7 @@ import { iComment } from './interface/comment.interface';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { Status } from 'src/enum/status.enum';
 import { UserService } from 'src/user/user.service';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { BookService } from 'src/book/book.service';
 import { UpdateCommentDto } from './dto/update-comment.dto';
@@ -16,6 +16,7 @@ export class CommentService {
     private readonly userService: UserService,
     private readonly bookService: BookService,
   ) { }
+
 
   async createComment(createCommentDto: CreateCommentDto): Promise<iComment> {
     try {
@@ -36,6 +37,7 @@ export class CommentService {
   
         if (userComments) {
           userComments.comments.push({
+            _id: new Types.ObjectId(),  
             content: createCommentDto.content,
             created_at: new Date(),
             updated_at: new Date(),
@@ -45,6 +47,7 @@ export class CommentService {
             user: createCommentDto.user,
             comments: [
               {
+                _id: new Types.ObjectId(), 
                 content: createCommentDto.content,
                 created_at: new Date(),
                 updated_at: new Date(),
@@ -65,6 +68,7 @@ export class CommentService {
               user: createCommentDto.user,
               comments: [
                 {
+                  _id: new Types.ObjectId(),  
                   content: createCommentDto.content,
                   created_at: new Date(),
                   updated_at: new Date(),
@@ -86,7 +90,7 @@ export class CommentService {
       );
     }
   }
-    
+      
   async findOneById(id: string): Promise<iComment> {
     const comment = await this.commentModel.findOne({
       _id: id,
@@ -119,34 +123,34 @@ export class CommentService {
     return { comments, total };
   }
 
-  async updateComment(bookId: string, userId: string, updateCommentDto: UpdateCommentDto): Promise<iComment> {
+  async updateComment(commentId: string, updateCommentDto: UpdateCommentDto): Promise<iComment> {
     try {
-      const user = await this.userService.findOneById(userId);
-      if (!user) {
-        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-      }
+      const { content, user, book } = updateCommentDto;
   
-      const book = await this.bookService.findOneById(bookId);
-      if (!book) {
-        throw new HttpException('Book not found', HttpStatus.NOT_FOUND);
-      }
+      const existingComment = await this.commentModel.findOne({
+        book: book,
+        'users.user': user,
+      });
   
-      const existingComment = await this.commentModel.findOne({ book: bookId });
       if (!existingComment) {
         throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
       }
   
-      const userComments = existingComment.users.find(u => u.user.toString() === userId);
+      const userComments = existingComment.users.find(u => u.user.toString() === user.toString());
+  
       if (!userComments) {
         throw new HttpException('User has not commented on this book', HttpStatus.NOT_FOUND);
       }
   
-      const commentIndex = userComments.comments.findIndex(comment => comment.content === updateCommentDto.content);
+      const commentIndex = userComments.comments.findIndex(
+        comment => comment._id.toString() === commentId.toString()  // ใช้ commentId ที่ได้รับ
+      );
+      
       if (commentIndex === -1) {
         throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
       }
   
-      userComments.comments[commentIndex].content = updateCommentDto.content;
+      userComments.comments[commentIndex].content = content;
       userComments.comments[commentIndex].updated_at = new Date();
   
       await existingComment.save();
@@ -159,7 +163,7 @@ export class CommentService {
       );
     }
   }
-      
+               
   async softDelete(bookId: string, userId: string): Promise<iComment> {
     const comment = await this.commentModel.findOne({
       'book': bookId,
