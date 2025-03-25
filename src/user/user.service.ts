@@ -4,7 +4,6 @@ import { iUser } from './interface/user.interface';
 import { Model } from 'mongoose';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
-import { UserRole } from 'src/enum/user-role.enum';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { Status } from 'src/enum/status.enum';
 @Injectable()

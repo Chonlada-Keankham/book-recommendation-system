@@ -71,14 +71,14 @@ export class AuthController {
   @Post('/forgot-password')
   async forgotPassword(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
     const response = await this.authService.sendPasswordResetLink(requestPasswordResetDto);
-
+  
     return {
       statusCode: HttpStatus.OK,
       message: response.message,
-      resetLink: response.resetLink,
+      resetLink: response.resetLink,  
     };
   }
-
+    
   @Post('/reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     try {

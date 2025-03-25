@@ -78,13 +78,24 @@ export class AuthService {
       throw new NotFoundException('User with this email not found');
     }
 
-    const resetToken = this.jwtService.sign({ email }, { expiresIn: '12h' });
+    const resetToken = this.jwtService.sign({ email }, { expiresIn: '1h' });
 
-    const resetLink = resetToken
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    console.log('Frontend URL:', frontendUrl); 
+
+    if (!frontendUrl) {
+      throw new Error('FRONTEND_URL is not defined in the configuration');
+    }
+
+    const resetLink = `${frontendUrl}?token=${resetToken}`;
+
+    console.log('Frontend URL:', frontendUrl); 
+    console.log('Reset Link:', resetLink);  
 
     return {
       message: 'Password reset link generated successfully',
       resetLink,
+      token: resetToken,
     };
   }
 
@@ -92,25 +103,18 @@ export class AuthService {
     const { token, newPassword } = resetPasswordDto;
 
     try {
-      // ตรวจสอบ token ว่ายังไม่หมดอายุและถูกต้อง
-      const decoded = this.jwtService.verify(token);  // token ที่ส่งมา
-      console.log(decoded); // ดูข้อมูลที่ถูก decode ออกมา
-
+      const decoded = this.jwtService.verify(token);
+      console.log(decoded);
       const user = await this.userService.findOneByEmail(decoded.email);
       if (!user) {
         throw new NotFoundException('User not found');
       }
 
-      // ทำการเปลี่ยนรหัสผ่านใหม่
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       await this.userService.updatePassword(user._id, hashedPassword);
 
-      // สร้าง Access Token ใหม่และส่งให้ผู้ใช้
-      const newAccessToken = this.jwtService.sign({ email: user.email, sub: user._id, role: user.role }, { expiresIn: '1h' });
-
       return {
         message: 'Password reset successful',
-        access_token: newAccessToken // ส่ง Access Token ใหม่กลับไป
       };
 
     } catch (error) {
