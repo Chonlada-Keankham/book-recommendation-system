@@ -4,10 +4,22 @@ import { Status } from 'src/enum/status.enum';
 
 @Schema({ timestamps: true })
 export class Book {
-  @Prop({ required: true })
+  @Prop({
+    required: true,
+    validate: {
+      validator: (value: string) => /^[ก-๙0-9\s]+$/.test(value), 
+      message: 'ชื่อหนังสือภาษาไทยต้องมีแต่ตัวอักษรไทยและตัวเลขเท่านั้น',
+    },
+  })
   book_th: string;
 
-  @Prop({ required: true })
+  @Prop({
+    required: true,
+    validate: {
+      validator: (value: string) => /^[a-zA-Z0-9\s]+$/.test(value), 
+      message: 'ชื่อหนังสือภาษาอังกฤษต้องมีแต่ตัวอักษรอังกฤษและตัวเลขเท่านั้น',
+    },
+  })
   book_en: string;
 
   @Prop({ required: false })
@@ -27,10 +39,8 @@ export class Book {
 
   @Prop({ type: Date, default: null })
   deleted_at?: Date;
-
-
-
 }
+
 export type BookDocument = Book & Document;
 
 export const BookSchema = SchemaFactory.createForClass(Book);

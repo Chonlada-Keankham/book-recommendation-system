@@ -147,6 +147,10 @@ export class UserService {
       { $set: { password: hashedPassword } }
     );
 
+    if (result.matchedCount === 0) { 
+      throw new NotFoundException('User not found');
+    }
+  
     if (result.modifiedCount === 0) {
       throw new BadRequestException('Failed to update password');
     }

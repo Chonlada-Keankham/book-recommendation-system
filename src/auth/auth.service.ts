@@ -80,17 +80,14 @@ export class AuthService {
 
     const resetToken = this.jwtService.sign({ email }, { expiresIn: '1h' });
 
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-    console.log('Frontend URL:', frontendUrl); 
-
-    if (!frontendUrl) {
-      throw new Error('FRONTEND_URL is not defined in the configuration');
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000'); if (!frontendUrl) {
+      throw new Error('frontendUrl is not defined in the configuration');
     }
 
     const resetLink = `${frontendUrl}?token=${resetToken}`;
 
-    console.log('Frontend URL:', frontendUrl); 
-    console.log('Reset Link:', resetLink);  
+    console.log('Frontend URL:', frontendUrl);
+    console.log('Reset Link:', resetLink);
 
     return {
       message: 'Password reset link generated successfully',
@@ -103,15 +100,26 @@ export class AuthService {
     const { token, newPassword } = resetPasswordDto;
 
     try {
-      const decoded = this.jwtService.verify(token);
-      console.log(decoded);
+      console.log('Received token:', token);
+
+      const decoded = this.jwtService.verify(token, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+      });
+      console.log('Decoded token:', decoded);
+
       const user = await this.userService.findOneByEmail(decoded.email);
+      console.log('User found:', user);
+
       if (!user) {
+        console.log('User not found');
         throw new NotFoundException('User not found');
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
+      console.log('Hashed password:', hashedPassword);
+
       await this.userService.updatePassword(user._id, hashedPassword);
+      console.log('Password updated for user:', user._id.toString());
 
       return {
         message: 'Password reset successful',
@@ -119,11 +127,14 @@ export class AuthService {
 
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
+        console.log('Token expired');
         throw new BadRequestException('Token has expired');
       }
       if (error instanceof jwt.JsonWebTokenError) {
+        console.log('Invalid token');
         throw new BadRequestException('Invalid token');
       }
+      console.error('Error during password reset:', error);
       throw new BadRequestException(error.message || 'An error occurred during password reset');
     }
   }
