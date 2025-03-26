@@ -1,8 +1,10 @@
-import { IsEmail, IsString, IsNotEmpty, MinLength,} from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsEmail, IsString, IsNotEmpty, MinLength, } from 'class-validator';
 
 export class LoginAuthDto {
-  @IsNotEmpty({ message: 'Email is required' })
-  @IsEmail({}, { message: 'Invalid email format' })
+  @IsNotEmpty({ message: 'Email is required.' })
+  @IsEmail({}, { message: 'Invalid email format.' })
+  @Transform(({ value }) => value.toLowerCase())
   email: string;
 
   @IsNotEmpty({ message: 'Password is required' })

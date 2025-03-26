@@ -4,6 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { iUser } from './interface/user.interface';
 import { RegisterUserDto } from './dto/register-user.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @ApiTags('User')
 @Controller('user')
@@ -15,7 +16,7 @@ export class UserController {
   @Post('/register-user')
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'User created successfully.' })
-  async createOne(@Body() registerUserDto:RegisterUserDto): Promise<{ statusCode: number; message: string; data: iUser }> {
+  async register(@Body() registerUserDto: RegisterUserDto): Promise<{ statusCode: number; message: string; data: iUser }> {
     const createdUser = await this.userService.register(registerUserDto);
     return {
       statusCode: HttpStatus.CREATED,
@@ -23,7 +24,25 @@ export class UserController {
       data: createdUser,
     };
   }
-
+  @Post('/register-employee')
+  @ApiOperation({ summary: 'Create a new employee and return email and password' })
+  @ApiResponse({ status: HttpStatus.CREATED, description: 'Employee created successfully.' })
+  async registerEmployee(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<{ statusCode: number; message: string; data: { user: iUser; email: string; password: string } }> {
+    const { user, password } = await this.userService.registerEmployee(createUserDto);
+  
+    return {
+      statusCode: HttpStatus.CREATED,
+      message: 'Employee created successfully',
+      data: {
+        user,        
+        email: user.email, 
+        password,   
+      },
+    };
+  }
+  
   @Get('/find-one/:id')
   @ApiOperation({ summary: 'Find a user by ID' })
   async findOneById(@Param('id') id: string) {
@@ -57,7 +76,7 @@ export class UserController {
       total: result.total,
     };
   }
-  
+
   @Put('/update-one/:id')
   @ApiOperation({ summary: 'Update a user by ID' })
   async updateOne(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
@@ -80,7 +99,7 @@ export class UserController {
       data: null,
     };
   }
-  
+
   @Delete('soft-delete/:id')
   @ApiOperation({ summary: 'Soft delete a user by ID' })
   async softDelete(@Param('id') id: string) {

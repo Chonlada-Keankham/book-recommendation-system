@@ -108,22 +108,22 @@ export class BookService {
 
   async updateCoverImage(bookId: string, img: string): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
-  
+
     if (!book) {
       throw new NotFoundException('Book not found');
     }
-  
+
     book.img = img;
-  
+
     return await book.save();
   }
 
-  async updateView (bookId: string): Promise<iBook> {
+  async updateView(bookId: string): Promise<iBook> {
     try {
       const updatedBook = await this.bookModel.findByIdAndUpdate(
         bookId,
-        { $inc: { view: 1 } }, 
-        { new: true } 
+        { $inc: { view: 1 } },
+        { new: true }
       ).exec();
 
       if (!updatedBook) {
@@ -135,7 +135,7 @@ export class BookService {
       console.error(`Error updating views for book with ID "${bookId}":`, error);
       throw new NotFoundException('Failed to update views for book');
     }
-  }  
+  }
 
   async softDelete(bookId: string): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
@@ -201,19 +201,41 @@ export class BookService {
     return { data: books, total };
   }
 
-  async recLetGuest (category: BookCategory, bookId: string): Promise<iBook[]> {
+  async recLetGuest(category: BookCategory, bookId: string): Promise<iBook[]> {
     const books = await this.bookModel.find({
       category: category,
-      _id: { $ne: bookId }, 
+      _id: { $ne: bookId },
       status: { $ne: Status.DELETED },
       deleted_at: null
     })
-    .sort({ view: -1 }) 
-    .limit(5)  
-    .exec();
-  
+      .sort({ view: -1 })
+      .limit(5)
+      .exec();
+
     return books;
   }
-  
-  
+
+  async bulkUpdateCoverImagesForMissingCover(img: string): Promise<any> {
+    const booksWithoutCover = await this.bookModel.find({ img: { $exists: false } });
+
+    if (booksWithoutCover.length === 0) {
+      throw new NotFoundException('No books without cover found');
+    }
+
+    const bulkOperations = booksWithoutCover.map(book => ({
+      updateOne: {
+        filter: { _id: book._id },
+        update: { $set: { img } },
+      }
+    }));
+
+    const result = await this.bookModel.bulkWrite(bulkOperations);
+
+    if (result.modifiedCount === 0) {
+      throw new NotFoundException('No books were updated');
+    }
+
+    return result;
+  }
+
 }

@@ -6,6 +6,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { Status } from 'src/enum/status.enum';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UserRole } from 'src/enum/user-role.enum';
 @Injectable()
 export class UserService {
 
@@ -35,6 +37,11 @@ export class UserService {
     return hashedPassword;
   }
 
+  async generateRandomPassword(): Promise<string> {
+    const password = Math.random().toString(36).slice(-8);
+    return password;
+  }
+
   async register(registerUserDto: RegisterUserDto): Promise<iUser> {
     try {
       await this.checkUserExists(registerUserDto);
@@ -56,6 +63,38 @@ export class UserService {
       throw new InternalServerErrorException(`User creation failed: ${error.message}`);
     }
   }
+
+  async registerEmployee(createUserDto: CreateUserDto): Promise<{ user: iUser; password: string }> {
+    try {
+      await this.checkUserExists(createUserDto);
+
+      const randomPassword = await this.generateRandomPassword();
+
+      const hashedPassword = await this.hashPassword(randomPassword);
+
+      const username = createUserDto.username || `${createUserDto.first_name.toLowerCase()}${createUserDto.last_name.toLowerCase()}`;
+
+
+      const newUser = new this.userModel({
+        ...createUserDto,
+        password: hashedPassword,
+        username: username,
+        role: UserRole.EMPLOYEE,
+        deleted_at: null,
+      });
+
+      const createdUser = await newUser.save();
+
+      return { user: createdUser, password: randomPassword };
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new ConflictException('User with this email or username already exists.');
+      }
+      console.error('User creation failed:', error);
+      throw new InternalServerErrorException(`User creation failed: ${error.message}`);
+    }
+  }
+
 
   async findOneById(id: string): Promise<iUser> {
     const user = await this.userModel.findOne({
@@ -147,10 +186,10 @@ export class UserService {
       { $set: { password: hashedPassword } }
     );
 
-    if (result.matchedCount === 0) { 
+    if (result.matchedCount === 0) {
       throw new NotFoundException('User not found');
     }
-  
+
     if (result.modifiedCount === 0) {
       throw new BadRequestException('Failed to update password');
     }
