@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Put, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Put, Query } from '@nestjs/common';
 import { BookService } from './book.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateBookDto } from './dto/create-book.dto';
@@ -39,15 +39,24 @@ export class BookController {
   @Get('find-one/:id')
   @ApiOperation({ summary: 'Find a book by ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Book found.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid ID format.' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Book not found or has been deleted.' })
   async findOneById(@Param('id') id: string): Promise<{ statusCode: number; message: string; data: iBook }> {
-    const book = await this.bookService.findOneById(id);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Book found',
-      data: book,
-    };
+    try {
+      const book = await this.bookService.findOneById(id);
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Book found',
+        data: book,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Invalid ID format.');
+    }
   }
-
+  
   @Get('find-all')
   @ApiOperation({ summary: 'Find all books' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Books found.' })
@@ -174,10 +183,8 @@ export class BookController {
     let updatedBook: iBook;
 
     if (img) {
-      // อัปเดตหน้าปกแยกต่างหาก
       updatedBook = await this.bookService.updateCoverImage(id, img);
     } else {
-      // อัปเดตข้อมูลอื่นๆ ของหนังสือ
       updatedBook = await this.bookService.updateOne(id, updateBookDto);
     }
 
@@ -221,6 +228,18 @@ export class BookController {
   ): Promise<{ statusCode: number; message: string; data: any }> {
     const result = await this.bookService.bulkUpdateCoverImagesForMissingCover(img);
 
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Books updated successfully',
+      data: result,
+    };
+  }
+
+  @Put('/update-all-short-description')
+  async updateAllShortDescriptions(
+    @Body('short_description') shortDescription: string,
+  ) {
+    const result = await this.bookService.updateAllShortDescriptions(shortDescription);
     return {
       statusCode: HttpStatus.OK,
       message: 'Books updated successfully',

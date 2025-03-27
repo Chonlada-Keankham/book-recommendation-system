@@ -39,7 +39,14 @@ export class Book {
 
   @Prop({ type: Date, default: null })
   deleted_at?: Date;
+  
+  @Prop({
+    required: false,
+    max_length: 500, 
+  })
+  short_description: string;
 }
+
 
 export type BookDocument = Book & Document;
 

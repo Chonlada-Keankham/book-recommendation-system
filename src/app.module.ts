@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { BookModule } from './book/book.module';
 import { CommentModule } from './comment/comment.module';
 import { databaseConfig } from './config/database.config';
+import { PlaylistModule } from './playlist/playlist.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { databaseConfig } from './config/database.config';
     AuthModule,
     BookModule,
     CommentModule,
+    PlaylistModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,6 +1,6 @@
 import { InjectModel } from '@nestjs/mongoose';
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Model, PipelineStage } from 'mongoose';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Model, PipelineStage, Types } from 'mongoose';
 import { iBook } from './interface/book.interface';
 import { CreateBookDto } from './dto/create-book.dto';
 import { Status } from 'src/enum/status.enum';
@@ -62,19 +62,23 @@ export class BookService {
   }
 
   async findOneById(id: string): Promise<iBook> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid ID format.');
+    }
+  
     const book = await this.bookModel.findOne({
       _id: id,
       status: { $ne: Status.DELETED },
       deleted_at: null,
     }).exec();
-
+  
     if (!book) {
       throw new NotFoundException(`Book with ID ${id} not found or has been deleted.`);
     }
-
+  
     return book;
   }
-
+    
   async findAll(page: number = 1, limit: number = 10): Promise<{ books: iBook[], total: number }> {
     const skip = (page - 1) * limit;
     const total = await this.bookModel.countDocuments({
@@ -230,6 +234,19 @@ export class BookService {
     }));
 
     const result = await this.bookModel.bulkWrite(bulkOperations);
+
+    if (result.modifiedCount === 0) {
+      throw new NotFoundException('No books were updated');
+    }
+
+    return result;
+  }
+
+  async updateAllShortDescriptions(shortDescription: string): Promise<any> {
+    const result = await this.bookModel.updateMany(
+      { status: { $ne: Status.DELETED }, deleted_at: null }, 
+      { $set: { short_description: shortDescription } },
+    );
 
     if (result.modifiedCount === 0) {
       throw new NotFoundException('No books were updated');
