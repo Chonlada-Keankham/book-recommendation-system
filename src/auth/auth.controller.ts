@@ -70,55 +70,24 @@ export class AuthController {
     };
   }
 
-  @Post('/forgot-password')
-  async forgotPassword(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
+  @Post('/send-password-reset-link')
+  async sendPasswordResetLink(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
     const response = await this.authService.sendPasswordResetLink(requestPasswordResetDto);
-
     return {
       statusCode: HttpStatus.OK,
       message: response.message,
-      resetLink: response.resetLink,
+      resetLink: response.resetLink, // สำหรับ front-end หรือ debug
+      token: response.token,         // สำหรับ dev/test (ใน production ไม่ควรส่ง token กลับไป)
     };
   }
 
-  @Post('/reset-password')
+  @Post('reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    const { token, newPassword } = resetPasswordDto;
-
-    if (!token) {
-      throw new BadRequestException('Token must be provided');
-    }
-
-    try {
-      const decoded = this.jwtService.verify(token, {
-        secret: this.configService.get<string>('JWT_SECRET'),
-      });
-
-      console.log('Decoded Token:', decoded);
-
-      const user = await this.userService.findOneById(decoded.userId);
-      if (!user) {
-        throw new BadRequestException('User not found');
-      }
-
-      await this.userService.updatePassword(user._id, newPassword);
-
-      return {
-        statusCode: HttpStatus.OK,
-        message: 'Password reset successful',
-      };
-    } catch (error) {
-      if (error instanceof jwt.TokenExpiredError) {
-        console.log('Token expired');
-        throw new BadRequestException('Token has expired');
-      }
-      if (error instanceof jwt.JsonWebTokenError) {
-        console.log('Invalid token');
-        throw new BadRequestException('Invalid token');
-      }
-      console.error('Error during password reset:', error);
-      throw new BadRequestException(error.message || 'An error occurred during password reset');
-    }
+    const response = await this.authService.resetPassword(resetPasswordDto);
+    return {
+      statusCode: HttpStatus.OK,
+      message: response.message,
+    };
   }
 }
 
