@@ -73,23 +73,18 @@ export class AuthService {
   async sendPasswordResetLink(requestPasswordResetDto: RequestPasswordResetDto) {
     const { email } = requestPasswordResetDto;
 
-    // ค้นหา user โดยใช้ email (ควร normalize email ด้วยใน service)
     const user = await this.userService.findOneByEmail(email);
     if (!user) {
       throw new NotFoundException('User with this email not found');
     }
 
-    // สร้าง token โดยใส่ข้อมูลที่จำเป็น (แนะนำให้รวม sub ด้วยเพื่อความปลอดภัย)
-    // ในที่นี้เราส่งเพียง email แต่คุณสามารถเพิ่ม sub: user._id.toString() ได้หากต้องการ
     const resetToken = this.jwtService.sign({ email: user.email, sub: user._id.toString() }, { expiresIn: '1h' });
 
-    // ดึง URL ของ Frontend จาก config
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
     if (!frontendUrl) {
       throw new Error('frontendUrl is not defined in the configuration');
     }
 
-    // สร้าง reset link
     const resetLink = `${frontendUrl}?token=${resetToken}`;
 
     console.log('Frontend URL:', frontendUrl);
@@ -108,13 +103,11 @@ export class AuthService {
     try {
       console.log('Received token:', token);
 
-      // ตรวจสอบ token โดยใช้ secret จาก config
       const decoded = this.jwtService.verify(token, {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
       console.log('Decoded token:', decoded);
 
-      // ค้นหา user โดยใช้ email ใน decoded payload
       const user = await this.userService.findOneByEmail(decoded.email);
       console.log('User found:', user);
 
@@ -123,11 +116,9 @@ export class AuthService {
         throw new NotFoundException('User not found');
       }
 
-      // สร้าง hashed password ใหม่
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       console.log('Hashed password:', hashedPassword);
 
-      // อัปเดตรหัสผ่านในฐานข้อมูล
       await this.userService.updatePassword(user._id, hashedPassword);
       console.log('Password updated for user:', user._id.toString());
 
@@ -136,7 +127,6 @@ export class AuthService {
       };
 
     } catch (error) {
-      // แยกกรณี token หมดอายุหรือ token ไม่ถูกต้อง
       if (error instanceof jwt.TokenExpiredError) {
         console.log('Token expired');
         throw new BadRequestException('Token has expired');
