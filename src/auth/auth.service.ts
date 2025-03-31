@@ -73,13 +73,10 @@ export class AuthService {
       throw new NotFoundException('User with this email not found');
     }
 
-    // สร้าง payload ให้รวม sub (user id) และ email
     const payload = { email: user.email, sub: user._id.toString() };
     const resetToken = this.jwtService.sign(payload, { expiresIn: '1h' });
 
-    // ดึง URL ของ frontend จาก config (เช่น .env)
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
-    // สมมติว่า frontend มีหน้าสำหรับ reset password ที่ /reset-password
     const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     console.log("Frontend URL:", frontendUrl);
@@ -88,24 +85,21 @@ export class AuthService {
     return {
       message: 'Password reset link generated successfully',
       resetLink,
-      token: resetToken, // สำหรับ development; ใน production ควรส่งลิงก์เท่านั้น
+      token: resetToken, 
     };
   }
 
-  // รีเซ็ตรหัสผ่าน (backend)
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const { token, newPassword } = resetPasswordDto;
     try {
       console.log("resetPassword called with token:", token);
       console.log("New password received:", newPassword);
 
-      // ตรวจสอบ token โดยใช้ secret จาก config
       const decoded = this.jwtService.verify(token, {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
       console.log("Decoded token:", decoded);
 
-      // ค้นหา user โดยใช้ email จาก decoded token
       const user = await this.userService.findOneByEmail(decoded.email);
       console.log("User found:", user);
 
@@ -113,11 +107,9 @@ export class AuthService {
         throw new NotFoundException('User not found');
       }
 
-      // Hash new password
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       console.log("Hashed password:", hashedPassword);
 
-      // Update password in database
       await this.userService.updatePassword(user._id, hashedPassword);
       console.log("Password updated for user:", user._id);
 
