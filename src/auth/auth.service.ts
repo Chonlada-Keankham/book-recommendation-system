@@ -1,9 +1,9 @@
-import { 
-  BadRequestException, 
-  Injectable, 
-  InternalServerErrorException, 
-  NotFoundException, 
-  UnauthorizedException 
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from './../user/user.service';
@@ -72,20 +72,22 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User with this email not found');
     }
-
+    // สร้าง payload โดยรวม email และ sub (user id) ให้เป็น string
     const payload = { email: user.email, sub: user._id.toString() };
     const resetToken = this.jwtService.sign(payload, { expiresIn: '1h' });
+    console.log("Generated resetToken:", resetToken);
 
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
-    const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
+    const resetLink = `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
 
     console.log("Frontend URL:", frontendUrl);
     console.log("Reset Link:", resetLink);
 
+    // Return token (สำหรับ dev/test) พร้อมข้อความ
     return {
       message: 'Password reset link generated successfully',
-      resetLink,
-      token: resetToken, 
+      resetToken, // จะใช้เพื่อเซ็ท cookie ใน controller
+      resetLink,  // Optional: ใช้สำหรับแสดงให้ dev ดู
     };
   }
 

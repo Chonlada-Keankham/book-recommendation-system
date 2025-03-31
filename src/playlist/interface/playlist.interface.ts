@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 
-export interface IPlaylist {
+export interface iPlaylist {
   _id?: string;
   user: string | Types.ObjectId;
   categories: string[];

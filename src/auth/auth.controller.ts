@@ -77,7 +77,7 @@ export class AuthController {
       statusCode: HttpStatus.OK,
       message: response.message,
       resetLink: response.resetLink,
-      token: response.token, // สำหรับ dev/test เท่านั้น
+      token: response, // สำหรับ dev/test เท่านั้น
     };
   }
 
