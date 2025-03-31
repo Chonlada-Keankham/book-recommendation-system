@@ -70,20 +70,20 @@ export class AuthController {
     };
   }
 
-  @Post('/send-password-reset-link')
-  async sendPasswordResetLink(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
-    const response = await this.authService.sendPasswordResetLink(requestPasswordResetDto);
+  @Post('send-password-reset-link')
+  async sendPasswordResetLink(@Body() dto: RequestPasswordResetDto) {
+    const response = await this.authService.sendPasswordResetLink(dto);
     return {
       statusCode: HttpStatus.OK,
       message: response.message,
-      resetLink: response.resetLink, 
-      token: response.token,         
+      resetLink: response.resetLink,
+      token: response.token, // สำหรับ dev/test เท่านั้น
     };
   }
 
   @Post('reset-password')
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    const response = await this.authService.resetPassword(resetPasswordDto);
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    const response = await this.authService.resetPassword(dto);
     return {
       statusCode: HttpStatus.OK,
       message: response.message,

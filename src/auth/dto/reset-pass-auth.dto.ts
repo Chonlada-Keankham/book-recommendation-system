@@ -13,6 +13,5 @@ export class ResetPasswordDto {
     @Matches(/(?=.*[A-Z])/, { message: 'Password must contain at least one uppercase letter.' })
     @Matches(/(?=.*[!@#$%^&*])/, { message: 'Password must contain at least one special character.' })
     @Transform(({ value }) => value?.trim())
-    password: string;
     newPassword: string;
 }

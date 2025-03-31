@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { 
+  BadRequestException, 
+  Injectable, 
+  InternalServerErrorException, 
+  NotFoundException, 
+  UnauthorizedException 
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from './../user/user.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
@@ -26,7 +32,6 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-
     const isPasswordMatching = await bcrypt.compare(password, user.password);
     if (!isPasswordMatching) {
       throw new UnauthorizedException('Invalid credentials');
@@ -44,24 +49,15 @@ export class AuthService {
   async refreshAccessToken(refreshTokenDto: RefreshTokenDto): Promise<{ access_token: string }> {
     try {
       const payload = this.jwtService.verify(refreshTokenDto.refresh_token);
-
       const user = await this.userService.findOneById(payload.sub);
       if (!user || user.status === Status.DELETED) {
         throw new UnauthorizedException('User not found or is deleted');
       }
-
       const newAccessToken = this.jwtService.sign(
-        {
-          email: user.email,
-          sub: user._id,
-          role: user.role,
-        },
+        { email: user.email, sub: user._id, role: user.role },
         { expiresIn: '1h' },
       );
-
-      return {
-        access_token: newAccessToken,
-      };
+      return { access_token: newAccessToken };
     } catch (error) {
       if (error instanceof jwt.JsonWebTokenError) {
         throw new UnauthorizedException('Invalid or expired refresh token');
@@ -72,70 +68,68 @@ export class AuthService {
 
   async sendPasswordResetLink(requestPasswordResetDto: RequestPasswordResetDto) {
     const { email } = requestPasswordResetDto;
-
     const user = await this.userService.findOneByEmail(email);
     if (!user) {
       throw new NotFoundException('User with this email not found');
     }
 
-    const resetToken = this.jwtService.sign({ email: user.email, sub: user._id.toString() }, { expiresIn: '1h' });
+    // สร้าง payload ให้รวม sub (user id) และ email
+    const payload = { email: user.email, sub: user._id.toString() };
+    const resetToken = this.jwtService.sign(payload, { expiresIn: '1h' });
 
+    // ดึง URL ของ frontend จาก config (เช่น .env)
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
-    if (!frontendUrl) {
-      throw new Error('frontendUrl is not defined in the configuration');
-    }
+    // สมมติว่า frontend มีหน้าสำหรับ reset password ที่ /reset-password
+    const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
 
-    const resetLink = `${frontendUrl}?token=${resetToken}`;
-
-    console.log('Frontend URL:', frontendUrl);
-    console.log('Reset Link:', resetLink);
+    console.log("Frontend URL:", frontendUrl);
+    console.log("Reset Link:", resetLink);
 
     return {
       message: 'Password reset link generated successfully',
       resetLink,
-      token: resetToken,
+      token: resetToken, // สำหรับ development; ใน production ควรส่งลิงก์เท่านั้น
     };
   }
 
+  // รีเซ็ตรหัสผ่าน (backend)
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const { token, newPassword } = resetPasswordDto;
-
     try {
-      console.log('Received token:', token);
+      console.log("resetPassword called with token:", token);
+      console.log("New password received:", newPassword);
 
+      // ตรวจสอบ token โดยใช้ secret จาก config
       const decoded = this.jwtService.verify(token, {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
-      console.log('Decoded token:', decoded);
+      console.log("Decoded token:", decoded);
 
+      // ค้นหา user โดยใช้ email จาก decoded token
       const user = await this.userService.findOneByEmail(decoded.email);
-      console.log('User found:', user);
+      console.log("User found:", user);
 
       if (!user) {
-        console.log('User not found');
         throw new NotFoundException('User not found');
       }
 
+      // Hash new password
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-      console.log('Hashed password:', hashedPassword);
+      console.log("Hashed password:", hashedPassword);
 
+      // Update password in database
       await this.userService.updatePassword(user._id, hashedPassword);
-      console.log('Password updated for user:', user._id.toString());
+      console.log("Password updated for user:", user._id);
 
-      return {
-        message: 'Password reset successful',
-      };
-
+      return { message: 'Password reset successful' };
     } catch (error) {
+      console.error("Error during resetPassword:", error);
       if (error instanceof jwt.TokenExpiredError) {
-        console.log('Token expired');
         throw new BadRequestException('Token has expired');
       }
       if (error instanceof jwt.JsonWebTokenError) {
-        console.log('Invalid token');
         throw new BadRequestException('Invalid token');
       }
-      console.error('Error during password reset:', error);
       throw new BadRequestException(error.message || 'An error occurred during password reset');
     }
   }
