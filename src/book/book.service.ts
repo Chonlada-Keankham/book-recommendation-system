@@ -255,4 +255,23 @@ export class BookService {
     return result;
   }
 
+  async findRandomBooksByCategory(category: string, limit: number): Promise<iBook[]> {
+    const books = await this.bookModel.aggregate([
+      { $match: { category: category, status: { $ne: 'deleted' } } },
+      { $sample: { size: limit } },
+    ]);
+    return books;
+  }
+
+  async findPopularBooksByAuthor(author: string, limit: number): Promise<iBook[]> {
+    const books = await this.bookModel.find({
+      author,
+      status: { $ne: 'deleted' },
+    })
+      .sort({ view: -1 })
+      .limit(limit)
+      .exec();
+    return books;
+  }
+  
 }

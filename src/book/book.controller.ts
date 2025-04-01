@@ -24,7 +24,7 @@ export class BookController {
     };
   }
 
-  @Post('create-many')
+  @Post('/create-many')
   @ApiOperation({ summary: 'Create multiple books' })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'Books created successfully.' })
   async createMany(@Body() createBookDtos: CreateBookDto[]): Promise<{ statusCode: number; message: string; data: iBook[] }> {
@@ -36,7 +36,7 @@ export class BookController {
     };
   }
 
-  @Get('find-one/:id')
+  @Get('/find-one/:id')
   @ApiOperation({ summary: 'Find a book by ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Book found.' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid ID format.' })
@@ -56,8 +56,8 @@ export class BookController {
       throw new BadRequestException('Invalid ID format.');
     }
   }
-  
-  @Get('find-all')
+
+  @Get('/find-all')
   @ApiOperation({ summary: 'Find all books' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Books found.' })
   async findAll(@Query('page') page = 1, @Query('limit') limit = 10): Promise<{ statusCode: number; message: string; data: iBook[]; total: number }> {
@@ -247,4 +247,33 @@ export class BookController {
     };
   }
 
+  @Get('/random')
+  @ApiOperation({ summary: 'Get random books by category' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Random books fetched successfully.' })
+  async getRandomBooks(
+    @Query('category') category: string,
+    @Query('limit') limit = '3',
+  ): Promise<{ statusCode: number; message: string; data: iBook[] }> {
+    const books = await this.bookService.findRandomBooksByCategory(category, parseInt(limit, 10));
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Random books fetched successfully',
+      data: books,
+    };
+  }
+
+  @Get('/popular')
+  @ApiOperation({ summary: 'Get popular books by author' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Popular books fetched successfully.' })
+  async getPopularBooks(
+    @Query('author') author: string,
+    @Query('limit') limit = '3',
+  ): Promise<{ statusCode: number; message: string; data: iBook[] }> {
+    const books = await this.bookService.findPopularBooksByAuthor(author, parseInt(limit, 10));
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Popular books fetched successfully',
+      data: books,
+    };
+  }
 }
