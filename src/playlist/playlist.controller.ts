@@ -30,7 +30,7 @@ export class PlaylistController {
     };
   }
 
-  @Get('/playlist/:userId')
+  @Get('/find-playlist/:userId')
   async getPlaylist(@Param('userId') userId: string) {
     const playlist = await this.playlistService.getPlaylist(userId);
     return {
