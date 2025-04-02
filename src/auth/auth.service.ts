@@ -1,3 +1,4 @@
+import { LoginEmployeeDto } from './dto/login-employee-auth.dto';
 import {
   BadRequestException,
   Injectable,
@@ -7,7 +8,6 @@ import {
   from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from './../user/user.service';
-import { LoginAuthDto } from './dto/login-auth.dto';
 import { iUser } from 'src/user/interface/user.interface';
 import * as bcrypt from 'bcryptjs';
 import { ConfigService } from '@nestjs/config';
@@ -17,6 +17,7 @@ import { RequestPasswordResetDto } from './dto/request-pass-auth.dto';
 import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
 import { Status } from 'src/enum/status.enum';
 import { UserRole } from 'src/enum/user-role.enum';
+import { LoginMemberDto } from './dto/login-member-auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -27,8 +28,8 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) { }
 
-  async validateUser(loginAuthDto: LoginAuthDto): Promise<iUser> {
-    const { email, password } = loginAuthDto;
+  async validateUser(loginMemberDto: LoginMemberDto): Promise<iUser> {
+    const { email, password } = loginMemberDto;
     const user = await this.userService.findOneByEmail(email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -40,7 +41,9 @@ export class AuthService {
     return user;
   }
 
-  async validateEmployee(employeeId: string, password: string): Promise<iUser> {
+  async validateEmployee(loginEmployeeDto: LoginEmployeeDto): Promise<iUser> {
+    const { employeeId, password } = loginEmployeeDto;
+
     const user = await this.userService.findByEmployeeId(employeeId);
 
     if (!user || user.role !== UserRole.EMPLOYEE) {
@@ -56,11 +59,21 @@ export class AuthService {
     return user;
   }
 
-  async login(user: iUser): Promise<{ access_token: string; refresh_token: string }> {
-    const payload = { email: user.email, sub: user._id, role: user.role };
+  async login(user: iUser): Promise<{
+    access_token: string;
+    refresh_token: string
+  }> {
+    const payload = {
+      email: user.email,
+      sub: user._id,
+      role: user.role
+    };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
     const refreshToken = this.jwtService.sign({ sub: user._id }, { expiresIn: '7d' });
-    return { access_token: accessToken, refresh_token: refreshToken };
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken
+    };
   }
 
   async refreshAccessToken(refreshTokenDto: RefreshTokenDto): Promise<{ access_token: string }> {
@@ -101,8 +114,8 @@ export class AuthService {
 
     return {
       message: 'Password reset link generated successfully',
-      resetToken, 
-      resetLink,  
+      resetToken,
+      resetLink,
     };
   }
 
