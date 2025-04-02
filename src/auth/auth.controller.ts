@@ -11,6 +11,8 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserRole } from 'src/enum/user-role.enum';
 import { LoginMemberDto } from './dto/login-member-auth.dto';
 import { LoginEmployeeDto } from './dto/login-employee-auth.dto';
+import { RolesGuard } from './guard/role.guard';
+import { Roles } from 'src/decorator/roles.decorator';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -22,7 +24,7 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) { }
 
-  @Post('/login')
+  @Post('/auth/login-member')
   @ApiOperation({ summary: 'Member login only' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -30,7 +32,7 @@ export class AuthController {
   })
   async loginMember(@Body() loginMemberDto: LoginMemberDto) {
     try {
-      const user = await this.authService.validateUser(loginMemberDto);
+      const user = await this.authService.validateMember(loginMemberDto);
 
       if (user.role !== UserRole.MEMBER) {
         throw new UnauthorizedException({
@@ -78,7 +80,7 @@ export class AuthController {
       });
     }
   }
-  
+
   @Post('/refresh')
   @ApiOperation({ summary: 'Refresh token' })
   @ApiResponse({
@@ -113,6 +115,13 @@ export class AuthController {
     };
   }
 
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.EMPLOYEE)
+  @Get('/employee-only')
+  getForEmployee() {
+      return "Hello Employee";
+  }
+  
   @Post('/send-password-reset-link')
   @ApiOperation({ summary: 'Send password reset link to email' })
   async sendPasswordResetLink(@Body() dto: RequestPasswordResetDto) {

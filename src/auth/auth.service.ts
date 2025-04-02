@@ -28,7 +28,7 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) { }
 
-  async validateUser(loginMemberDto: LoginMemberDto): Promise<iUser> {
+  async validateMember(loginMemberDto: LoginMemberDto): Promise<iUser> {
     const { email, password } = loginMemberDto;
     const user = await this.userService.findOneByEmail(email);
     if (!user) {

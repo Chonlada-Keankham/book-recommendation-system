@@ -5,18 +5,20 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { RegisterUserDto } from './dto/register-member-user.dto';
 import { CreateEmployeeDto } from './dto/register-employee-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { ConfigService } from '@nestjs/config';
 
 @ApiTags('User')
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService,
+  constructor(
+    private readonly userService: UserService,
     private readonly configService: ConfigService,
   ) { }
 
   @Post('/register-member')
-  @ApiOperation({ summary: 'Register a new user' })
+  @ApiOperation({ summary: 'Register a new member' })
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'User created successfully.'
@@ -31,14 +33,7 @@ export class UserController {
   }
 
   @Post('/register-employee')
-  @ApiOperation({ summary: 'Register a new employee and return email and password' })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Employee created successfully.'
-  })
-
-  @Post('/register-employee')
-  @ApiOperation({ summary: 'Register a new employee and return employeeId & password' })
+  @ApiOperation({ summary: 'Register a new employee' })
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'Employee created successfully.'
@@ -50,8 +45,8 @@ export class UserController {
       message: 'Employee created successfully',
       data: {
         employeeId: user.employeeId,
-        password: password,
-      },
+        password
+      }
     };
   }
 
@@ -59,28 +54,26 @@ export class UserController {
   @ApiOperation({ summary: 'Upload profile image' })
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
-      destination: (req, file, cb) => {
-        cb(null, process.env.PROFILE_PATH || './uploads/profile');
-      },
+      destination: './uploads/profile',
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
-      }
+      },
     }),
     fileFilter: (req, file, cb) => {
-      if (!file.mimetype.match(/\/image\/(jpg|jpeg|png|gif)$/)) {
+      if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
         return cb(new BadRequestException('Only image files are allowed!'), false);
       }
       cb(null, true);
     },
-    limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024 }
+    limits: { fileSize: 5 * 1024 * 1024 },
   }))
   async uploadProfile(@Param('id') userId: string, @UploadedFile() file: Express.Multer.File) {
-    const result = await this.userService.uploadProfile(userId, file.filename);
+    const result = await this.userService.uploadProfileImage(userId, file.filename);
     return {
       statusCode: HttpStatus.OK,
       message: 'Profile image uploaded successfully',
-      data: result,
+      data: result
     };
   }
 
@@ -88,37 +81,30 @@ export class UserController {
   @ApiOperation({ summary: 'Upload background image' })
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
-      destination: (req, file, cb) => {
-        cb(null, process.env.BACKGROUND_PATH || './uploads/background');
-      },
+      destination: './uploads/background',
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
-      }
+      },
     }),
     fileFilter: (req, file, cb) => {
-      if (!file.mimetype.match(/\/image\/(jpg|jpeg|png|gif)$/)) {
+      if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
         return cb(new BadRequestException('Only image files are allowed!'), false);
       }
       cb(null, true);
     },
-    limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024 }
+    limits: { fileSize: 5 * 1024 * 1024 },
   }))
   async uploadBackground(@Param('id') userId: string, @UploadedFile() file: Express.Multer.File) {
-    const result = await this.userService.uploadBackground(userId, file.filename);
+    const result = await this.userService.uploadBackgroundImage(userId, file.filename);
     return {
       statusCode: HttpStatus.OK,
       message: 'Background image uploaded successfully',
-      data: result,
+      data: result
     };
   }
 
   @Get('/find-one/:id')
-  @ApiOperation({ summary: 'Find a user by ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User found.'
-  })
   async findOneById(@Param('id') id: string) {
     const user = await this.userService.findOneById(id);
     return {
@@ -129,11 +115,6 @@ export class UserController {
   }
 
   @Get('/find-email/:email')
-  @ApiOperation({ summary: 'Find a user by email' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User found.'
-  })
   async findOneByEmail(@Param('email') email: string) {
     const user = await this.userService.findOneByEmail(email);
     return {
@@ -144,12 +125,9 @@ export class UserController {
   }
 
   @Get('/find-all')
-  @ApiOperation({ summary: 'Find all users' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Users found.'
-  })
-  async findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
+  async findAll(
+    @Query('page') page = 1,
+    @Query('limit') limit = 10) {
     const result = await this.userService.findAll(page, limit);
     return {
       statusCode: HttpStatus.OK,
@@ -160,12 +138,9 @@ export class UserController {
   }
 
   @Put('/update-one/:id')
-  @ApiOperation({ summary: 'Update a user by ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User updated successfully.'
-  })
-  async updateOne(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  async updateOne(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto) {
     const user = await this.userService.updateOne(id, updateUserDto);
     return {
       statusCode: HttpStatus.OK,
@@ -176,11 +151,6 @@ export class UserController {
 
   @Delete('/delete-one/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a user by ID' })
-  @ApiResponse({
-    status: HttpStatus.NO_CONTENT,
-    description: 'User deleted successfully.'
-  })
   async deleteById(@Param('id') id: string) {
     await this.userService.deleteById(id);
     return {
@@ -191,11 +161,6 @@ export class UserController {
   }
 
   @Delete('/soft-delete/:id')
-  @ApiOperation({ summary: 'Soft delete a user by ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User soft deleted successfully.'
-  })
   async softDelete(@Param('id') id: string) {
     const user = await this.userService.softDelete(id);
     return {
@@ -205,7 +170,3 @@ export class UserController {
     };
   }
 }
-function diskStorage(arg0: { destination: string; filename: (req: any, file: any, cb: any) => void; }): any {
-  throw new Error('Function not implemented.');
-}
-
