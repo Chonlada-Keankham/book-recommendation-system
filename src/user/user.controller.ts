@@ -14,7 +14,6 @@ import { ConfigService } from '@nestjs/config';
 export class UserController {
   constructor(
     private readonly userService: UserService,
-    private readonly configService: ConfigService,
   ) { }
 
   @Post('/register-member')

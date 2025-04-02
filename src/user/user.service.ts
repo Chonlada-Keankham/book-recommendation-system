@@ -16,7 +16,8 @@ export class UserService {
     private readonly userModel: Model<iUser>,
   ) { }
 
-  async checkUserExists(updateUserDto: UpdateUserDto, userId?: string): Promise<void> {
+  async checkUserExists(updateUserDto: UpdateUserDto, 
+    userId?: string): Promise<void> {
     const filter: any = { _id: { $ne: userId } };
 
     if (updateUserDto.email && updateUserDto.email.trim() !== '') {
@@ -173,7 +174,9 @@ export class UserService {
     }
   }
 
-  async findAll(page: number = 1, limit: number = 10): Promise<{ users: iUser[], total: number }> {
+  async findAll(page: number = 1, 
+    limit: number = 10): Promise<{ users: iUser[],
+       total: number }> {
     const skip = (page - 1) * limit;
     const total = await this.userModel.countDocuments({
       status: { $ne: Status.DELETED },
@@ -190,7 +193,8 @@ export class UserService {
     return { users, total };
   }
 
-  async updateOne(userId: string, updateUserDto: UpdateUserDto): Promise<iUser> {
+  async updateOne(userId: string, 
+    updateUserDto: UpdateUserDto): Promise<iUser> {
     const user = await this.userModel.findById(userId);
 
     if (!user) {
@@ -217,7 +221,8 @@ export class UserService {
     return await this.userModel.findById(userId);
 }
 
-  async updatePassword(userId: string, hashedPassword: string): Promise<void> {
+  async updatePassword(userId: string, 
+    hashedPassword: string): Promise<void> {
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -237,14 +242,16 @@ export class UserService {
     }
   }
 
-  async uploadProfileImage(userId: string, filename: string): Promise<iUser> {
+  async uploadProfileImage(userId: string,
+     filename: string): Promise<iUser> {
     const user = await this.userModel.findById(userId);
     if (!user) throw new NotFoundException('User not found');
     user.profileImage = `/uploads/profile/${filename}`;
     return user.save();
 }
 
-async uploadBackgroundImage(userId: string, filename: string): Promise<iUser> {
+async uploadBackgroundImage(userId: string, 
+  filename: string): Promise<iUser> {
     const user = await this.userModel.findById(userId);
     if (!user) throw new NotFoundException('User not found');
     user.backgroundImage = `/uploads/background/${filename}`;
