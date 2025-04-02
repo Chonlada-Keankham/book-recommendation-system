@@ -35,6 +35,7 @@ export class RegisterUserDto {
   @Transform(({ value }) => value?.trim())
   password: string;
 
+  @Transform(({ value }) => value?.trim())
   @IsNotEmpty({ message: 'Username is required.' })
   @IsString()
   @Length(3, 20, { message: 'Username must be between 3 and 20 characters long.' })

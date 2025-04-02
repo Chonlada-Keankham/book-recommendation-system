@@ -9,6 +9,7 @@ import { RefreshTokenDto } from './dto/refresh-token-auth.dto';
 import { RequestPasswordResetDto } from './dto/request-pass-auth.dto';
 import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserRole } from 'src/enum/user-role.enum';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -21,24 +22,54 @@ export class AuthController {
   ) { }
 
   @Post('/login')
-  @ApiOperation({ summary: 'Login' })
+  @ApiOperation({ summary: 'Member login only' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Login successful'
+    description: 'Member login successful'
   })
   async login(@Body() loginAuthDto: LoginAuthDto) {
     try {
       const user = await this.authService.validateUser(loginAuthDto);
+
+      if (user.role !== UserRole.MEMBER) {
+        throw new UnauthorizedException({
+          statusCode: 401,
+          message: 'Only members can login here',
+          error: 'Unauthorized',
+        });
+      }
+
       const tokens = await this.authService.login(user);
       return {
         statusCode: HttpStatus.OK,
-        message: 'Login successful',
+        message: 'Member login successful',
         data: tokens,
       };
     } catch (error) {
       throw new UnauthorizedException({
         statusCode: 401,
-        message: 'Invalid credentials',
+        message: error.message || 'Invalid credentials',
+        error: 'Unauthorized',
+      });
+    }
+  }
+
+  @Post('/login-employee')
+  @ApiOperation({ summary: 'Employee login only' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Employee login successful' })
+  async loginEmployee(@Body() body: { employeeId: string; password: string }) {
+    try {
+      const user = await this.authService.validateEmployee(body.employeeId, body.password);
+      const tokens = await this.authService.login(user);
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Employee login successful',
+        data: tokens,
+      };
+    } catch (error) {
+      throw new UnauthorizedException({
+        statusCode: 401,
+        message: error.message || 'Invalid credentials',
         error: 'Unauthorized',
       });
     }

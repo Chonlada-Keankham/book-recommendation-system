@@ -1,7 +1,7 @@
 import { IsEmail, IsNotEmpty, IsOptional, IsString, Length, Matches } from 'class-validator';
 import { Transform } from 'class-transformer';
 
-export class CreateUserDto {
+export class CreateEmployeeDto {
     @IsNotEmpty({ message: 'First name is required.' })
     @IsString()
     @Matches(/^[a-zA-Zก-๙]+$/, { message: 'First name can only contain letters (Thai or English).' })

@@ -4,10 +4,10 @@ import { iUser } from './interface/user.interface';
 import { Model } from 'mongoose';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
-import { RegisterUserDto } from './dto/register-user.dto';
+import { RegisterUserDto } from './dto/register-member-user.dto';
 import { Status } from 'src/enum/status.enum';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UserRole } from 'src/enum/user-role.enum';
+import { CreateEmployeeDto } from './dto/register-employee-user.dto';
 @Injectable()
 export class UserService {
 
@@ -31,10 +31,22 @@ export class UserService {
     }
   }
 
+
   async hashPassword(password: string): Promise<string> {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     return hashedPassword;
+  }
+
+  async generateEmployeeId(): Promise<string> {
+    const prefix = 'CKN';
+    const random = Math.floor(100000 + Math.random() * 900000); // Ex: 123456
+    const employeeId = `${prefix}${random}`;
+
+    const exists = await this.userModel.findOne({ employeeId });
+    if (exists) return this.generateEmployeeId();
+
+    return employeeId;
   }
 
   async generateRandomPassword(): Promise<string> {
@@ -64,37 +76,42 @@ export class UserService {
     }
   }
 
-  async registerEmployee(createUserDto: CreateUserDto): Promise<{ user: iUser; password: string }> {
+  async registerEmployee(createEmployeeDto: CreateEmployeeDto): Promise<{ user: iUser; password: string }> {
     try {
-      await this.checkUserExists(createUserDto);
+      await this.checkUserExists(createEmployeeDto);
 
       const randomPassword = await this.generateRandomPassword();
-
       const hashedPassword = await this.hashPassword(randomPassword);
 
-      const username = createUserDto.username || `${createUserDto.first_name.toLowerCase()}${createUserDto.last_name.toLowerCase()}`;
-
+      const username = createEmployeeDto.username || `${createEmployeeDto.first_name.toLowerCase()}${createEmployeeDto.last_name.toLowerCase()}`;
+      const employeeId = await this.generateEmployeeId(); // ✅
 
       const newUser = new this.userModel({
-        ...createUserDto,
+        ...createEmployeeDto,
         password: hashedPassword,
         username: username,
         role: UserRole.EMPLOYEE,
+        employeeId: employeeId, // ✅
         deleted_at: null,
       });
 
       const createdUser = await newUser.save();
-
       return { user: createdUser, password: randomPassword };
     } catch (error) {
       if (error.code === 11000) {
         throw new ConflictException('User with this email or username already exists.');
       }
-      console.error('User creation failed:', error);
       throw new InternalServerErrorException(`User creation failed: ${error.message}`);
     }
   }
 
+  async findByEmployeeId(employeeId: string): Promise<iUser | null> {
+    return this.userModel.findOne({
+      employeeId,
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    }).exec();
+  }
 
   async findOneById(id: string): Promise<iUser> {
     const user = await this.userModel.findOne({

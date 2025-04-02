@@ -67,6 +67,8 @@ export class User {
       message: 'Username must be between 3 and 20 characters long.',
     },
   })
+
+  @Transform(({ value }) => value?.trim())
   @IsNotEmpty({ message: 'Username is required.' })
   @IsString()
   @Length(3, 20, { message: 'Username must be between 3 and 20 characters long.' })
@@ -81,6 +83,13 @@ status: Status;
 
 @Prop({ type: Date, default: null })
 deleted_at ?: Date; 
+
+@Prop({
+  required: function() { return this.role === UserRole.EMPLOYEE },
+  unique: true,
+})
+employeeId?: string;
+
 }
 
 export type UserDocument = User & Document;

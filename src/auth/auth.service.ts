@@ -1,10 +1,10 @@
 import {
   BadRequestException,
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException
-} from '@nestjs/common';
+}
+  from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from './../user/user.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
@@ -16,6 +16,7 @@ import * as jwt from 'jsonwebtoken';
 import { RequestPasswordResetDto } from './dto/request-pass-auth.dto';
 import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
 import { Status } from 'src/enum/status.enum';
+import { UserRole } from 'src/enum/user-role.enum';
 
 @Injectable()
 export class AuthService {
@@ -36,6 +37,22 @@ export class AuthService {
     if (!isPasswordMatching) {
       throw new UnauthorizedException('Invalid credentials');
     }
+    return user;
+  }
+
+  async validateEmployee(employeeId: string, password: string): Promise<iUser> {
+    const user = await this.userService.findByEmployeeId(employeeId);
+
+    if (!user || user.role !== UserRole.EMPLOYEE) {
+      throw new UnauthorizedException('Invalid employeeId or password');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid employeeId or password');
+    }
+
     return user;
   }
 
@@ -72,7 +89,6 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User with this email not found');
     }
-    // สร้าง payload โดยรวม email และ sub (user id) ให้เป็น string
     const payload = { email: user.email, sub: user._id.toString() };
     const resetToken = this.jwtService.sign(payload, { expiresIn: '1h' });
     console.log("Generated resetToken:", resetToken);
@@ -83,11 +99,10 @@ export class AuthService {
     console.log("Frontend URL:", frontendUrl);
     console.log("Reset Link:", resetLink);
 
-    // Return token (สำหรับ dev/test) พร้อมข้อความ
     return {
       message: 'Password reset link generated successfully',
-      resetToken, // จะใช้เพื่อเซ็ท cookie ใน controller
-      resetLink,  // Optional: ใช้สำหรับแสดงให้ dev ดู
+      resetToken, 
+      resetLink,  
     };
   }
 

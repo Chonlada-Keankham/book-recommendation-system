@@ -2,8 +2,8 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, 
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { RegisterUserDto } from './dto/register-user.dto';
-import { CreateUserDto } from './dto/create-user.dto';
+import { RegisterUserDto } from './dto/register-member-user.dto';
+import { CreateEmployeeDto } from './dto/register-employee-user.dto';
 
 @ApiTags('User')
 @Controller('user')
@@ -31,8 +31,9 @@ export class UserController {
     status: HttpStatus.CREATED,
     description: 'Employee created successfully.'
   })
-  async registerEmployee(@Body() createUserDto: CreateUserDto) {
-    const { user, password } = await this.userService.registerEmployee(createUserDto);
+
+  async registerEmployee(@Body() createEmployeeDto: CreateEmployeeDto) {
+    const { user, password } = await this.userService.registerEmployee(createEmployeeDto);
     return {
       statusCode: HttpStatus.CREATED,
       message: 'Employee created successfully',

@@ -11,6 +11,7 @@ export interface iUser {
     username: string;
     role: UserRole;
     status: Status;
+    employeeId?: string;
     created_at: Date;
     updated_at: Date; 
     deleted_at?: Date;
