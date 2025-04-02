@@ -1,17 +1,21 @@
 import { InjectModel } from '@nestjs/mongoose';
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { Model, PipelineStage, Types } from 'mongoose';
 import { iBook } from './interface/book.interface';
 import { CreateBookDto } from './dto/create-book.dto';
 import { Status } from 'src/enum/status.enum';
 import { BookCategory } from 'src/enum/book-category.enum';
 import { UpdateBookDto } from './dto/update-book.dto';
+import { PlaylistService } from 'src/playlist/playlist.service';
 
 @Injectable()
 export class BookService {
   constructor(
     @InjectModel('Book')
     private readonly bookModel: Model<iBook>,
+    @Inject(forwardRef(() => PlaylistService))
+    private readonly playlistService: PlaylistService,
+
   ) { }
 
   async createOne(createBookDto: CreateBookDto): Promise<iBook> {
@@ -65,20 +69,20 @@ export class BookService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ID format.');
     }
-  
+
     const book = await this.bookModel.findOne({
       _id: id,
       status: { $ne: Status.DELETED },
       deleted_at: null,
     }).exec();
-  
+
     if (!book) {
       throw new NotFoundException(`Book with ID ${id} not found or has been deleted.`);
     }
-  
+
     return book;
   }
-    
+
   async findAll(page: number = 1, limit: number = 10): Promise<{ books: iBook[], total: number }> {
     const skip = (page - 1) * limit;
     const total = await this.bookModel.countDocuments({
@@ -205,7 +209,7 @@ export class BookService {
     return { data: books, total };
   }
 
-  async recLetGuest(category: BookCategory, bookId: string): Promise<iBook[]> {
+  async recommendBooksForGuest(category: BookCategory, bookId: string): Promise<iBook[]> {
     const books = await this.bookModel.find({
       category: category,
       _id: { $ne: bookId },
@@ -213,12 +217,69 @@ export class BookService {
       deleted_at: null
     })
       .sort({ view: -1 })
-      .limit(5)
       .exec();
-
     return books;
   }
-
+  
+  async recommendBooksForMember(userId: string, currentBookId: string): Promise<iBook[]> {
+    const playlist = await this.playlistService.getPlaylist(userId);
+    if (!playlist) {
+      throw new NotFoundException('Playlist not found for this user.');
+    }
+    const currentBook = await this.bookModel.findById(currentBookId);
+    if (!currentBook) {
+      throw new NotFoundException('Current book not found.');
+    }
+    const group1 = await this.bookModel.find({
+      category: currentBook.category,
+      _id: { $ne: currentBookId },
+      status: { $ne: Status.DELETED },
+      deleted_at: null
+    })
+      .sort({ view: -1, createdAt: -1 })
+      .exec();
+  
+    const group2 = await this.bookModel.find({
+      category: { $in: playlist.categories },
+      _id: { $ne: currentBookId },
+      status: { $ne: Status.DELETED },
+      deleted_at: null
+    })
+      .sort({ createdAt: -1 })
+      .exec();
+  
+    const group3 = await this.bookModel.find({
+      author: { $in: playlist.authors },
+      _id: { $ne: currentBookId },
+      status: { $ne: Status.DELETED },
+      deleted_at: null
+    })
+      .sort({ createdAt: -1 })
+      .exec();
+  
+    const seen = new Set<string>();
+    const filterDuplicates = (books: iBook[]) =>
+      books.filter(book => {
+        const id = book._id.toString();
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+  
+    const filteredGroup1 = filterDuplicates(group1);
+    const filteredGroup2 = filterDuplicates(group2);
+    const filteredGroup3 = filterDuplicates(group3);
+  
+    const maxLength = Math.max(filteredGroup1.length, filteredGroup2.length, filteredGroup3.length);
+    const combined: iBook[] = [];
+    for (let i = 0; i < maxLength; i++) {
+      if (i < filteredGroup1.length) combined.push(filteredGroup1[i]);
+      if (i < filteredGroup2.length) combined.push(filteredGroup2[i]);
+      if (i < filteredGroup3.length) combined.push(filteredGroup3[i]);
+    }
+    return combined;
+  }
+  
   async bulkUpdateCoverImagesForMissingCover(img: string): Promise<any> {
     const booksWithoutCover = await this.bookModel.find({ img: { $exists: false } });
 
@@ -244,7 +305,7 @@ export class BookService {
 
   async updateAllShortDescriptions(shortDescription: string): Promise<any> {
     const result = await this.bookModel.updateMany(
-      { status: { $ne: Status.DELETED }, deleted_at: null }, 
+      { status: { $ne: Status.DELETED }, deleted_at: null },
       { $set: { short_description: shortDescription } },
     );
 
@@ -273,5 +334,5 @@ export class BookService {
       .exec();
     return books;
   }
-  
+
 }

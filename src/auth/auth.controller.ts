@@ -1,16 +1,14 @@
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
 import { ConfigService } from '@nestjs/config';
-import { BadRequestException, Body, Controller, Get, HttpStatus, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { RefreshTokenDto } from './dto/refresh-token-auth.dto';
 import { RequestPasswordResetDto } from './dto/request-pass-auth.dto';
 import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
-import { ApiTags } from '@nestjs/swagger';
-import * as jwt from 'jsonwebtoken';
-
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -20,10 +18,14 @@ export class AuthController {
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-
   ) { }
 
   @Post('/login')
+  @ApiOperation({ summary: 'Login' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Login successful'
+  })
   async login(@Body() loginAuthDto: LoginAuthDto) {
     try {
       const user = await this.authService.validateUser(loginAuthDto);
@@ -43,6 +45,11 @@ export class AuthController {
   }
 
   @Post('/refresh')
+  @ApiOperation({ summary: 'Refresh token' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Access token refreshed successfully'
+  })
   async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
     try {
       const tokens = await this.authService.refreshAccessToken(refreshTokenDto);
@@ -61,8 +68,9 @@ export class AuthController {
   }
 
   @Get('/profile')
+  @ApiOperation({ summary: 'Get user profile (JWT Required)' })
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Req() request): Promise<any> {
+  async getProfile(@Req() request) {
     return {
       statusCode: HttpStatus.OK,
       message: 'User profile fetched successfully',
@@ -70,18 +78,20 @@ export class AuthController {
     };
   }
 
-  @Post('send-password-reset-link')
+  @Post('/send-password-reset-link')
+  @ApiOperation({ summary: 'Send password reset link to email' })
   async sendPasswordResetLink(@Body() dto: RequestPasswordResetDto) {
     const response = await this.authService.sendPasswordResetLink(dto);
     return {
       statusCode: HttpStatus.OK,
       message: response.message,
       resetLink: response.resetLink,
-      token: response, // สำหรับ dev/test เท่านั้น
+      token: response,
     };
   }
 
-  @Post('reset-password')
+  @Post('/reset-password')
+  @ApiOperation({ summary: 'Reset password' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
     const response = await this.authService.resetPassword(dto);
     return {
@@ -90,5 +100,3 @@ export class AuthController {
     };
   }
 }
-
-

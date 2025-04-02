@@ -1,3 +1,4 @@
+import { BookCategory } from 'src/enum/book-category.enum';
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Put, Query } from '@nestjs/common';
 import { BookService } from './book.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -14,65 +15,59 @@ export class BookController {
 
   @Post('/create-one')
   @ApiOperation({ summary: 'Create a new book' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Book created successfully.' })
-  async createOne(@Body() createBookDto: CreateBookDto): Promise<{ statusCode: number; message: string; data: iBook }> {
-    const createdBook = await this.bookService.createOne(createBookDto);
+  @ApiResponse({
+    status: 201,
+    description: 'Book created successfully.'
+  })
+  async createOne(@Body() createBookDto: CreateBookDto) {
+    const book = await this.bookService.createOne(createBookDto);
     return {
-      statusCode: HttpStatus.CREATED,
+      statusCode: 201,
       message: 'Book created successfully',
-      data: createdBook,
+      data: book,
     };
   }
 
   @Post('/create-many')
   @ApiOperation({ summary: 'Create multiple books' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Books created successfully.' })
-  async createMany(@Body() createBookDtos: CreateBookDto[]): Promise<{ statusCode: number; message: string; data: iBook[] }> {
-    const createdBooks = await this.bookService.createMany(createBookDtos);
+  @ApiResponse({
+    status: 201,
+    description: 'Books created successfully.'
+  })
+  async createMany(@Body() createBookDtos: CreateBookDto[]) {
+    const books = await this.bookService.createMany(createBookDtos);
     return {
-      statusCode: HttpStatus.CREATED,
+      statusCode: 201,
       message: 'Books created successfully',
-      data: createdBooks,
+      data: books,
     };
   }
 
   @Get('/find-one/:id')
   @ApiOperation({ summary: 'Find a book by ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Book found.' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid ID format.' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Book not found or has been deleted.' })
-  async findOneById(@Param('id') id: string): Promise<{ statusCode: number; message: string; data: iBook }> {
-    try {
-      const book = await this.bookService.findOneById(id);
-      return {
-        statusCode: HttpStatus.OK,
-        message: 'Book found',
-        data: book,
-      };
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new BadRequestException('Invalid ID format.');
-    }
+  async findOneById(@Param('id') id: string) {
+    const book = await this.bookService.findOneById(id);
+    return {
+      statusCode: 200,
+      message: 'Book found',
+      data: book,
+    };
   }
 
   @Get('/find-all')
   @ApiOperation({ summary: 'Find all books' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Books found.' })
-  async findAll(@Query('page') page = 1, @Query('limit') limit = 10): Promise<{ statusCode: number; message: string; data: iBook[]; total: number }> {
+  async findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
     const result = await this.bookService.findAll(page, limit);
     return {
-      statusCode: HttpStatus.OK,
+      statusCode: 200,
       message: 'Books found',
       data: result.books,
       total: result.total,
     };
   }
 
-  @Get('/search')
-  @ApiOperation({ summary: 'Find all books with filters' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Books found.' })
+  @Get('/depth-search')
+  @ApiOperation({ summary: 'Search books with filters' })
   async depthSearch(
     @Query('page') page = '1',
     @Query('limit') limit = '10',
@@ -80,23 +75,17 @@ export class BookController {
     @Query('author') author?: string,
     @Query('minViews') minViews?: string,
     @Query('maxViews') maxViews?: string,
-  ): Promise<{ statusCode: number; message: string; data: iBook[]; total: number }> {
-    const pageNumber = parseInt(page, 10) || 1;
-    const limitNumber = parseInt(limit, 10) || 10;
-    const minViewsNumber = minViews !== undefined ? parseInt(minViews, 10) : undefined;
-    const maxViewsNumber = maxViews !== undefined ? parseInt(maxViews, 10) : undefined;
-
+  ) {
     const result = await this.bookService.depthSearch(
       category,
       author,
-      minViewsNumber,
-      maxViewsNumber,
-      pageNumber,
-      limitNumber
+      minViews ? parseInt(minViews) : undefined,
+      maxViews ? parseInt(maxViews) : undefined,
+      parseInt(page),
+      parseInt(limit)
     );
-
     return {
-      statusCode: HttpStatus.OK,
+      statusCode: 200,
       message: 'Books found',
       data: result.data,
       total: result.total,
@@ -104,56 +93,65 @@ export class BookController {
   }
 
   @Get('/updateView/:id')
-  @ApiOperation({ summary: 'Get a book and update its views' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Book retrieved and views updated' })
-  async getBook(@Param('id') id: string): Promise<{ statusCode: number; message: string; data: iBook }> {
-    try {
-      const updatedBook = await this.bookService.updateView(id);
-      return {
-        statusCode: HttpStatus.OK,
-        message: 'Book retrieved and views updated',
-        data: updatedBook,
-      };
-    } catch (error) {
-      return {
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message,
-        data: null,
-      };
-    }
+  @ApiOperation({ summary: 'Increase view count of a book' })
+  async updateView(@Param('id') id: string) {
+    const updatedBook = await this.bookService.updateView(id);
+    return {
+      statusCode: 200,
+      message: 'View updated successfully',
+      data: updatedBook,
+    };
   }
 
-  @Get('/recBooksByCate/:id')
-  @ApiOperation({ summary: 'Automatically recommend books by category' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Recommended books fetched successfully.' })
-  async recommendBooks(
-    @Param('id') id: string
-  ): Promise<{ statusCode: number; message: string; data: iBook[] }> {
-    const book = await this.bookService.findOneById(id);
-
-    if (!book) {
-      throw new NotFoundException('Book not found');
+  @Get('/recommend/guest')
+  @ApiOperation({ summary: 'Recommend books for guest' })
+  async recommendForGuest(
+    @Query('category') category: string,
+    @Query('exclude') bookId: string,
+  ) {
+    if (!Object.values(BookCategory).includes(category as BookCategory)) {
+      throw new BadRequestException('Invalid category');
     }
 
-    const recommendedBooks = await this.bookService.recLetGuest(book.category, id);
-
+    const books = await this.bookService.recommendBooksForGuest(category as BookCategory, bookId);
     return {
-      statusCode: HttpStatus.OK,
-      message: 'Recommended books fetched successfully',
-      data: recommendedBooks,
+      statusCode: 200,
+      message: 'Recommended books for guest',
+      data: books,
+    };
+  }
+
+  @Get('/recommend/member')
+  @ApiOperation({ summary: 'Recommend books for member' })
+  async recommendForMember(@Query('userId') userId: string, @Query('bookId') bookId: string) {
+    const books = await this.bookService.recommendBooksForMember(userId, bookId);
+    return {
+      statusCode: 200,
+      message: 'Recommended books for member',
+      data: books,
     };
   }
 
   @Get('/view-and-recommend/:id')
   @ApiOperation({ summary: 'Get a book, update its views, and recommend books in the same category' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Book retrieved, views updated, and recommendations sent' })
-  async viewAndRecommendBook(@Param('id') id: string): Promise<{ statusCode: number; message: string; data: { updatedBook: iBook; recommendedBooks: iBook[] } }> {
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Book retrieved, views updated, and recommendations sent'
+  })
+  async viewAndRecommendBook(@Param('id') id: string): Promise<{
+    statusCode: number;
+    message: string;
+    data: {
+      updatedBook: iBook;
+      recommendedBooks: iBook[]
+    }
+  }> {
     try {
       const updatedBook = await this.bookService.updateView(id);
 
       const category = updatedBook.category;
 
-      const recommendedBooks = await this.bookService.recLetGuest(category, id);
+      const recommendedBooks = await this.bookService.recommendBooksForGuest(category, id);
 
       return {
         statusCode: HttpStatus.OK,
@@ -174,12 +172,19 @@ export class BookController {
 
   @Put('update-one/:id')
   @ApiOperation({ summary: 'Update a book by ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Book updated successfully.' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Book updated successfully.'
+  })
   async updateOne(
     @Param('id') id: string,
     @Body() updateBookDto: UpdateBookDto,
     @Body('img') img?: string,
-  ): Promise<{ statusCode: number; message: string; data: iBook }> {
+  ): Promise<{
+    statusCode: number;
+    message: string;
+    data: iBook
+  }> {
     let updatedBook: iBook;
 
     if (img) {
@@ -195,85 +200,91 @@ export class BookController {
     };
   }
 
-  @Delete('delete-one/:id')
+  @Delete('/delete-one/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a book by ID' })
-  @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Book deleted successfully.' })
-  async deleteById(@Param('id') id: string): Promise<{ statusCode: number; message: string; data: null }> {
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'Book deleted successfully.'
+  })
+  async deleteById(@Param('id') id: string) {
     await this.bookService.deleteById(id);
     return {
       statusCode: HttpStatus.NO_CONTENT,
       message: 'Book deleted successfully',
-      data: null,
+      data: null
     };
   }
 
-  @Delete('soft-delete/:id')
+  @Delete('/soft-delete/:id')
   @ApiOperation({ summary: 'Soft delete a book by ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Book soft deleted successfully.' })
-  async softDelete(@Param('id') id: string): Promise<{ statusCode: number; message: string; data: iBook }> {
-    const softDeletedBook = await this.bookService.softDelete(id);
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Book soft deleted successfully.'
+  })
+  async softDelete(@Param('id') id: string) {
+    const book = await this.bookService.softDelete(id);
     return {
       statusCode: HttpStatus.OK,
       message: 'Book soft deleted successfully',
-      data: softDeletedBook,
+      data: book
     };
   }
 
-  @Put('update-cover-for-missing')
-  @ApiOperation({ summary: 'Update cover image for books without cover' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Books updated successfully.' })
-  async bulkUpdateCoverForMissing(
-    @Body('img') img: string,
-  ): Promise<{ statusCode: number; message: string; data: any }> {
+  @Put('/update-cover-for-missing')
+  @ApiOperation({ summary: 'Update cover for books without image' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Covers updated successfully.'
+  })
+  async bulkUpdateCoverForMissing(@Body('img') img: string) {
     const result = await this.bookService.bulkUpdateCoverImagesForMissingCover(img);
-
     return {
       statusCode: HttpStatus.OK,
-      message: 'Books updated successfully',
-      data: result,
+      message: 'Covers updated successfully',
+      data: result
     };
   }
 
   @Put('/update-all-short-description')
-  async updateAllShortDescriptions(
-    @Body('short_description') shortDescription: string,
-  ) {
+  @ApiOperation({ summary: 'Bulk update short description' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Descriptions updated successfully.'
+  })
+  async updateAllShortDescriptions(@Body('short_description') shortDescription: string) {
     const result = await this.bookService.updateAllShortDescriptions(shortDescription);
     return {
       statusCode: HttpStatus.OK,
-      message: 'Books updated successfully',
-      data: result,
+      message: 'Descriptions updated successfully',
+      data: result
     };
   }
 
   @Get('/random')
   @ApiOperation({ summary: 'Get random books by category' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Random books fetched successfully.' })
   async getRandomBooks(
     @Query('category') category: string,
-    @Query('limit') limit = '3',
-  ): Promise<{ statusCode: number; message: string; data: iBook[] }> {
-    const books = await this.bookService.findRandomBooksByCategory(category, parseInt(limit, 10));
+    @Query('limit') limit = '3') {
+    const books = await this.bookService.findRandomBooksByCategory(category, parseInt(limit));
     return {
       statusCode: HttpStatus.OK,
       message: 'Random books fetched successfully',
-      data: books,
+      data: books
     };
   }
 
   @Get('/popular')
   @ApiOperation({ summary: 'Get popular books by author' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Popular books fetched successfully.' })
   async getPopularBooks(
     @Query('author') author: string,
-    @Query('limit') limit = '3',
-  ): Promise<{ statusCode: number; message: string; data: iBook[] }> {
-    const books = await this.bookService.findPopularBooksByAuthor(author, parseInt(limit, 10));
+    @Query('limit') limit = '3') {
+    const books = await this.bookService.findPopularBooksByAuthor(author, parseInt(limit));
     return {
       statusCode: HttpStatus.OK,
       message: 'Popular books fetched successfully',
-      data: books,
+      data: books
     };
   }
 }
+
