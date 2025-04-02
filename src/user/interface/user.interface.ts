@@ -12,7 +12,9 @@ export interface iUser {
     role: UserRole;
     status: Status;
     employeeId?: string;
+    profileImage?: string;
+    backgroundImage?: string;
     created_at: Date;
-    updated_at: Date; 
+    updated_at: Date;
     deleted_at?: Date;
 }

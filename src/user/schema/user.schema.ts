@@ -90,6 +90,13 @@ deleted_at ?: Date;
 })
 employeeId?: string;
 
+@Prop({ default: null })
+profileImage?: string;
+
+@Prop({ default: null })
+backgroundImage?: string;
+
+
 }
 
 export type UserDocument = User & Document;

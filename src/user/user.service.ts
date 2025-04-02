@@ -17,19 +17,24 @@ export class UserService {
   ) { }
 
   async checkUserExists(updateUserDto: UpdateUserDto, userId?: string): Promise<void> {
-    const filter = { _id: { $ne: userId } };
-    if (updateUserDto.email) {
-      filter['email'] = updateUserDto.email;
-    }
-    if (updateUserDto.username) {
-      filter['username'] = updateUserDto.username;
+    const filter: any = { _id: { $ne: userId } };
+
+    if (updateUserDto.email && updateUserDto.email.trim() !== '') {
+        filter['email'] = updateUserDto.email.trim();
     }
 
-    const user = await this.userModel.findOne(filter);
-    if (user) {
-      throw new ConflictException('User with this email or username already exists.');
+    if (updateUserDto.username && updateUserDto.username.trim() !== '') {
+        filter['username'] = updateUserDto.username.trim();
     }
-  }
+
+    if (Object.keys(filter).length <= 1) return;
+
+    const user = await this.userModel.findOne(filter);
+
+    if (user) {
+        throw new ConflictException('User with this email or username already exists.');
+    }
+}
 
 
   async hashPassword(password: string): Promise<string> {
@@ -40,7 +45,7 @@ export class UserService {
 
   async generateEmployeeId(): Promise<string> {
     const prefix = 'CKN';
-    const random = Math.floor(100000 + Math.random() * 900000); // Ex: 123456
+    const random = Math.floor(100000 + Math.random() * 900000); 
     const employeeId = `${prefix}${random}`;
 
     const exists = await this.userModel.findOne({ employeeId });
@@ -49,12 +54,32 @@ export class UserService {
     return employeeId;
   }
 
-  async generateRandomPassword(): Promise<string> {
-    const password = Math.random().toString(36).slice(-8);
-    return password;
-  }
+  async generateRandomPassword(length: number = 8): Promise<string> {
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const special = '!@#$%^&*';
 
-  async register(registerUserDto: RegisterUserDto): Promise<iUser> {
+    const allChars = uppercase + lowercase + numbers + special;
+
+    if (length < 4) {
+        throw new Error('Password length must be at least 4 characters to include all character types.');
+    }
+
+    let password = '';
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += special[Math.floor(Math.random() * special.length)];
+
+    for (let i = 4; i < length; i++) {
+        password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+
+    return password.split('').sort(() => 0.5 - Math.random()).join('');
+}
+
+  async registerMember(registerUserDto: RegisterUserDto): Promise<iUser> {
     try {
       await this.checkUserExists(registerUserDto);
 
@@ -91,7 +116,7 @@ export class UserService {
         password: hashedPassword,
         username: username,
         role: UserRole.EMPLOYEE,
-        employeeId: employeeId, // ✅
+        employeeId: employeeId, 
         deleted_at: null,
       });
 
@@ -172,7 +197,7 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
-    await this.checkUserExists(updateUserDto, userId);
+    await this.checkUserExists(updateUserDto, userId); 
 
     const updatedUser = await this.userModel.updateOne(
       { _id: userId },
@@ -190,7 +215,7 @@ export class UserService {
     }
 
     return await this.userModel.findById(userId);
-  }
+}
 
   async updatePassword(userId: string, hashedPassword: string): Promise<void> {
     const user = await this.userModel.findById(userId);
@@ -211,6 +236,20 @@ export class UserService {
       throw new BadRequestException('Failed to update password');
     }
   }
+
+  async uploadProfileImage(userId: string, filename: string): Promise<iUser> {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+    user.profileImage = `/uploads/profile/${filename}`;
+    return user.save();
+}
+
+async uploadBackgroundImage(userId: string, filename: string): Promise<iUser> {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+    user.backgroundImage = `/uploads/background/${filename}`;
+    return user.save();
+}
 
   async softDelete(userId: string): Promise<iUser> {
     const user = await this.userModel.findById(userId);
