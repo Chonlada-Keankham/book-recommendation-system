@@ -9,6 +9,7 @@ import { BookModule } from './book/book.module';
 import { CommentModule } from './comment/comment.module';
 import { databaseConfig } from './config/database.config';
 import { PlaylistModule } from './playlist/playlist.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PlaylistModule } from './playlist/playlist.module';
       envFilePath: '.env',
       isGlobal: true, 
     }),
+    ScheduleModule.forRoot(),
     MongooseModule.forRoot(databaseConfig.uri),
     UserModule,
     AuthModule,
