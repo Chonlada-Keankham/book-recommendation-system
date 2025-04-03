@@ -24,7 +24,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);  
 
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads/' });
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
+
   await app.listen(5000, '0.0.0.0');
 }
 
