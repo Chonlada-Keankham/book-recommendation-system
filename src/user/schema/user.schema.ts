@@ -28,8 +28,12 @@ export class User {
     },
   })
   last_name: string;
-  @Prop({ required: true, validate: /^\d{10}$/ })
-  phone: string;
+
+@Prop({
+  required: function() { return this.role !== UserRole.EMPLOYEE }, 
+  validate: /^\d{10}$/,
+})
+phone?: string;
 
   @Prop({
     required: true,
