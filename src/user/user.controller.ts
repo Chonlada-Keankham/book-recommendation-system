@@ -6,9 +6,9 @@ import { RegisterUserDto } from './dto/register-member-user.dto';
 import { CreateEmployeeDto } from './dto/register-employee-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateProfileDto } from './dto/update-profile-user.dto';
-import { UserInterestDto } from './dto/interest-user.dto';
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { diskStorage } from 'multer';
+import { UserInterestDto } from './dto/interest-user.dto';
 
 @ApiTags('User')
 @Controller('user')
@@ -86,6 +86,28 @@ export class UserController {
     };
   }
 
+  @Put('/update-interests/:id')
+  @ApiOperation({ summary: 'Update user interests and generate playlist' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Interests updated and playlist generated successfully.'
+  })
+  async updateInterests(
+    @Param('id') userId: string,
+    @Body() interestDto: UserInterestDto
+  ) {
+    const playlist = await this.userService.updateInterests(
+      userId,
+      interestDto.categories,
+      interestDto.authors
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Interests updated and playlist generated successfully',
+      data: playlist,
+    };
+  }
+  
   @Patch('/update-profile/:id')
   async updateProfile(
     @Param('id') userId: string,
@@ -102,7 +124,7 @@ export class UserController {
   @Post('/upload/profile/:id')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
-      destination: './uploads/profile', 
+      destination: './uploads/profile',
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         const ext = extname(file.originalname);
@@ -115,7 +137,7 @@ export class UserController {
       }
       cb(null, true);
     },
-    limits: { fileSize: 5 * 1024 * 1024 } 
+    limits: { fileSize: 5 * 1024 * 1024 }
   }))
   async uploadProfile(
     @Param('id') userId: string,
@@ -136,7 +158,7 @@ export class UserController {
   @Post('/upload/background/:id')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
-      destination: './uploads/background', 
+      destination: './uploads/background',
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         const ext = extname(file.originalname);
@@ -149,7 +171,7 @@ export class UserController {
       }
       cb(null, true);
     },
-    limits: { fileSize: 5 * 1024 * 1024 }, 
+    limits: { fileSize: 5 * 1024 * 1024 },
   }))
   async uploadBackground(
     @Param('id') userId: string,
@@ -158,7 +180,7 @@ export class UserController {
     if (!file || !file.filename) {
       throw new BadRequestException('File is missing or invalid.');
     }
-  
+
     const result = await this.userService.uploadBackgroundImage(userId, file.filename);
     return {
       statusCode: 200,
