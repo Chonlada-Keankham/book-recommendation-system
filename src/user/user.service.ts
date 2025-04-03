@@ -1,42 +1,57 @@
+import { PlaylistService } from 'src/playlist/playlist.service';
 import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { iUser } from './interface/user.interface';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
 import { RegisterUserDto } from './dto/register-member-user.dto';
 import { Status } from 'src/enum/status.enum';
 import { UserRole } from 'src/enum/user-role.enum';
 import { CreateEmployeeDto } from './dto/register-employee-user.dto';
+import { iPlaylist } from 'src/playlist/interface/playlist.interface';
+import { UserInterestDto } from './dto/interest-user.dto';
 @Injectable()
 export class UserService {
 
   constructor(
     @InjectModel('User')
     private readonly userModel: Model<iUser>,
+    private readonly playlistService: PlaylistService,
+
   ) { }
 
-  async checkUserExists(updateUserDto: UpdateUserDto, 
+  async checkUserExists(updateUserDto: UpdateUserDto | RegisterUserDto | CreateEmployeeDto,
     userId?: string): Promise<void> {
-    const filter: any = { _id: { $ne: userId } };
+    const filter: any[] = [];
 
-    if (updateUserDto.email && updateUserDto.email.trim() !== '') {
-        filter['email'] = updateUserDto.email.trim();
+    if (updateUserDto.email) {
+      filter.push({ email: updateUserDto.email });
     }
 
-    if (updateUserDto.username && updateUserDto.username.trim() !== '') {
-        filter['username'] = updateUserDto.username.trim();
+    if (updateUserDto.username) {
+      filter.push({ username: updateUserDto.username });
     }
 
-    if (Object.keys(filter).length <= 1) return;
+    if (updateUserDto.phone) {
+      filter.push({ phone: updateUserDto.phone });
+    }
 
-    const user = await this.userModel.findOne(filter);
+    if (filter.length === 0) return;
 
+    const condition: any = {
+      $or: filter
+    };
+
+    if (userId) {
+      condition._id = { $ne: userId };
+    }
+
+    const user = await this.userModel.findOne(condition);
     if (user) {
-        throw new ConflictException('User with this email or username already exists.');
+      throw new ConflictException('Email, username, or phone number already exists.');
     }
-}
-
+  }
 
   async hashPassword(password: string): Promise<string> {
     const saltRounds = 10;
@@ -46,7 +61,7 @@ export class UserService {
 
   async generateEmployeeId(): Promise<string> {
     const prefix = 'CKN';
-    const random = Math.floor(100000 + Math.random() * 900000); 
+    const random = Math.floor(100000 + Math.random() * 900000);
     const employeeId = `${prefix}${random}`;
 
     const exists = await this.userModel.findOne({ employeeId });
@@ -64,7 +79,7 @@ export class UserService {
     const allChars = uppercase + lowercase + numbers + special;
 
     if (length < 4) {
-        throw new Error('Password length must be at least 4 characters to include all character types.');
+      throw new Error('Password length must be at least 4 characters to include all character types.');
     }
 
     let password = '';
@@ -74,11 +89,11 @@ export class UserService {
     password += special[Math.floor(Math.random() * special.length)];
 
     for (let i = 4; i < length; i++) {
-        password += allChars[Math.floor(Math.random() * allChars.length)];
+      password += allChars[Math.floor(Math.random() * allChars.length)];
     }
 
     return password.split('').sort(() => 0.5 - Math.random()).join('');
-}
+  }
 
   async registerMember(registerUserDto: RegisterUserDto): Promise<iUser> {
     try {
@@ -110,14 +125,14 @@ export class UserService {
       const hashedPassword = await this.hashPassword(randomPassword);
 
       const username = createEmployeeDto.username || `${createEmployeeDto.first_name.toLowerCase()}${createEmployeeDto.last_name.toLowerCase()}`;
-      const employeeId = await this.generateEmployeeId(); // ✅
+      const employeeId = await this.generateEmployeeId();
 
       const newUser = new this.userModel({
         ...createEmployeeDto,
         password: hashedPassword,
         username: username,
         role: UserRole.EMPLOYEE,
-        employeeId: employeeId, 
+        employeeId: employeeId,
         deleted_at: null,
       });
 
@@ -131,7 +146,7 @@ export class UserService {
     }
   }
 
-  async findByEmployeeId(employeeId: string): Promise<iUser | null> {
+  async findByEmployeeId(employeeId: string): Promise<iUser> {
     return this.userModel.findOne({
       employeeId,
       status: { $ne: Status.DELETED },
@@ -174,9 +189,11 @@ export class UserService {
     }
   }
 
-  async findAll(page: number = 1, 
-    limit: number = 10): Promise<{ users: iUser[],
-       total: number }> {
+  async findAll(page: number = 1,
+    limit: number = 10): Promise<{
+      users: iUser[],
+      total: number
+    }> {
     const skip = (page - 1) * limit;
     const total = await this.userModel.countDocuments({
       status: { $ne: Status.DELETED },
@@ -193,7 +210,7 @@ export class UserService {
     return { users, total };
   }
 
-  async updateOne(userId: string, 
+  async updateOne(userId: string,
     updateUserDto: UpdateUserDto): Promise<iUser> {
     const user = await this.userModel.findById(userId);
 
@@ -201,7 +218,7 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
-    await this.checkUserExists(updateUserDto, userId); 
+    await this.checkUserExists(updateUserDto, userId);
 
     const updatedUser = await this.userModel.updateOne(
       { _id: userId },
@@ -219,9 +236,9 @@ export class UserService {
     }
 
     return await this.userModel.findById(userId);
-}
+  }
 
-  async updatePassword(userId: string, 
+  async updatePassword(userId: string,
     hashedPassword: string): Promise<void> {
     const user = await this.userModel.findById(userId);
     if (!user) {
@@ -242,21 +259,74 @@ export class UserService {
     }
   }
 
-  async uploadProfileImage(userId: string,
-     filename: string): Promise<iUser> {
+  async uploadProfileImage(userId: string, filename: string): Promise<iUser> {
     const user = await this.userModel.findById(userId);
     if (!user) throw new NotFoundException('User not found');
+
+    if (user.profileImage) { }
+
     user.profileImage = `/uploads/profile/${filename}`;
     return user.save();
-}
+  }
 
-async uploadBackgroundImage(userId: string, 
-  filename: string): Promise<iUser> {
+  async uploadBackgroundImage(userId: string, filename: string): Promise<iUser> {
     const user = await this.userModel.findById(userId);
     if (!user) throw new NotFoundException('User not found');
+
+    if (user.backgroundImage) {
+    }
+
     user.backgroundImage = `/uploads/background/${filename}`;
     return user.save();
-}
+  }
+
+  async updateProfile(userId: string, updateUserDto: Partial<UpdateUserDto>): Promise<iUser> {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
+      throw new BadRequestException('Email cannot be changed');
+    }
+
+    await this.checkUserExists(updateUserDto, userId);
+
+    user.first_name = updateUserDto.first_name || user.first_name;
+    user.last_name = updateUserDto.last_name || user.last_name;
+    user.phone = updateUserDto.phone || user.phone;
+    user.username = updateUserDto.username || user.username;
+    user.updated_at = new Date();
+
+    return user.save();
+  }
+
+  async updateInterests(
+    userId: string,
+    categories: string[],
+    authors: string[]
+  ): Promise<iPlaylist> {
+
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    let playlist = await this.playlistService.getPlaylist(userId).catch(() => null);
+
+    if (!playlist) {
+      playlist = await this.playlistService.createPlaylist({
+        user: new Types.ObjectId(user._id), 
+        categories: categories,
+        authors: authors
+      });
+    } else {
+      playlist.categories = categories;
+      playlist.authors = authors;
+      playlist.recommendedBooks = await this.playlistService.generateRecommendations(categories, authors);
+      await playlist.save();
+    }
+
+    return playlist;
+  }
 
   async softDelete(userId: string): Promise<iUser> {
     const user = await this.userModel.findById(userId);
