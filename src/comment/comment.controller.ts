@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpException, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -9,6 +9,7 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 export class CommentController {
   constructor(private readonly commentService: CommentService) { }
 
+  // ----------------Create----------
   @Post('/create-one')
   @ApiOperation({ summary: 'Create a new comment' })
   @ApiResponse({
@@ -24,6 +25,7 @@ export class CommentController {
     };
   }
 
+  // ----------------Read----------
   @Get('/find-one/:id')
   @ApiOperation({ summary: 'Find a comment by ID' })
   @ApiResponse({
@@ -57,6 +59,7 @@ export class CommentController {
     };
   }
 
+  // ----------------Update----------
   @Patch('/update-comment/:commentId')
   @ApiOperation({ summary: 'Update a comment by ID' })
   @ApiResponse({
@@ -74,6 +77,7 @@ export class CommentController {
     };
   }
 
+  // ----------------Delete----------
   @Delete('/soft-delete/:bookId/:userId')
   @ApiOperation({ summary: 'Soft delete a comment by book ID and user ID' })
   @ApiResponse({

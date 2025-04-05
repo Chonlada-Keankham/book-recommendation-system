@@ -10,6 +10,8 @@ dotenv.config();
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  app.setGlobalPrefix('api');
+
   app.enableCors({
     origin: ['http://localhost:3000'],
     credentials: true,
@@ -22,7 +24,7 @@ async function bootstrap() {
     .addTag('example')
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);  
+  SwaggerModule.setup('api', app, document);
 
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',

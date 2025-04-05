@@ -20,30 +20,37 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 UTILITIES
   // -------------------------------------------------------------------
-
   async findRandomBooksByCategory(
     category: string,
-    limit: number): Promise<iBook[]> {
+    limit: number
+  ): Promise<iBook[]> {
     return this.bookModel.aggregate([
       {
         $match: {
-          category, status: { $ne: Status.DELETED },
+          category,
+          status: { $ne: Status.DELETED },
           deleted_at: null
         }
       },
-      { $sample: { size: limit } },
+      {
+        $sort: { view: -1}
+      },
+      {
+        $sample: { size: limit }
+      }
     ]);
   }
 
   async findPopularBooksByAuthor(
     author: string,
-    limit: number): Promise<iBook[]> {
+    limit: number
+  ): Promise<iBook[]> {
     return this.bookModel.find({
       author,
       status: { $ne: Status.DELETED },
       deleted_at: null
     })
-      .sort({ view: -1 })
+      .sort({ view: -1})
       .limit(limit)
       .exec();
   }
@@ -80,7 +87,7 @@ export class BookService {
   // 🔸 CREATE
   // -------------------------------------------------------------------
 
-  async createOne(createBookDto: CreateBookDto): Promise<iBook> {
+  async createBook(createBookDto: CreateBookDto): Promise<iBook> {
     const existingBook = await this.bookModel.findOne({
       $or: [
         { book_th: createBookDto.book_th },
@@ -98,7 +105,7 @@ export class BookService {
     return newBook.save();
   }
 
-  async createMany(createBookDto: CreateBookDto[]): Promise<iBook[]> {
+  async createBooks(createBookDto: CreateBookDto[]): Promise<iBook[]> {
     const booksInDb = await this.bookModel.find({
       $or: createBookDto.map(dto => ({
         $or: [{ book_th: dto.book_th }, { book_en: dto.book_en }]
@@ -227,7 +234,7 @@ export class BookService {
   // 🔸 UPDATE
   // -------------------------------------------------------------------
 
-  async updateOne(
+  async updateBook(
     bookId: string,
     updateBookDto: UpdateBookDto): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
@@ -252,17 +259,6 @@ export class BookService {
     return await this.bookModel.findByIdAndUpdate(bookId, updatedData, { new: true });
   }
 
-  async uploadBookCover(
-    bookId: string,
-    filename: string): Promise<iBook> {
-    const book = await this.bookModel.findById(bookId);
-    if (!book) throw new NotFoundException('Book not found');
-
-    book.img = `/uploads/book${filename}`;
-    return await book.save();
-  }
-
-
   async updateView(bookId: string): Promise<iBook> {
     const updated = await this.bookModel.findByIdAndUpdate(
       bookId,
@@ -274,63 +270,121 @@ export class BookService {
     return updated;
   }
 
+  async uploadBookCover(
+    bookId: string,
+    filename: string): Promise<iBook> {
+    const book = await this.bookModel.findById(bookId);
+    if (!book) throw new NotFoundException('Book not found');
+
+    book.img = `/uploads/book${filename}`;
+    return await book.save();
+  }
+
   // -------------------------------------------------------------------
   // 🔸 RECOMMENDATION
   // -------------------------------------------------------------------
-
   async recommendBooksForGuest(
     category: BookCategory,
-    bookId: string): Promise<iBook[]> {
-    return this.bookModel.find({
+    bookId: string,
+    limit?: number
+  ): Promise<{ book: iBook; recommendedBooks: iBook[] }> {
+    if (!Types.ObjectId.isValid(bookId)) {
+      throw new BadRequestException('Invalid book ID format.');
+    }
+
+    if (!category) {
+      throw new BadRequestException('Category is required.');
+    }
+
+    const book = await this.bookModel.findOneAndUpdate(
+      {
+        _id: bookId,
+        status: { $ne: Status.DELETED },
+        deleted_at: null,
+      },
+      { $inc: { view: 1 } },
+      { new: true }
+    ).exec();
+
+    if (!book) {
+      throw new NotFoundException('Book not found.');
+    }
+
+    const query = this.bookModel.find({
       category,
       _id: { $ne: bookId },
       status: { $ne: Status.DELETED },
-      deleted_at: null
-    }).sort({ view: -1 }).exec();
+      deleted_at: null,
+    }).sort({ view: -1 });
+
+    if (limit && limit > 0) {
+      query.limit(limit);
+    }
+
+    const recommendedBooks = await query.exec();
+
+    return { book, recommendedBooks };
   }
 
   async recommendBooksForMember(
     userId: string,
-    currentBookId: string): Promise<iBook[]> {
+    currentBookId: string
+  ): Promise<iBook[]> {
     const playlist = await this.playlistService.getPlaylist(userId);
     if (!playlist) throw new NotFoundException('Playlist not found');
 
-    const currentBook = await this.bookModel.findById(currentBookId);
+    const currentBook = await this.bookModel.findOneAndUpdate(
+      {
+        _id: currentBookId,
+        status: { $ne: Status.DELETED },
+        deleted_at: null,
+      },
+      { $inc: { view: 1 } },
+      { new: true }
+    ).exec();
+
     if (!currentBook) throw new NotFoundException('Current book not found');
 
     const seen = new Set<string>();
-    const dedup = (books: iBook[]) => books.filter(b => {
-      const id = b._id.toString();
-      if (seen.has(id)) return false;
-      seen.add(id);
-      return true;
-    });
+    const dedup = (books: iBook[]) =>
+      books.filter((b) => {
+        const id = b._id.toString();
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
 
-    const group1 = await this.bookModel.find({
-      category: currentBook.category,
-      _id: { $ne: currentBookId },
-      status: { $ne: Status.DELETED },
-      deleted_at: null
-    }).sort({ view: -1, createdAt: -1 }).exec();
+    const group1 = await this.bookModel
+      .find({
+        category: currentBook.category,
+        _id: { $ne: currentBookId },
+        status: { $ne: Status.DELETED },
+        deleted_at: null,
+      })
+      .sort({ view: -1, createdAt: -1 })
+      .exec();
 
-    const group2 = await this.bookModel.find({
-      category: { $in: playlist.categories },
-      _id: { $ne: currentBookId },
-      status: { $ne: Status.DELETED },
-      deleted_at: null
-    }).sort({ createdAt: -1 }).exec();
+    const group2 = await this.bookModel
+      .find({
+        category: { $in: playlist.categories },
+        _id: { $ne: currentBookId },
+        status: { $ne: Status.DELETED },
+        deleted_at: null,
+      })
+      .sort({ createdAt: -1 })
+      .exec();
 
-    const group3 = await this.bookModel.find({
-      author: { $in: playlist.authors },
-      _id: { $ne: currentBookId },
-      status: { $ne: Status.DELETED },
-      deleted_at: null
-    }).sort({ createdAt: -1 }).exec();
+    const group3 = await this.bookModel
+      .find({
+        author: { $in: playlist.authors },
+        _id: { $ne: currentBookId },
+        status: { $ne: Status.DELETED },
+        deleted_at: null,
+      })
+      .sort({ createdAt: -1 })
+      .exec();
 
-    return [
-      ...dedup(group1),
-      ...dedup(group2),
-      ...dedup(group3)];
+    return [...dedup(group1), ...dedup(group2), ...dedup(group3)];
   }
 
   // -------------------------------------------------------------------

@@ -7,19 +7,17 @@ import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { diskStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Types } from 'mongoose';
 
 @ApiTags('Book')
 @Controller('book')
 export class BookController {
   constructor(private readonly bookService: BookService) { }
 
-  // -------------------------------------------------------------------
-  // 🔸 CREATE
-  // -------------------------------------------------------------------
-
-  @Post('/create-one')
+  // ----------------Create----------
+  @Post('/create-book')
   async createOne(@Body() createBookDto: CreateBookDto) {
-    const book = await this.bookService.createOne(createBookDto);
+    const book = await this.bookService.createBook(createBookDto);
     return {
       statusCode: 201,
       message: 'Book created successfully',
@@ -27,9 +25,9 @@ export class BookController {
     };
   }
 
-  @Post('/create-many')
+  @Post('/create-books')
   async createMany(@Body() createBookDtos: CreateBookDto[]) {
-    const books = await this.bookService.createMany(createBookDtos);
+    const books = await this.bookService.createBooks(createBookDtos);
     return {
       statusCode: 201,
       message: 'Books created successfully',
@@ -37,10 +35,7 @@ export class BookController {
     };
   }
 
-  // -------------------------------------------------------------------
-  // 🔸 READ
-  // -------------------------------------------------------------------
-
+  // ----------------Get----------
   @Get('/find-one/:id')
   async findOneById(@Param('id') id: string) {
     const book = await this.bookService.findOneById(id);
@@ -50,17 +45,6 @@ export class BookController {
       data: book,
     };
   }
-
-  @Get('/view-book/:id')
-  @ApiOperation({ summary: 'Get book by ID and increase view count' })
-  async getBookUpdateView(@Param('id') id: string) {
-    const book = await this.bookService.getBookUpdateView(id);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Book retrieved and view count updated successfully',
-      data: book,
-    };
-  }  
 
   @Get('/find-all')
   async findAll(
@@ -100,38 +84,112 @@ export class BookController {
     };
   }
 
-  @Get('/updateView/:id')
-  async updateView(@Param('id') id: string) {
-    const updatedBook = await this.bookService.updateView(id);
-    return {
-      statusCode: 200,
-      message: 'View updated successfully',
-      data: updatedBook,
-    };
-  }
-
-  // -------------------------------------------------------------------
-  // 🔸 UPDATE
-  // -------------------------------------------------------------------
-
-  @Put('/update-one/:id')
-  async updateOne(
-    @Param('id') id: string,
-    @Body() updateBookDto: UpdateBookDto
-  ) {
-    const updatedBook = await this.bookService.updateOne(id, updateBookDto);
-  
+  @Get('/view-book/:id')
+  @ApiOperation({ summary: 'Get book by ID and increase view count' })
+  async getBookUpdateView(@Param('id') id: string) {
+    const book = await this.bookService.getBookUpdateView(id);
     return {
       statusCode: HttpStatus.OK,
-      message: 'Book updated successfully',
-      data: updatedBook,
+      message: 'Book retrieved and view count updated successfully',
+      data: book,
+    };
+  }
+
+  // ---------- Recommendation ----------
+  @Get('/recommend/guest')
+  async recommendForGuest(
+    @Query('category') category: string,
+    @Query('bookId') bookId: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (!Object.values(BookCategory).includes(category as BookCategory)) {
+      throw new BadRequestException('Invalid category');
+    }
+
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    if (limit && isNaN(parsedLimit)) {
+      throw new BadRequestException('Limit must be a number');
+    }
+
+    const categoryEnum = category as BookCategory;
+
+    const books = await this.bookService.recommendBooksForGuest(
+      categoryEnum,
+      bookId,
+      parsedLimit
+    );
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Recommended books found',
+      data: books,
+    };
+  }
+
+  @Get('/recommend/member')
+  async recommendForMember(
+    @Query('userId') userId: string,
+    @Query('bookId') bookId: string,
+  ) {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    if (!Types.ObjectId.isValid(bookId)) {
+      throw new BadRequestException('Invalid book ID');
+    }
+
+    const recommendedBooks = await this.bookService.recommendBooksForMember(userId, bookId);
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Recommended books for member retrieved successfully.',
+      data: recommendedBooks,
+    };
+  }
+
+  @Get('/random')
+  async getRandomBooks(
+    @Query('category') category: string,
+    @Query('limit') limit = '10' 
+  ) {
+    const books = await this.bookService.findRandomBooksByCategory(category, parseInt(limit));
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Random books fetched successfully',
+      data: books,
     };
   }
   
+  @Get('/popular')
+  async getPopularBooks(
+    @Query('author') author: string,
+    @Query('limit') limit = '10'  
+  ) {
+    const books = await this.bookService.findPopularBooksByAuthor(author, parseInt(limit));
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Popular books fetched successfully',
+      data: books,
+    };
+  }
+    
+  // ----------------Update----------
+  @Put('/update-all-short-description')
+  async updateAllShortDescriptions(@Body('short_description') shortDescription: string) {
+    const result = await this.bookService.updateAllShortDescriptions(shortDescription);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Descriptions updated successfully',
+      data: result
+    };
+  }
+
+  // ---------- Upload ----------
   @Put('/upload-cover/:id')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
-      destination: './uploads/book', 
+      destination: './uploads/book',
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         cb(null, uniqueSuffix + extname(file.originalname));
@@ -151,30 +209,7 @@ export class BookController {
     };
   }
 
-  @Put('/update-cover-for-missing')
-  async bulkUpdateCoverForMissing(@Body('img') img: string) {
-    const result = await this.bookService.bulkUpdateCoverImagesForMissingCover(img);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Covers updated successfully',
-      data: result
-    };
-  }
-
-  @Put('/update-all-short-description')
-  async updateAllShortDescriptions(@Body('short_description') shortDescription: string) {
-    const result = await this.bookService.updateAllShortDescriptions(shortDescription);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Descriptions updated successfully',
-      data: result
-    };
-  }
-
-  // -------------------------------------------------------------------
-  // 🔸 DELETE
-  // -------------------------------------------------------------------
-
+  // ---------- Delete ----------
   @Delete('/delete-one/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteById(@Param('id') id: string) {
@@ -196,79 +231,4 @@ export class BookController {
     };
   }
 
-  // -------------------------------------------------------------------
-  // 🔸 RECOMMENDATION
-  // -------------------------------------------------------------------
-
-  @Get('/recommend/guest')
-  async recommendForGuest(
-    @Query('category') category: string,
-    @Query('exclude') bookId: string,
-  ) {
-    if (!Object.values(BookCategory).includes(category as BookCategory)) {
-      throw new BadRequestException('Invalid category');
-    }
-
-    const books = await this.bookService.recommendBooksForGuest(category as BookCategory, bookId);
-    return {
-      statusCode: 200,
-      message: 'Recommended books for guest',
-      data: books,
-    };
-  }
-
-  @Get('/recommend/member')
-  async recommendForMember(
-    @Query('userId') userId: string,
-    @Query('bookId') bookId: string) {
-    const books = await this.bookService.recommendBooksForMember(userId, bookId);
-    return {
-      statusCode: 200,
-      message: 'Recommended books for member',
-      data: books,
-    };
-  }
-
-  @Get('/view-and-recommend/:id')
-  async viewAndRecommendBook(@Param('id') id: string) {
-    try {
-      const updatedBook = await this.bookService.updateView(id);
-      const recommendedBooks = await this.bookService.recommendBooksForGuest(updatedBook.category, id);
-      return {
-        statusCode: HttpStatus.OK,
-        message: 'Book retrieved, views updated, and recommendations sent',
-        data: { updatedBook, recommendedBooks },
-      };
-    } catch (error) {
-      return {
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message,
-        data: null,
-      };
-    }
-  }
-
-  @Get('/random')
-  async getRandomBooks(
-    @Query('category') category: string,
-    @Query('limit') limit = '3') {
-    const books = await this.bookService.findRandomBooksByCategory(category, parseInt(limit));
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Random books fetched successfully',
-      data: books
-    };
-  }
-
-  @Get('/popular')
-  async getPopularBooks(
-    @Query('author') author: string,
-    @Query('limit') limit = '3') {
-    const books = await this.bookService.findPopularBooksByAuthor(author, parseInt(limit));
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Popular books fetched successfully',
-      data: books
-    };
-  }
 }
