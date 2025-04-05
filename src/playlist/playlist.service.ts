@@ -1,5 +1,5 @@
 import { InjectModel } from '@nestjs/mongoose';
-import { Delete, HttpStatus, Inject, Injectable, NotFoundException, Param, forwardRef } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, Param, forwardRef } from '@nestjs/common';
 import { CreatePlaylistDto } from './dto/create-playlist.dto';
 import { UpdatePlaylistDto } from './dto/update-playlist.dto';
 import { Model } from 'mongoose';

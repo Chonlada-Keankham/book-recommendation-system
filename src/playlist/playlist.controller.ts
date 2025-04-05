@@ -60,12 +60,4 @@ export class PlaylistController {
   }
 
   // ----------------Delete----------
-  @Delete('/delete/:userId')
-  async deletePlaylist(@Param('userId') userId: string) {
-    await this.deletePlaylist(userId);
-    return {
-      statusCode: HttpStatus.NO_CONTENT,
-      message: 'Playlist deleted successfully',
-    };
-  }
 }
