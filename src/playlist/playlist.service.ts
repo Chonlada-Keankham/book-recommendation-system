@@ -1,5 +1,5 @@
 import { InjectModel } from '@nestjs/mongoose';
-import { Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
+import { Delete, HttpStatus, Inject, Injectable, NotFoundException, Param, forwardRef } from '@nestjs/common';
 import { CreatePlaylistDto } from './dto/create-playlist.dto';
 import { UpdatePlaylistDto } from './dto/update-playlist.dto';
 import { Model } from 'mongoose';
@@ -15,6 +15,10 @@ export class PlaylistService {
     private readonly bookService: BookService,
   ) { }
 
+  // -------------------------------------------------------------------
+  // 🔸 CREATE
+  // -------------------------------------------------------------------
+
   async createPlaylist(createPlaylistDto: CreatePlaylistDto): Promise<iPlaylist> {
     const newPlaylist = new this.playlistModel(createPlaylistDto);
     newPlaylist.recommendedBooks = await this.generateRecommendations(
@@ -23,6 +27,10 @@ export class PlaylistService {
     );
     return newPlaylist.save();
   }
+
+  // -------------------------------------------------------------------
+  // 🔸 UPDATE
+  // -------------------------------------------------------------------
 
   async updatePlaylist(userId: string, updatePlaylistDto: UpdatePlaylistDto): Promise<iPlaylist> {
     const playlist = await this.playlistModel.findOne({ user: userId });
@@ -42,6 +50,10 @@ export class PlaylistService {
     return playlist.save();
   }
 
+  // -------------------------------------------------------------------
+  // 🔸 GET
+  // -------------------------------------------------------------------
+
   async getPlaylist(userId: string): Promise<iPlaylist> {
     const playlist = await this.playlistModel.findOne({ user: userId });
     if (!playlist) {
@@ -50,26 +62,31 @@ export class PlaylistService {
     return playlist;
   }
 
-  async generateRecommendations(categories: string[], authors: string[]): Promise<any[]> {
-    let recommendations = [];
+  // -------------------------------------------------------------------
+  // 🔸 RECOMMENDATIONS
+  // -------------------------------------------------------------------
 
-    for (const category of categories) {
-      const books = await this.bookService.findRandomBooksByCategory(category, 3);
-      recommendations = recommendations.concat(books);
-    }
+  public async generateRecommendations(categories: string[], authors: string[]): Promise<any[]> {
+    const recommendations = await Promise.all([
+      ...categories.map(category =>
+        this.bookService.findRandomBooksByCategory(category, 3)
+      ),
+      ...authors.map(author =>
+        this.bookService.findPopularBooksByAuthor(author, 3)
+      ),
+    ]);
 
-    for (const author of authors) {
-      const books = await this.bookService.findPopularBooksByAuthor(author, 3);
-      recommendations = recommendations.concat(books);
-    }
-
-    const uniqueBooks = Array.from(new Set(recommendations.map(book => book._id.toString())))
-      .map(id => recommendations.find(book => book._id.toString() === id));
+    const flattenedRecommendations = recommendations.flat();
+    const uniqueBooks = Array.from(new Set(flattenedRecommendations.map(book => book._id.toString())))
+      .map(id => flattenedRecommendations.find(book => book._id.toString() === id));
 
     uniqueBooks.sort(() => Math.random() - 0.5);
-
     return uniqueBooks.slice(0, 20);
   }
+
+  // -------------------------------------------------------------------
+  // 🔸 UPDATE ALL PLAYLISTS
+  // -------------------------------------------------------------------
 
   async updateAllPlaylists(): Promise<void> {
     const playlists = await this.playlistModel.find();

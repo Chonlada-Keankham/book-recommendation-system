@@ -1,3 +1,4 @@
+import { UserService } from 'src/user/user.service';
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CommentService } from './comment.service';
@@ -7,10 +8,13 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 @ApiTags('Comment')
 @Controller('comment')
 export class CommentController {
-  constructor(private readonly commentService: CommentService) { }
+  constructor(
+    private readonly commentService: CommentService,
+    private readonly userService: UserService,
+  ) { }
 
   // ----------------Create----------
-  @Post('/create-one')
+  @Post('/create-comment')
   @ApiOperation({ summary: 'Create a new comment' })
   @ApiResponse({
     status: HttpStatus.CREATED,
@@ -25,7 +29,7 @@ export class CommentController {
     };
   }
 
-  // ----------------Read----------
+  // ----------------Get----------
   @Get('/find-one/:id')
   @ApiOperation({ summary: 'Find a comment by ID' })
   @ApiResponse({
@@ -33,32 +37,14 @@ export class CommentController {
     description: 'Comment found.'
   })
   async findOneById(@Param('id') id: string) {
-    const comment = await this.commentService.findOneById(id);
+    const comment = await this.commentService.findOneById(id); 
     return {
       statusCode: HttpStatus.OK,
       message: 'Comment found',
       data: comment,
     };
   }
-
-  @Get('/find-all')
-  @ApiOperation({ summary: 'Find all comments' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Comments found.'
-  })
-  async findAll(
-    @Query('page') page = 1,
-    @Query('limit') limit = 10) {
-    const result = await this.commentService.findAll(page, limit);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Comments found',
-      data: result.comments,
-      total: result.total,
-    };
-  }
-
+  
   // ----------------Update----------
   @Patch('/update-comment/:commentId')
   @ApiOperation({ summary: 'Update a comment by ID' })

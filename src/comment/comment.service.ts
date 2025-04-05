@@ -20,7 +20,6 @@ export class CommentService {
   // -------------------------------------------------------------------
   // 🔸 CREATE
   // -------------------------------------------------------------------
-
   async createComment(createCommentDto: CreateCommentDto): Promise<iComment> {
     try {
       const user = await this.userService.findOneById(createCommentDto.user.toString());
@@ -29,6 +28,7 @@ export class CommentService {
       const book = await this.bookService.findOneById(createCommentDto.book.toString());
       if (!book) throw new HttpException('Book not found', HttpStatus.NOT_FOUND);
 
+      // ตรวจสอบคอมเมนต์ที่มีอยู่แล้วสำหรับหนังสือและผู้ใช้
       const existingComment = await this.commentModel.findOne({ book: createCommentDto.book });
 
       if (existingComment) {
@@ -37,12 +37,20 @@ export class CommentService {
         );
 
         if (userComments) {
-          userComments.comments.push({
-            _id: new Types.ObjectId(),
-            content: createCommentDto.content,
-            created_at: new Date(),
-            updated_at: new Date(),
-          });
+          const existingUserComment = userComments.comments.find(
+            comment => comment.content === createCommentDto.content
+          );
+
+          if (!existingUserComment) {
+            userComments.comments.push({
+              _id: new Types.ObjectId(),
+              content: createCommentDto.content,
+              created_at: new Date(),
+              updated_at: new Date(),
+            });
+          } else {
+            throw new HttpException('Duplicate comment found', HttpStatus.BAD_REQUEST);
+          }
         } else {
           existingComment.users.push({
             user: createCommentDto.user,
@@ -82,6 +90,7 @@ export class CommentService {
 
       return await newComment.save();
     } catch (error) {
+      console.error(error);
       throw new HttpException('Failed to create comment.', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -89,45 +98,34 @@ export class CommentService {
   // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
-
-  async findOneById(id: string): Promise<iComment> {
+async findOneById(id: string): Promise<any> {
+  try {
     const comment = await this.commentModel.findOne({
-      _id: id,
-      status: { $ne: Status.DELETED },
-      deleted_at: null,
-    }).exec();
+      'users.comments._id': new Types.ObjectId(id), 
+    }).populate('users.user') //
+    .exec();
 
-    if (!comment) throw new NotFoundException(`Comment with ID ${id} not found or has been deleted.`);
-    return comment;
+    if (!comment) {
+      throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
+    }
+
+    const userComment = comment.users
+      .map(user => user.comments.find(c => c._id.toString() === id)) 
+      .find(c => c !== undefined);
+
+    if (!userComment) {
+      throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
+    }
+
+    return userComment;
+  } catch (error) {
+    throw new HttpException('Failed to find comment.', HttpStatus.INTERNAL_SERVER_ERROR);
   }
+}
 
-  async findAll(
-    page: number = 1,
-    limit: number = 10): Promise<{
-      comments: iComment[];
-      total: number
-    }> {
-    const skip = (page - 1) * limit;
-    const total = await this.commentModel.countDocuments({
-      status: { $ne: Status.DELETED },
-      deleted_at: null,
-    });
-
-    const comments = await this.commentModel.find({
-      status: { $ne: Status.DELETED },
-      deleted_at: null,
-    })
-      .skip(skip)
-      .limit(limit)
-      .exec();
-
-    return { comments, total };
-  }
-
-  // -------------------------------------------------------------------
+// -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------
-
   async updateComment(
     commentId: string,
     updateCommentDto: UpdateCommentDto): Promise<iComment> {
