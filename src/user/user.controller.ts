@@ -30,15 +30,19 @@ export class UserController {
   }
 
   @Post('/register-employee')
+  @ApiOperation({ summary: 'Register new employee' })
   async registerEmployee(@Body() createEmployeeDto: CreateEmployeeDto) {
     const { user, password } = await this.userService.registerEmployee(createEmployeeDto);
     return {
       statusCode: HttpStatus.CREATED,
-      message: 'Employee created successfully',
-      data: { employeeId: user.employeeId, password }
+      message: 'Employee registered successfully',
+      data: {
+        employee: user,
+        initialPassword: password, 
+      },
     };
   }
-
+  
   // ---------- Get ----------
   @Get('/find-one/:id')
   async findOneById(@Param('id') id: string) {

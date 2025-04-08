@@ -1,7 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
 import { ConfigService } from '@nestjs/config';
-import { Body, Controller, Get, HttpStatus, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, NotFoundException, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { RefreshTokenDto } from './dto/refresh-token-auth.dto';
@@ -13,6 +13,7 @@ import { LoginMemberDto } from './dto/login-member-auth.dto';
 import { LoginEmployeeDto } from './dto/login-employee-auth.dto';
 import { RolesGuard } from './guard/role.guard';
 import { Roles } from 'src/decorator/roles.decorator';
+import bcrypt from 'bcryptjs';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -24,11 +25,15 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) { }
 
-  @Post('/auth/login-member')
+  // -------------------------------------------------------------------
+  // 🔸 LOGIN
+  // -------------------------------------------------------------------
+
+  @Post('/login-member')
   @ApiOperation({ summary: 'Member login only' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Member login successful'
+    description: 'Member login successful',
   })
   async loginMember(@Body() loginMemberDto: LoginMemberDto) {
     try {
@@ -59,33 +64,25 @@ export class AuthController {
 
   @Post('/login-employee')
   @ApiOperation({ summary: 'Employee login only' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Employee login successful'
-  })
   async loginEmployee(@Body() loginEmployeeDto: LoginEmployeeDto) {
-    try {
-      const user = await this.authService.validateEmployee(loginEmployeeDto);
-      const tokens = await this.authService.login(user);
-      return {
-        statusCode: HttpStatus.OK,
-        message: 'Employee login successful',
-        data: tokens,
-      };
-    } catch (error) {
-      throw new UnauthorizedException({
-        statusCode: 401,
-        message: error.message || 'Invalid credentials',
-        error: 'Unauthorized',
-      });
-    }
+    const user = await this.authService.validateEmployee(loginEmployeeDto);
+    const tokens = await this.authService.login(user);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Employee login successful',
+      data: tokens,
+    };
   }
+  
+  // -------------------------------------------------------------------
+  // 🔸 REFRESH TOKEN
+  // -------------------------------------------------------------------
 
   @Post('/refresh')
   @ApiOperation({ summary: 'Refresh token' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Access token refreshed successfully'
+    description: 'Access token refreshed successfully',
   })
   async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
     try {
@@ -104,6 +101,10 @@ export class AuthController {
     }
   }
 
+  // -------------------------------------------------------------------
+  // 🔸 PROFILE
+  // -------------------------------------------------------------------
+
   @Get('/profile')
   @ApiOperation({ summary: 'Get user profile (JWT Required)' })
   @UseGuards(JwtAuthGuard)
@@ -115,13 +116,25 @@ export class AuthController {
     };
   }
 
+  // -------------------------------------------------------------------
+  // 🔸 ROLE-BASED ACCESS
+  // -------------------------------------------------------------------
+
   @UseGuards(RolesGuard)
   @Roles(UserRole.EMPLOYEE)
   @Get('/employee-only')
-  getForEmployee() {
-      return "Hello Employee";
+  @ApiOperation({ summary: 'Employee only route' })
+  async getForEmployee() {
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Hello Employee',
+    };
   }
-  
+
+  // -------------------------------------------------------------------
+  // 🔸 PASSWORD RESET
+  // -------------------------------------------------------------------
+
   @Post('/send-password-reset-link')
   @ApiOperation({ summary: 'Send password reset link to email' })
   async sendPasswordResetLink(@Body() dto: RequestPasswordResetDto) {
@@ -143,4 +156,6 @@ export class AuthController {
       message: response.message,
     };
   }
+
+
 }

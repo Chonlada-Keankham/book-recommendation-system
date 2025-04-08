@@ -98,7 +98,7 @@ export class UserService {
     const hashedPassword = await this.hashPassword(randomPassword);
     const username = createEmployeeDto.username || `${createEmployeeDto.first_name.toLowerCase()}${createEmployeeDto.last_name.toLowerCase()}`;
     const employeeId = await this.generateEmployeeId();
-
+  
     const newUser = new this.userModel({
       ...createEmployeeDto,
       password: hashedPassword,
@@ -107,11 +107,11 @@ export class UserService {
       employeeId: employeeId,
       deleted_at: null,
     });
-
+  
     const createdUser = await newUser.save();
     return { user: createdUser, password: randomPassword };
   }
-
+  
   // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
@@ -205,34 +205,6 @@ export class UserService {
     if (result.modifiedCount === 0) throw new BadRequestException('Failed to update password');
   }
 
-  async updateInterests(
-    userId: string,
-    categories: string[],
-    authors: string[]): Promise<iPlaylist> {
-    const user = await this.userModel.findById(userId);
-    if (!user) throw new NotFoundException('User not found');
-
-    let playlist = await this.playlistService.getPlaylist(userId).catch(() => null);
-
-    if (!playlist) {
-      playlist = await this.playlistService.createPlaylist({
-        user: new Types.ObjectId(user._id),
-        categories: categories,
-        authors: authors
-      });
-    } else {
-      playlist.categories = categories;
-      playlist.authors = authors;
-      playlist.recommendedBooks = await this.playlistService.generateRecommendations(categories, authors);
-      await playlist.save();
-    }
-
-    return playlist;
-  }
-
-  // -------------------------------------------------------------------
-  // 🔸 UPLOAD
-  // -------------------------------------------------------------------
   async uploadProfileImage(
     userId: string,
     filename: string): Promise<iUser> {
@@ -272,6 +244,31 @@ export class UserService {
     user.updated_at = new Date();
 
     return user.save();
+  }
+
+  async updateInterests(
+    userId: string,
+    categories: string[],
+    authors: string[]): Promise<iPlaylist> {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    let playlist = await this.playlistService.getPlaylist(userId).catch(() => null);
+
+    if (!playlist) {
+      playlist = await this.playlistService.createPlaylist({
+        user: new Types.ObjectId(user._id),
+        categories: categories,
+        authors: authors
+      });
+    } else {
+      playlist.categories = categories;
+      playlist.authors = authors;
+      playlist.recommendedBooks = await this.playlistService.generateRecommendations(categories, authors);
+      await playlist.save();
+    }
+
+    return playlist;
   }
 
   // -------------------------------------------------------------------

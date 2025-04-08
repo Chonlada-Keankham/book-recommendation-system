@@ -1,11 +1,5 @@
 import { LoginEmployeeDto } from './dto/login-employee-auth.dto';
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException
-}
-  from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from './../user/user.service';
 import { iUser } from 'src/user/interface/user.interface';
@@ -21,12 +15,15 @@ import { LoginMemberDto } from './dto/login-member-auth.dto';
 
 @Injectable()
 export class AuthService {
-
   constructor(
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
     private readonly configService: ConfigService,
   ) { }
+
+  // -------------------------------------------------------------------
+  // 🔸 VALIDATION
+  // -------------------------------------------------------------------
 
   async validateMember(loginMemberDto: LoginMemberDto): Promise<iUser> {
     const { email, password } = loginMemberDto;
@@ -43,7 +40,6 @@ export class AuthService {
 
   async validateEmployee(loginEmployeeDto: LoginEmployeeDto): Promise<iUser> {
     const { employeeId, password } = loginEmployeeDto;
-
     const user = await this.userService.findByEmployeeId(employeeId);
 
     if (!user || user.role !== UserRole.EMPLOYEE) {
@@ -51,7 +47,6 @@ export class AuthService {
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid employeeId or password');
     }
@@ -59,20 +54,24 @@ export class AuthService {
     return user;
   }
 
+  // -------------------------------------------------------------------
+  // 🔸 LOGIN / REFRESH TOKEN
+  // -------------------------------------------------------------------
+
   async login(user: iUser): Promise<{
     access_token: string;
-    refresh_token: string
+    refresh_token: string;
   }> {
     const payload = {
       email: user.email,
       sub: user._id,
-      role: user.role
+      role: user.role,
     };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
     const refreshToken = this.jwtService.sign({ sub: user._id }, { expiresIn: '7d' });
     return {
       access_token: accessToken,
-      refresh_token: refreshToken
+      refresh_token: refreshToken,
     };
   }
 
@@ -96,6 +95,10 @@ export class AuthService {
     }
   }
 
+  // -------------------------------------------------------------------
+  // 🔸 PASSWORD RESET
+  // -------------------------------------------------------------------
+
   async sendPasswordResetLink(requestPasswordResetDto: RequestPasswordResetDto) {
     const { email } = requestPasswordResetDto;
     const user = await this.userService.findOneByEmail(email);
@@ -104,13 +107,9 @@ export class AuthService {
     }
     const payload = { email: user.email, sub: user._id.toString() };
     const resetToken = this.jwtService.sign(payload, { expiresIn: '1h' });
-    console.log("Generated resetToken:", resetToken);
 
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
     const resetLink = `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
-
-    console.log("Frontend URL:", frontendUrl);
-    console.log("Reset Link:", resetLink);
 
     return {
       message: 'Password reset link generated successfully',
@@ -122,30 +121,22 @@ export class AuthService {
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const { token, newPassword } = resetPasswordDto;
     try {
-      console.log("resetPassword called with token:", token);
-      console.log("New password received:", newPassword);
-
       const decoded = this.jwtService.verify(token, {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
-      console.log("Decoded token:", decoded);
 
       const user = await this.userService.findOneByEmail(decoded.email);
-      console.log("User found:", user);
 
       if (!user) {
         throw new NotFoundException('User not found');
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-      console.log("Hashed password:", hashedPassword);
 
       await this.userService.updatePassword(user._id, hashedPassword);
-      console.log("Password updated for user:", user._id);
 
       return { message: 'Password reset successful' };
     } catch (error) {
-      console.error("Error during resetPassword:", error);
       if (error instanceof jwt.TokenExpiredError) {
         throw new BadRequestException('Token has expired');
       }
