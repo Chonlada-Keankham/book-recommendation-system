@@ -10,28 +10,28 @@ dotenv.config();
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api'); 
 
   app.enableCors({
-    origin: ['http://localhost:3000'], 
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000', // ใช้ค่าจาก .env หรือค่า default
     credentials: true, 
   });
 
   const config = new DocumentBuilder()
-    .setTitle('API Documentation') 
-    .setDescription('API description') 
-    .setVersion('1.0') 
-    .addTag('example') 
+    .setTitle('API Documentation')
+    .setDescription('API description')
+    .setVersion('1.0')
+    .addTag('example')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config); 
-  SwaggerModule.setup('api', app, document); 
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/', 
   });
 
-  await app.listen(5000, '0.0.0.0'); 
+  await app.listen(process.env.PORT || 5000, '0.0.0.0'); 
 }
 
 bootstrap();

@@ -14,16 +14,18 @@ import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }), 
     CacheModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         store: (await import('cache-manager-ioredis')).redisStore,
-        host: configService.get('REDIS_HOST'),
-        port: parseInt(configService.get('REDIS_PORT'), 10),
-        ttl: 0,
+        host: configService.get<string>('REDIS_HOST'),
+        port: parseInt(configService.get<string>('REDIS_PORT'), 10),
+        ttl: 0, 
       }),
-    }),    ScheduleModule.forRoot(),
+    }),
+    ScheduleModule.forRoot(),
     MongooseModule.forRoot(databaseConfig.uri),
     UserModule,
     AuthModule,
@@ -36,7 +38,7 @@ import { CacheModule } from '@nestjs/cache-manager';
     AppService,
     {
       provide: 'CONFIG_SERVICE',
-      useClass: ConfigService,  
+      useClass: ConfigService,
     },
   ],
 })
