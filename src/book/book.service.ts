@@ -1,3 +1,4 @@
+import { Redis } from 'ioredis';
 import { InjectModel } from '@nestjs/mongoose';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { Model, PipelineStage, Types } from 'mongoose';
@@ -10,12 +11,19 @@ import { PlaylistService } from 'src/playlist/playlist.service';
 
 @Injectable()
 export class BookService {
+  private redisClient: Redis; 
+
   constructor(
-    @InjectModel('Book')
-    private readonly bookModel: Model<iBook>,
-    @Inject(forwardRef(() => PlaylistService))
-    private readonly playlistService: PlaylistService,
-  ) { }
+    @InjectModel('Book') private readonly bookModel: Model<iBook>,
+    @Inject(forwardRef(() => PlaylistService)) private readonly playlistService: PlaylistService,
+  ) {
+    this.redisClient = new Redis({
+      host: 'localhost',
+      port: 6379,
+      password: '', 
+      db: 0, 
+    });
+  }
 
   // -------------------------------------------------------------------
   // 🔸 UTILITIES
@@ -33,7 +41,7 @@ export class BookService {
         }
       },
       {
-        $sort: { view: -1}
+        $sort: { view: -1 }
       },
       {
         $sample: { size: limit }
@@ -50,7 +58,7 @@ export class BookService {
       status: { $ne: Status.DELETED },
       deleted_at: null
     })
-      .sort({ view: -1})
+      .sort({ view: -1 })
       .limit(limit)
       .exec();
   }
@@ -133,22 +141,37 @@ export class BookService {
   // 🔸 READ
   // -------------------------------------------------------------------
 
-  async findOneById(id: string): Promise<iBook> {
+  async findOneById(id: string, ip: string): Promise<iBook> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ID format.');
     }
 
-    const book = await this.bookModel.findOne({
+    const redisKey = `viewed:${id}:${ip}`;
+    const viewed = await this.redisClient.get(redisKey);
+
+    if (!viewed) {
+      // เพิ่มยอดวิว
+      const book = await this.bookModel.findOneAndUpdate(
+        { _id: id, status: { $ne: Status.DELETED }, deleted_at: null },
+        { $inc: { view: 1 } },
+        { new: true }
+      ).exec();
+
+      if (!book) {
+        throw new NotFoundException(`Book with ID ${id} not found.`);
+      }
+
+      // เก็บค่าใน Redis เพื่อป้องกันการดูซ้ำใน 5 นาที
+      await this.redisClient.set(redisKey, 'true', 'EX', 300);
+
+      return book;
+    }
+
+    return await this.bookModel.findOne({
       _id: id,
       status: { $ne: Status.DELETED },
       deleted_at: null,
     }).exec();
-
-    if (!book) {
-      throw new NotFoundException(`Book with ID ${id} not found.`);
-    }
-
-    return book;
   }
 
   async getBookUpdateView(bookId: string): Promise<iBook> {
@@ -173,27 +196,26 @@ export class BookService {
     return book;
   }
 
-  async findAll(
-    page = 1,
-    limit = 10): Promise<{
-      books: iBook[],
-      total: number
-    }> {
-    const skip = (page - 1) * limit;
+  async findAll(page = 1, ip: string): Promise<{
+    books: iBook[],
+    total: number
+  }> {
+    const skip = (page - 1) * 10;  
     const total = await this.bookModel.countDocuments({
       status: { $ne: Status.DELETED },
       deleted_at: null,
     });
-
+  
     const books = await this.bookModel.find({
       status: { $ne: Status.DELETED },
-      deleted_at: null
+      deleted_at: null,
     })
-      .skip(skip).limit(limit).exec();
-
+      .skip(skip) 
+      .exec();
+  
     return { books, total };
   }
-
+    
   async depthSearch(
     category?: string,
     author?: string,

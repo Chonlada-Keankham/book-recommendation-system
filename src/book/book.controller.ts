@@ -1,13 +1,13 @@
 import { extname } from 'path';
 import { BookCategory } from 'src/enum/book-category.enum';
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Put, Query, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { BookService } from './book.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateBookDto } from './dto/create-book.dto';
-import { UpdateBookDto } from './dto/update-book.dto';
 import { diskStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Types } from 'mongoose';
+import { Request } from 'express';
 
 @ApiTags('Book')
 @Controller('book')
@@ -37,28 +37,17 @@ export class BookController {
 
   // ----------------Get----------
   @Get('/find-one/:id')
-  async findOneById(@Param('id') id: string) {
-    const book = await this.bookService.findOneById(id);
-    return {
-      statusCode: 200,
-      message: 'Book found',
-      data: book,
-    };
+  async getBook(@Param('id') id: string, @Req() request: Request) {
+    const ip = request.headers['x-forwarded-for'] || request.ip; 
+    return this.bookService.findOneById(id, request.ip);
   }
-
+  
   @Get('/find-all')
-  async findAll(
-    @Query('page') page = 1,
-    @Query('limit') limit = 10) {
-    const result = await this.bookService.findAll(page, limit);
-    return {
-      statusCode: 200,
-      message: 'Books found',
-      data: result.books,
-      total: result.total,
-    };
+  async findAll(@Query('page') page: number, @Req() request: Request) {
+    const ip = request.headers['x-forwarded-for'] || request.ip;
+    return this.bookService.findAll(page, request.ip); 
   }
-
+    
   @Get('/depth-search')
   async depthSearch(
     @Query('page') page = '1',
@@ -151,7 +140,7 @@ export class BookController {
   @Get('/random')
   async getRandomBooks(
     @Query('category') category: string,
-    @Query('limit') limit = '10' 
+    @Query('limit') limit = '10'
   ) {
     const books = await this.bookService.findRandomBooksByCategory(category, parseInt(limit));
     return {
@@ -160,11 +149,11 @@ export class BookController {
       data: books,
     };
   }
-  
+
   @Get('/popular')
   async getPopularBooks(
     @Query('author') author: string,
-    @Query('limit') limit = '10'  
+    @Query('limit') limit = '10'
   ) {
     const books = await this.bookService.findPopularBooksByAuthor(author, parseInt(limit));
     return {
@@ -173,7 +162,7 @@ export class BookController {
       data: books,
     };
   }
-    
+
   // ----------------Update----------
   @Put('/update-all-short-description')
   async updateAllShortDescriptions(@Body('short_description') shortDescription: string) {

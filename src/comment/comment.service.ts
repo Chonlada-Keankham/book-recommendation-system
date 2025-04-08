@@ -7,6 +7,7 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 import { UserService } from 'src/user/user.service';
 import { BookService } from 'src/book/book.service';
 import { Status } from 'src/enum/status.enum';
+import { request } from 'express';
 
 @Injectable()
 export class CommentService {
@@ -25,7 +26,8 @@ export class CommentService {
       const user = await this.userService.findOneById(createCommentDto.user.toString());
       if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
 
-      const book = await this.bookService.findOneById(createCommentDto.book.toString());
+      const ip = request.headers['x-forwarded-for'] || request.ip;
+      const book = await this.bookService.findOneById(createCommentDto.book.toString(), request.ip);
       if (!book) throw new HttpException('Book not found', HttpStatus.NOT_FOUND);
 
       // ตรวจสอบคอมเมนต์ที่มีอยู่แล้วสำหรับหนังสือและผู้ใช้
@@ -98,32 +100,32 @@ export class CommentService {
   // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
-async findOneById(id: string): Promise<any> {
-  try {
-    const comment = await this.commentModel.findOne({
-      'users.comments._id': new Types.ObjectId(id), 
-    }).populate('users.user') //
-    .exec();
+  async findOneById(id: string): Promise<any> {
+    try {
+      const comment = await this.commentModel.findOne({
+        'users.comments._id': new Types.ObjectId(id),
+      }).populate('users.user') //
+        .exec();
 
-    if (!comment) {
-      throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
+      if (!comment) {
+        throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
+      }
+
+      const userComment = comment.users
+        .map(user => user.comments.find(c => c._id.toString() === id))
+        .find(c => c !== undefined);
+
+      if (!userComment) {
+        throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
+      }
+
+      return userComment;
+    } catch (error) {
+      throw new HttpException('Failed to find comment.', HttpStatus.INTERNAL_SERVER_ERROR);
     }
-
-    const userComment = comment.users
-      .map(user => user.comments.find(c => c._id.toString() === id)) 
-      .find(c => c !== undefined);
-
-    if (!userComment) {
-      throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
-    }
-
-    return userComment;
-  } catch (error) {
-    throw new HttpException('Failed to find comment.', HttpStatus.INTERNAL_SERVER_ERROR);
   }
-}
 
-// -------------------------------------------------------------------
+  // -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------
   async updateComment(
