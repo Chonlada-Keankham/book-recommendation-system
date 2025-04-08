@@ -101,23 +101,31 @@ export class AuthService {
 
   async sendPasswordResetLink(requestPasswordResetDto: RequestPasswordResetDto) {
     const { email } = requestPasswordResetDto;
-    const user = await this.userService.findOneByEmail(email);
+    
+    const user = await this.userService.findOneByEmail(email);   // << ที่นี่เลย
+  
     if (!user) {
       throw new NotFoundException('User with this email not found');
     }
+  
+    // ➡️ ใส่เพิ่มตรงนี้
+    if (user.role !== 'member') {
+      throw new UnauthorizedException('Only members can reset password');
+    }
+  
     const payload = { email: user.email, sub: user._id.toString() };
     const resetToken = this.jwtService.sign(payload, { expiresIn: '1h' });
-
+  
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
     const resetLink = `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
-
+  
     return {
       message: 'Password reset link generated successfully',
       resetToken,
       resetLink,
     };
   }
-
+  
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const { token, newPassword } = resetPasswordDto;
     try {

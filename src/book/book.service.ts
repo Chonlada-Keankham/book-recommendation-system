@@ -15,6 +15,7 @@ export class BookService {
     private readonly bookModel: Model<iBook>,
     @Inject(forwardRef(() => PlaylistService))
     private readonly playlistService: PlaylistService,
+    
   ) { }
 
   // -------------------------------------------------------------------
@@ -33,7 +34,7 @@ export class BookService {
         }
       },
       {
-        $sort: { view: -1}
+        $sort: { view: -1 }
       },
       {
         $sample: { size: limit }
@@ -50,7 +51,7 @@ export class BookService {
       status: { $ne: Status.DELETED },
       deleted_at: null
     })
-      .sort({ view: -1})
+      .sort({ view: -1 })
       .limit(limit)
       .exec();
   }
@@ -137,20 +138,20 @@ export class BookService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ID format.');
     }
-
-    const book = await this.bookModel.findOne({
-      _id: id,
-      status: { $ne: Status.DELETED },
-      deleted_at: null,
-    }).exec();
-
+  
+    const book = await this.bookModel.findOneAndUpdate(
+      { _id: id, status: { $ne: Status.DELETED }, deleted_at: null },
+      { $inc: { view: 1 } }, 
+      { new: true }
+    ).exec();
+  
     if (!book) {
       throw new NotFoundException(`Book with ID ${id} not found.`);
     }
-
+  
     return book;
   }
-
+      
   async getBookUpdateView(bookId: string): Promise<iBook> {
     if (!Types.ObjectId.isValid(bookId)) {
       throw new BadRequestException('Invalid book ID format.');
