@@ -66,16 +66,17 @@ export class BookService {
 
   async updateAllShortDescriptions(shortDescription: string): Promise<any> {
     const result = await this.bookModel.updateMany(
-      { 
+      {
         status: {
-           $ne: Status.DELETED
-           }, 
-           deleted_at: null },
-      { 
+          $ne: Status.DELETED
+        },
+        deleted_at: null
+      },
+      {
         $set:
-         { 
-          short_description: shortDescription 
-        } 
+        {
+          short_description: shortDescription
+        }
       },
     );
     if (result.modifiedCount === 0) throw new NotFoundException('No books were updated');
@@ -160,16 +161,29 @@ export class BookService {
 
     if (!viewed) {
       const book = await this.bookModel.findOneAndUpdate(
-        { _id: id, status: { $ne: Status.DELETED }, deleted_at: null },
-        { $inc: { view: 1 } },
-        { new: true }
+        {
+          _id: id, status:
+          {
+            $ne: Status.DELETED
+          },
+          deleted_at: null
+        },
+        {
+          $inc:
+          {
+            view: 1
+          }
+        },
+        {
+          new: true
+        }
       ).exec();
 
       if (!book) {
         throw new NotFoundException(`Book with ID ${id} not found.`);
       }
 
-      await this.redisClient.set(redisKey, 'true', 'EX', 300); 
+      await this.redisClient.set(redisKey, 'true', 'EX', 300);
 
       return book;
     }
@@ -180,24 +194,53 @@ export class BookService {
       deleted_at: null,
     }).exec();
   }
-  async findAll(page = 1, ip: string): Promise<{
+
+  async findBooksByCategory(category: BookCategory, ip: string): Promise<{
     books: iBook[],
     total: number
   }> {
-    const skip = (page - 1) * 10;
     const total = await this.bookModel.countDocuments({
+      category,
       status: { $ne: Status.DELETED },
       deleted_at: null,
     });
-
+  
+    const books = await this.bookModel.find({
+      category,
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    }).exec();
+  
+    for (const book of books) {
+      const redisKey = `viewed:${book._id}:${ip}`;
+      const viewed = await this.redisClient.get(redisKey);
+  
+      if (!viewed) {
+        await this.bookModel.findByIdAndUpdate(book._id, { $inc: { view: 1 } }).exec();
+        await this.redisClient.set(redisKey, 'true', 'EX', 300); 
+      }
+    }
+  
+    return { books, total };
+  }
+  
+  async findAll(ip: string): Promise<iBook[]> {
     const books = await this.bookModel.find({
       status: { $ne: Status.DELETED },
       deleted_at: null,
-    })
-      .skip(skip)
-      .exec();
+    }).exec();
 
-    return { books, total };
+    for (const book of books) {
+      const redisKey = `viewed:${book._id}:${ip}`;
+      const viewed = await this.redisClient.get(redisKey);
+
+      if (!viewed) {
+        await this.bookModel.findByIdAndUpdate(book._id, { $inc: { view: 1 } }).exec();
+        await this.redisClient.set(redisKey, 'true', 'EX', 300);
+      }
+    }
+
+    return books;
   }
 
   async depthSearch(

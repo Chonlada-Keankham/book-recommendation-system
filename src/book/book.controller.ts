@@ -35,19 +35,99 @@ export class BookController {
     };
   }
 
-  // ----------------Get----------
   @Get('/find-one/:id')
   async getBook(@Param('id') id: string, @Req() request: Request) {
-    const ip = request.headers['x-forwarded-for'] || request.ip; 
-    return this.bookService.findOneByIdAndUpdateView(id, request.ip);
+    const ip = typeof request.headers['x-forwarded-for'] === 'string'
+      ? request.headers['x-forwarded-for']
+      : request.ip;
+    return this.bookService.findOneByIdAndUpdateView(id, ip);
+  }
+
+  @Get('/find-all')
+  async findAll(@Req() request: Request) {
+    const ip = typeof request.headers['x-forwarded-for'] === 'string'
+      ? request.headers['x-forwarded-for']
+      : request.ip;
+
+    const books = await this.bookService.findAll(ip);
+    return {
+      statusCode: 200,
+      message: 'Books found',
+      data: books,
+    };
+  }
+
+  @Get('/novel')
+  async getNovelBooks(@Req() request: Request) {
+    const ip = typeof request.headers['x-forwarded-for'] === 'string'
+      ? request.headers['x-forwarded-for']
+      : request.ip;  
+    const result = await this.bookService.findBooksByCategory(BookCategory.NOVEL, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
+    return {
+      statusCode: 200,
+      message: 'Books found',
+      data: result.books,
+      total: result.total,
+    };
   }
   
-  @Get('/find-all')
-  async findAll(@Query('page') page: number, @Req() request: Request) {
-    const ip = request.headers['x-forwarded-for'] || request.ip;
-    return this.bookService.findAll(page, request.ip); 
+  @Get('/business')
+  async getBusinessBooks(@Req() request: Request) {
+    const ip = typeof request.headers['x-forwarded-for'] === 'string'
+      ? request.headers['x-forwarded-for']
+      : request.ip;  
+    const result = await this.bookService.findBooksByCategory(BookCategory.BUSINESS, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
+  
+    return {
+      statusCode: 200,
+      message: 'Books found',
+      data: result.books,
+      total: result.total,
+    };
   }
-    
+  
+  @Get('/sport')
+  async getSportBooks(@Req() request: Request) {
+    const ip = typeof request.headers['x-forwarded-for'] === 'string'
+      ? request.headers['x-forwarded-for']
+      : request.ip;  
+    const result = await this.bookService.findBooksByCategory(BookCategory.SPORT, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
+    return {
+      statusCode: 200,
+      message: 'Books found',
+      data: result.books,
+      total: result.total,
+    };
+  }
+  
+  @Get('/travel')
+  async getTravelBooks(@Req() request: Request) {
+    const ip = typeof request.headers['x-forwarded-for'] === 'string'
+      ? request.headers['x-forwarded-for']
+      : request.ip;  
+    const result = await this.bookService.findBooksByCategory(BookCategory.TRAVEL, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
+    return {
+      statusCode: 200,
+      message: 'Books found',
+      data: result.books,
+      total: result.total,
+    };
+  }
+  
+  @Get('/education')
+  async getEducationBooks(@Req() request: Request) {
+    const ip = typeof request.headers['x-forwarded-for'] === 'string'
+      ? request.headers['x-forwarded-for']
+      : request.ip;  
+    const result = await this.bookService.findBooksByCategory(BookCategory.EDUCATION, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
+    return {
+      statusCode: 200,
+      message: 'Books found',
+      data: result.books,
+      total: result.total,
+    };
+  }
+  
   @Get('/depth-search')
   async depthSearch(
     @Query('page') page = '1',
