@@ -267,7 +267,7 @@ export class BookController {
       data: book,
     };
   }
-
+  
   // ---------- Delete ----------
   @Delete('/delete-one/:id')
   @HttpCode(HttpStatus.NO_CONTENT)

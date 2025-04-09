@@ -1,6 +1,6 @@
 import { Redis } from 'ioredis';
 import { InjectModel } from '@nestjs/mongoose';
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, Put, UploadedFile, UseInterceptors, forwardRef } from '@nestjs/common';
 import { Model, PipelineStage, Types } from 'mongoose';
 import { iBook } from './interface/book.interface';
 import { CreateBookDto } from './dto/create-book.dto';
@@ -8,6 +8,10 @@ import { Status } from 'src/enum/status.enum';
 import { BookCategory } from 'src/enum/book-category.enum';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { PlaylistService } from 'src/playlist/playlist.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Injectable()
 export class BookService {
@@ -83,24 +87,6 @@ export class BookService {
     return result;
   }
 
-  async bulkUpdateCoverImagesForMissingCover(img: string): Promise<any> {
-    const booksWithoutCover = await this.bookModel.find({ img: { $exists: false } });
-
-    if (booksWithoutCover.length === 0) {
-      throw new NotFoundException('No books without cover found');
-    }
-
-    const bulkOperations = booksWithoutCover.map(book => ({
-      updateOne: {
-        filter: { _id: book._id },
-        update: { $set: { img } },
-      }
-    }));
-
-    const result = await this.bookModel.bulkWrite(bulkOperations);
-    if (result.modifiedCount === 0) throw new NotFoundException('No books were updated');
-    return result;
-  }
 
   // -------------------------------------------------------------------
   // 🔸 CREATE
@@ -204,26 +190,26 @@ export class BookService {
       status: { $ne: Status.DELETED },
       deleted_at: null,
     });
-  
+
     const books = await this.bookModel.find({
       category,
       status: { $ne: Status.DELETED },
       deleted_at: null,
     }).exec();
-  
+
     for (const book of books) {
       const redisKey = `viewed:${book._id}:${ip}`;
       const viewed = await this.redisClient.get(redisKey);
-  
+
       if (!viewed) {
         await this.bookModel.findByIdAndUpdate(book._id, { $inc: { view: 1 } }).exec();
-        await this.redisClient.set(redisKey, 'true', 'EX', 300); 
+        await this.redisClient.set(redisKey, 'true', 'EX', 300);
       }
     }
-  
+
     return { books, total };
   }
-  
+
   async findAll(ip: string): Promise<iBook[]> {
     const books = await this.bookModel.find({
       status: { $ne: Status.DELETED },
