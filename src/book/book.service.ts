@@ -91,95 +91,70 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 CREATE
   // -------------------------------------------------------------------
-
-  async createBook(createBookDto: CreateBookDto): Promise<iBook> {
+  async createBook(createBookDto: CreateBookDto, filename: string): Promise<iBook> {
     const existingBook = await this.bookModel.findOne({
       $or: [
         { book_th: createBookDto.book_th },
-        { book_en: createBookDto.book_en }]
+        { book_en: createBookDto.book_en }
+      ]
     });
-
+  
     if (existingBook) {
       throw new Error('This book is already in the system.');
     }
-
+  
+    // ใช้ process.env.BACKEND_URL เพื่อให้ URL ของภาพสามารถเข้าถึงได้จากเครื่องอื่น ๆ
+    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
     const newBook = new this.bookModel({
       ...createBookDto,
+      img: `${BACKEND_URL}/uploads/book${filename}`,  // สร้าง URL ของภาพ
       deleted_at: null
     });
+  
     return newBook.save();
   }
-
-  async createBooks(createBookDto: CreateBookDto[]): Promise<iBook[]> {
-    const booksInDb = await this.bookModel.find({
-      $or: createBookDto.map(dto => ({
-        $or: [{ book_th: dto.book_th }, { book_en: dto.book_en }]
-      }))
-    });
-
-    const existingTitles = booksInDb.map(book => book.book_th);
-
-    const booksToInsert = createBookDto.filter(dto =>
-      !existingTitles.includes(dto.book_th) && !existingTitles.includes(dto.book_en)
-    ).map(dto => ({
-      ...dto,
-      deleted_at: null,
-      status: Status.ACTIVE,
-    }));
-
-    if (!booksToInsert.length) {
-      throw new Error('No new books to add.');
-    }
-
-    return this.bookModel.insertMany(booksToInsert);
-  }
-
+  
   // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
-  async findOneByIdAndUpdateView(id: string, ip: string): Promise<iBook> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid ID format.');
-    }
-
-    const redisKey = `viewed:${id}:${ip}`;
-    const viewed = await this.redisClient.get(redisKey);
-
-    if (!viewed) {
-      const book = await this.bookModel.findOneAndUpdate(
-        {
-          _id: id, status:
-          {
-            $ne: Status.DELETED
-          },
-          deleted_at: null
-        },
-        {
-          $inc:
-          {
-            view: 1
-          }
-        },
-        {
-          new: true
-        }
-      ).exec();
-
-      if (!book) {
-        throw new NotFoundException(`Book with ID ${id} not found.`);
-      }
-
-      await this.redisClient.set(redisKey, 'true', 'EX', 300);
-
-      return book;
-    }
-
-    return await this.bookModel.findOne({
-      _id: id,
-      status: { $ne: Status.DELETED },
-      deleted_at: null,
-    }).exec();
+async findOneByIdAndUpdateView(id: string, ip: string): Promise<iBook> {
+  if (!Types.ObjectId.isValid(id)) {
+    throw new BadRequestException('Invalid ID format.');
   }
+
+  const redisKey = `viewed:${id}:${ip}`;
+  const viewed = await this.redisClient.get(redisKey);
+
+  if (!viewed) {
+    const book = await this.bookModel.findOneAndUpdate(
+      {
+        _id: id,
+        status: { $ne: Status.DELETED },
+        deleted_at: null
+      },
+      {
+        $inc: { view: 1 }
+      },
+      { new: true }
+    ).exec();
+
+    if (!book) {
+      throw new NotFoundException(`Book with ID ${id} not found.`);
+    }
+
+    book.img = `${process.env.BACKEND_URL}/uploads/book${book.img}`;
+
+    await this.redisClient.set(redisKey, 'true', 'EX', 300);
+
+    return book;
+  }
+
+  return await this.bookModel.findOne({
+    _id: id,
+    status: { $ne: Status.DELETED },
+    deleted_at: null,
+  }).exec();
+}
 
   async findBooksByCategory(category: BookCategory, ip: string): Promise<{
     books: iBook[],
@@ -305,13 +280,13 @@ export class BookService {
     return updated;
   }
 
-  async uploadBookCover(
-    bookId: string,
-    filename: string): Promise<iBook> {
+  async uploadBookCover(bookId: string, filename: string): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
 
-    book.img = `/uploads/book${filename}`;
+    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+    book.img = `${BACKEND_URL}/uploads/book${filename}`;
+
     return await book.save();
   }
 

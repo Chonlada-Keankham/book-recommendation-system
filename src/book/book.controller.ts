@@ -1,6 +1,6 @@
 import { extname } from 'path';
 import { BookCategory } from 'src/enum/book-category.enum';
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Put, Query, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Put, Query, Req, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { BookService } from './book.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateBookDto } from './dto/create-book.dto';
@@ -15,33 +15,30 @@ export class BookController {
   constructor(private readonly bookService: BookService) { }
 
   // ----------------Create----------
-  @Post('/create-book')
-  async createOne(@Body() createBookDto: CreateBookDto) {
-    const book = await this.bookService.createBook(createBookDto);
-    return {
-      statusCode: 201,
-      message: 'Book created successfully',
-      books: book,
-    };
-  }
+@Post('/create')
+async createBook(@Body() createBookDto: CreateBookDto, @UploadedFile() file: Express.Multer.File) {
+  const book = await this.bookService.createBook(createBookDto, file.filename);  
+  return {
+    statusCode: 201,
+    message: 'Book created successfully',
+    data: book,
+  };
+}
 
-  @Post('/create-books')
-  async createMany(@Body() createBookDtos: CreateBookDto[]) {
-    const books = await this.bookService.createBooks(createBookDtos);
-    return {
-      statusCode: 201,
-      message: 'Books created successfully',
-      data: books,
-    };
-  }
+@Get('/find-one/:id')
+async getBook(@Param('id') id: string, @Req() request: Request) {
+  const ip = typeof request.headers['x-forwarded-for'] === 'string'
+    ? request.headers['x-forwarded-for']
+    : request.ip;
 
-  @Get('/find-one/:id')
-  async getBook(@Param('id') id: string, @Req() request: Request) {
-    const ip = typeof request.headers['x-forwarded-for'] === 'string'
-      ? request.headers['x-forwarded-for']
-      : request.ip;
-    return this.bookService.findOneByIdAndUpdateView(id, ip);
-  }
+  const book = await this.bookService.findOneByIdAndUpdateView(id, ip);
+
+  return {
+    statusCode: 200,
+    message: 'Book found',
+    book: book,  
+  };
+}
 
   @Get('/find-all')
   async findAll(@Req() request: Request) {

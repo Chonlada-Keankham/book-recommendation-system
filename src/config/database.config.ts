@@ -6,6 +6,10 @@ export const databaseConfig = {
     url: process.env.frontendUrl || 'http://localhost:3000/', 
   };
   
+  export const BACKEND_UR = {
+    url: process.env.BACKEND_UR || 'https://d844-202-28-7-37.ngrok-free.app', 
+  };
+
 
 
   
