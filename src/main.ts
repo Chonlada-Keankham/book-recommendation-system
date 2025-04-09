@@ -28,9 +28,8 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
 
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/',
+    prefix: '/uploads/',  
   });
-
   await app.listen(process.env.PORT || 5000, '0.0.0.0');
 }
 

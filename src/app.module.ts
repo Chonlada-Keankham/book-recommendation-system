@@ -11,6 +11,7 @@ import { PlaylistModule } from './playlist/playlist.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from '@nestjs/cache-manager';
 import { databaseConfig } from './config/database.config';  
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { databaseConfig } from './config/database.config';
     BookModule,
     CommentModule,
     PlaylistModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [

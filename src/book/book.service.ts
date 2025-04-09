@@ -95,7 +95,7 @@ export class BookService {
     const existingBook = await this.bookModel.findOne({
       $or: [
         { book_th: createBookDto.book_th },
-        { book_en: createBookDto.book_en },
+        { book_en: createBookDto.book_en }
       ]
     });
   
@@ -103,59 +103,58 @@ export class BookService {
       throw new Error('This book is already in the system.');
     }
   
-    // ใช้ process.env.BACKEND_URL เพื่อให้ URL ของภาพสามารถเข้าถึงได้จากเครื่องอื่น ๆ
     const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
     const newBook = new this.bookModel({
       ...createBookDto,
-      img: `${BACKEND_URL}/uploads/book${filename}`,  // สร้าง URL ของภาพ
+      img: `${BACKEND_URL}/uploads/book${filename}`, 
       deleted_at: null
     });
   
     return newBook.save();
   }
-  
+    
   // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
-async findOneByIdAndUpdateView(id: string, ip: string): Promise<iBook> {
-  if (!Types.ObjectId.isValid(id)) {
-    throw new BadRequestException('Invalid ID format.');
-  }
-
-  const redisKey = `viewed:${id}:${ip}`;
-  const viewed = await this.redisClient.get(redisKey);
-
-  if (!viewed) {
-    const book = await this.bookModel.findOneAndUpdate(
-      {
-        _id: id,
-        status: { $ne: Status.DELETED },
-        deleted_at: null
-      },
-      {
-        $inc: { view: 1 }
-      },
-      { new: true }
-    ).exec();
-
-    if (!book) {
-      throw new NotFoundException(`Book with ID ${id} not found.`);
+  async findOneByIdAndUpdateView(id: string, ip: string): Promise<iBook> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid ID format.');
     }
-
-    book.img = `${process.env.BACKEND_URL}/uploads/book${book.img}`;
-
-    await this.redisClient.set(redisKey, 'true', 'EX', 300);
-
-    return book;
+  
+    const redisKey = `viewed:${id}:${ip}`;
+    const viewed = await this.redisClient.get(redisKey);
+  
+    if (!viewed) {
+      const book = await this.bookModel.findOneAndUpdate(
+        {
+          _id: id,
+          status: { $ne: Status.DELETED },
+          deleted_at: null
+        },
+        {
+          $inc: { view: 1 }
+        },
+        { new: true }
+      ).exec();
+  
+      if (!book) {
+        throw new NotFoundException(`Book with ID ${id} not found.`);
+      }
+  
+      book.img = `${process.env.BACKEND_URL}/uploads/book${book.img}`;
+  
+      await this.redisClient.set(redisKey, 'true', 'EX', 300);
+  
+      return book;
+    }
+  
+    return await this.bookModel.findOne({
+      _id: id,
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    }).exec();
   }
-
-  return await this.bookModel.findOne({
-    _id: id,
-    status: { $ne: Status.DELETED },
-    deleted_at: null,
-  }).exec();
-}
-
+  
   async findBooksByCategory(category: BookCategory, ip: string): Promise<{
     books: iBook[],
     total: number
