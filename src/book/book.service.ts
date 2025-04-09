@@ -141,7 +141,9 @@ export class BookService {
         throw new NotFoundException(`Book with ID ${id} not found.`);
       }
   
-      book.img = `${process.env.BACKEND_URL}/uploads/book${book.img}`;
+      if (book.img) {
+        book.img = `${process.env.BACKEND_URL}/uploads/book${book.img}`;
+      }
   
       await this.redisClient.set(redisKey, 'true', 'EX', 300);
   
@@ -154,7 +156,7 @@ export class BookService {
       deleted_at: null,
     }).exec();
   }
-  
+    
   async findBooksByCategory(category: BookCategory, ip: string): Promise<{
     books: iBook[],
     total: number
@@ -268,27 +270,15 @@ export class BookService {
     return await this.bookModel.findByIdAndUpdate(bookId, updatedData, { new: true });
   }
 
-  async updateView(bookId: string): Promise<iBook> {
-    const updated = await this.bookModel.findByIdAndUpdate(
-      bookId,
-      { $inc: { view: 1 } },
-      { new: true }
-    ).exec();
-
-    if (!updated) throw new NotFoundException('Book not found');
-    return updated;
-  }
-
   async uploadBookCover(bookId: string, filename: string): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
-
-    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-    book.img = `${BACKEND_URL}/uploads/book${filename}`;
-
+  
+    book.img = `/uploads/book/${filename}`;
+  
     return await book.save();
   }
-
+  
   // -------------------------------------------------------------------
   // 🔸 RECOMMENDATION
   // -------------------------------------------------------------------
