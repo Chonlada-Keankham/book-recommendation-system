@@ -95,7 +95,7 @@ export class BookService {
     const existingBook = await this.bookModel.findOne({
       $or: [
         { book_th: createBookDto.book_th },
-        { book_en: createBookDto.book_en }
+        { book_en: createBookDto.book_en },
       ]
     });
   
