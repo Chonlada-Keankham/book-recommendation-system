@@ -27,10 +27,9 @@ export class CommentService {
       if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
 
       const ip = request.headers['x-forwarded-for'] || request.ip;
-      const book = await this.bookService.findOneById(createCommentDto.book.toString(), request.ip);
+      const book = await this.bookService.findOneByIdAndUpdateView(createCommentDto.book.toString(), request.ip);
       if (!book) throw new HttpException('Book not found', HttpStatus.NOT_FOUND);
 
-      // ตรวจสอบคอมเมนต์ที่มีอยู่แล้วสำหรับหนังสือและผู้ใช้
       const existingComment = await this.commentModel.findOne({ book: createCommentDto.book });
 
       if (existingComment) {

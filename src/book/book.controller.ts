@@ -39,7 +39,7 @@ export class BookController {
   @Get('/find-one/:id')
   async getBook(@Param('id') id: string, @Req() request: Request) {
     const ip = request.headers['x-forwarded-for'] || request.ip; 
-    return this.bookService.findOneById(id, request.ip);
+    return this.bookService.findOneByIdAndUpdateView(id, request.ip);
   }
   
   @Get('/find-all')
@@ -73,16 +73,6 @@ export class BookController {
     };
   }
 
-  @Get('/view-book/:id')
-  @ApiOperation({ summary: 'Get book by ID and increase view count' })
-  async getBookUpdateView(@Param('id') id: string) {
-    const book = await this.bookService.getBookUpdateView(id);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Book retrieved and view count updated successfully',
-      data: book,
-    };
-  }
 
   // ---------- Recommendation ----------
   @Get('/recommend/guest')

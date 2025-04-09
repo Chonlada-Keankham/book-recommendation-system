@@ -11,17 +11,18 @@ import { PlaylistService } from 'src/playlist/playlist.service';
 
 @Injectable()
 export class BookService {
-  private redisClient: Redis; 
+  private redisClient: Redis;
 
   constructor(
     @InjectModel('Book') private readonly bookModel: Model<iBook>,
-    @Inject(forwardRef(() => PlaylistService)) private readonly playlistService: PlaylistService,
+    @Inject(forwardRef(() => PlaylistService))
+    private readonly playlistService: PlaylistService,
   ) {
     this.redisClient = new Redis({
       host: 'localhost',
       port: 6379,
-      password: '', 
-      db: 0, 
+      password: '',
+      db: 0,
     });
   }
 
@@ -65,8 +66,17 @@ export class BookService {
 
   async updateAllShortDescriptions(shortDescription: string): Promise<any> {
     const result = await this.bookModel.updateMany(
-      { status: { $ne: Status.DELETED }, deleted_at: null },
-      { $set: { short_description: shortDescription } },
+      { 
+        status: {
+           $ne: Status.DELETED
+           }, 
+           deleted_at: null },
+      { 
+        $set:
+         { 
+          short_description: shortDescription 
+        } 
+      },
     );
     if (result.modifiedCount === 0) throw new NotFoundException('No books were updated');
     return result;
@@ -140,8 +150,7 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
-
-  async findOneById(id: string, ip: string): Promise<iBook> {
+  async findOneByIdAndUpdateView(id: string, ip: string): Promise<iBook> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ID format.');
     }
@@ -150,7 +159,6 @@ export class BookService {
     const viewed = await this.redisClient.get(redisKey);
 
     if (!viewed) {
-      // เพิ่มยอดวิว
       const book = await this.bookModel.findOneAndUpdate(
         { _id: id, status: { $ne: Status.DELETED }, deleted_at: null },
         { $inc: { view: 1 } },
@@ -161,8 +169,7 @@ export class BookService {
         throw new NotFoundException(`Book with ID ${id} not found.`);
       }
 
-      // เก็บค่าใน Redis เพื่อป้องกันการดูซ้ำใน 5 นาที
-      await this.redisClient.set(redisKey, 'true', 'EX', 300);
+      await this.redisClient.set(redisKey, 'true', 'EX', 300); 
 
       return book;
     }
@@ -173,49 +180,26 @@ export class BookService {
       deleted_at: null,
     }).exec();
   }
-
-  async getBookUpdateView(bookId: string): Promise<iBook> {
-    if (!Types.ObjectId.isValid(bookId)) {
-      throw new BadRequestException('Invalid book ID format.');
-    }
-
-    const book = await this.bookModel.findOneAndUpdate(
-      {
-        _id: bookId,
-        status: { $ne: Status.DELETED },
-        deleted_at: null
-      },
-      { $inc: { view: 1 } },
-      { new: true }
-    ).exec();
-
-    if (!book) {
-      throw new NotFoundException('Book not found or has been deleted.');
-    }
-
-    return book;
-  }
-
   async findAll(page = 1, ip: string): Promise<{
     books: iBook[],
     total: number
   }> {
-    const skip = (page - 1) * 10;  
+    const skip = (page - 1) * 10;
     const total = await this.bookModel.countDocuments({
       status: { $ne: Status.DELETED },
       deleted_at: null,
     });
-  
+
     const books = await this.bookModel.find({
       status: { $ne: Status.DELETED },
       deleted_at: null,
     })
-      .skip(skip) 
+      .skip(skip)
       .exec();
-  
+
     return { books, total };
   }
-    
+
   async depthSearch(
     category?: string,
     author?: string,
