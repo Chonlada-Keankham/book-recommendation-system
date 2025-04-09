@@ -13,7 +13,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api'); 
 
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000', // ใช้ค่าจาก .env หรือค่า default
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000', 
     credentials: true, 
   });
 

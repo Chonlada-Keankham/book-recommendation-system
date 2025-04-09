@@ -21,7 +21,7 @@ export class BookController {
     return {
       statusCode: 201,
       message: 'Book created successfully',
-      data: book,
+      books: book,
     };
   }
 
@@ -53,7 +53,7 @@ export class BookController {
     return {
       statusCode: 200,
       message: 'Books found',
-      data: books,
+      books: books,
     };
   }
 
