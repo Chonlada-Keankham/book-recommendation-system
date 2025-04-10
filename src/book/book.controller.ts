@@ -176,6 +176,20 @@ export class BookController {
     };
   }
 
+  @Get('/recommendations/daily')
+  async getDailyRecommendations(
+    @Query('limit') limit = '10' 
+  ) {
+    const books = await this.bookService.getDailyRecommendedBooks();
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Daily recommended books fetched successfully',
+      date: new Date().toISOString().slice(0, 10), 
+      total: books.length,
+      data: books,
+    };
+  }
 
   @Get('/random')
   async getRandomBooks(

@@ -8,6 +8,7 @@ import { Status } from 'src/enum/status.enum';
 import { BookCategory } from 'src/enum/book-category.enum';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { PlaylistService } from 'src/playlist/playlist.service';
+
 @Injectable()
 export class BookService {
   private redisClient: Redis;
@@ -360,8 +361,45 @@ export class BookService {
     return [...dedup(group1), ...dedup(group2), ...dedup(group3)];
   }
 
+  async getDailyRecommendedBooks(topN = 50): Promise<iBook[]> {
+    const topBooks = await this.bookModel.find({
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    })
+    .sort({ view: -1 })
+    .limit(topN)
+    .select('book_th book_en img author category view')
+    .lean();
   
-  // -------------------------------------------------------------------
+    if (topBooks.length === 0) {
+      throw new NotFoundException('No books available for recommendation.');
+    }
+  
+    const today = new Date().toISOString().slice(0, 10); 
+    const seed = today.split('-').join(''); 
+    let pseudoRandomSeed = parseInt(seed);
+  
+    const random = () => {
+      const x = Math.sin(pseudoRandomSeed++) * 10000;
+      return x - Math.floor(x);
+    };
+  
+    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+  
+    const shuffled = topBooks
+      .map(book => {
+        if (book.img) {
+          book.img = `${BACKEND_URL}${book.img}`;
+        }
+        return { book, sort: random() }; 
+      })
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ book }) => book);
+  
+    return shuffled;
+  }
+
+    // -------------------------------------------------------------------
   // 🔸 DELETE
   // -------------------------------------------------------------------
 
