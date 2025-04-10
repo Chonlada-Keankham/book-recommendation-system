@@ -7,7 +7,7 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 import { UserService } from 'src/user/user.service';
 import { BookService } from 'src/book/book.service';
 import { Status } from 'src/enum/status.enum';
-import { request } from 'express';
+import { Request } from 'express';
 
 @Injectable()
 export class CommentService {
@@ -16,18 +16,21 @@ export class CommentService {
     private readonly commentModel: Model<iComment>,
     private readonly userService: UserService,
     private readonly bookService: BookService,
-  ) { }
+  ) {}
 
   // -------------------------------------------------------------------
   // 🔸 CREATE
   // -------------------------------------------------------------------
-  async createComment(createCommentDto: CreateCommentDto): Promise<iComment> {
+  async createComment(createCommentDto: CreateCommentDto, req: Request): Promise<iComment> {
     try {
       const user = await this.userService.findOneById(createCommentDto.user.toString());
       if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
 
-      const ip = request.headers['x-forwarded-for'] || request.ip;
-      const book = await this.bookService.findOneByIdAndUpdateView(createCommentDto.book.toString(), request.ip);
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+      const book = await this.bookService.findOneByIdAndUpdateView(
+        createCommentDto.book.toString(),
+        ip?.toString() || ''
+      );
       if (!book) throw new HttpException('Book not found', HttpStatus.NOT_FOUND);
 
       const existingComment = await this.commentModel.findOne({ book: createCommentDto.book });
@@ -39,13 +42,13 @@ export class CommentService {
 
         if (userComments) {
           const existingUserComment = userComments.comments.find(
-            comment => comment.content === createCommentDto.content
+            comment => comment.content.trim() === createCommentDto.content.trim()
           );
 
           if (!existingUserComment) {
             userComments.comments.push({
               _id: new Types.ObjectId(),
-              content: createCommentDto.content,
+              content: createCommentDto.content.trim(),
               created_at: new Date(),
               updated_at: new Date(),
             });
@@ -58,7 +61,7 @@ export class CommentService {
             comments: [
               {
                 _id: new Types.ObjectId(),
-                content: createCommentDto.content,
+                content: createCommentDto.content.trim(),
                 created_at: new Date(),
                 updated_at: new Date(),
               },
@@ -80,7 +83,7 @@ export class CommentService {
             comments: [
               {
                 _id: new Types.ObjectId(),
-                content: createCommentDto.content,
+                content: createCommentDto.content.trim(),
                 created_at: new Date(),
                 updated_at: new Date(),
               },
@@ -103,8 +106,7 @@ export class CommentService {
     try {
       const comment = await this.commentModel.findOne({
         'users.comments._id': new Types.ObjectId(id),
-      }).populate('users.user') //
-        .exec();
+      }).populate('users.user').exec();
 
       if (!comment) {
         throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
@@ -127,9 +129,7 @@ export class CommentService {
   // -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------
-  async updateComment(
-    commentId: string,
-    updateCommentDto: UpdateCommentDto): Promise<iComment> {
+  async updateComment(commentId: string, updateCommentDto: UpdateCommentDto): Promise<iComment> {
     try {
       const { content, user, book } = updateCommentDto;
 
@@ -149,7 +149,7 @@ export class CommentService {
 
       if (commentIndex === -1) throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
 
-      userComments.comments[commentIndex].content = content;
+      userComments.comments[commentIndex].content = content.trim();
       userComments.comments[commentIndex].updated_at = new Date();
 
       await existingComment.save();
@@ -162,10 +162,7 @@ export class CommentService {
   // -------------------------------------------------------------------
   // 🔸 DELETE
   // -------------------------------------------------------------------
-
-  async softDelete(
-    bookId: string,
-    userId: string): Promise<iComment> {
+  async softDelete(bookId: string, userId: string): Promise<iComment> {
     try {
       const user = await this.userService.findOneById(userId);
       if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
@@ -179,6 +176,7 @@ export class CommentService {
 
       if (!comment) throw new NotFoundException('Comment not found or already deleted.');
 
+      comment.status = Status.DELETED;
       comment.deleted_at = new Date();
       await comment.save();
       return comment;
@@ -187,9 +185,7 @@ export class CommentService {
     }
   }
 
-  async deleteById(
-    bookId: string,
-    userId: string): Promise<boolean> {
+  async deleteById(bookId: string, userId: string): Promise<boolean> {
     try {
       const user = await this.userService.findOneById(userId);
       if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);

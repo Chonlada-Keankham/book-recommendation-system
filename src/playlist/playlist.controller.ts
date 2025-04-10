@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, HttpStatus, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, HttpStatus } from '@nestjs/common';
 import { PlaylistService } from './playlist.service';
 import { CreatePlaylistDto } from './dto/create-playlist.dto';
 import { UpdatePlaylistDto } from './dto/update-playlist.dto';
@@ -6,9 +6,9 @@ import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @Controller('playlist')
 export class PlaylistController {
-  constructor(private readonly playlistService: PlaylistService) { }
+  constructor(private readonly playlistService: PlaylistService) {}
 
-  // ----------------Create----------
+  // ---------- Create ----------
   @Post('/create-playlist')
   @ApiOperation({ summary: 'Create a new playlist' })
   @ApiResponse({
@@ -24,7 +24,7 @@ export class PlaylistController {
     };
   }
 
-  // ----------------Read----------
+  // ---------- Read ----------
   @Get('/find-playlist/:userId')
   @ApiOperation({ summary: 'Get playlist by user ID' })
   @ApiResponse({
@@ -40,7 +40,7 @@ export class PlaylistController {
     };
   }
 
-  // ----------------Update----------
+  // ---------- Update ----------
   @Patch('/update/:userId')
   @ApiOperation({ summary: 'Update playlist for a user' })
   @ApiResponse({
@@ -58,6 +58,4 @@ export class PlaylistController {
       data: updatedPlaylist,
     };
   }
-
-  // ----------------Delete----------
 }

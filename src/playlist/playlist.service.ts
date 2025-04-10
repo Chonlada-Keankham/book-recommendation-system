@@ -1,5 +1,5 @@
 import { InjectModel } from '@nestjs/mongoose';
-import { Inject, Injectable, NotFoundException, Param, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, forwardRef, Inject } from '@nestjs/common';
 import { CreatePlaylistDto } from './dto/create-playlist.dto';
 import { UpdatePlaylistDto } from './dto/update-playlist.dto';
 import { Model } from 'mongoose';
@@ -13,7 +13,7 @@ export class PlaylistService {
     private readonly playlistModel: Model<iPlaylist>,
     @Inject(forwardRef(() => BookService))
     private readonly bookService: BookService,
-  ) { }
+  ) {}
 
   // -------------------------------------------------------------------
   // 🔸 CREATE
@@ -51,7 +51,7 @@ export class PlaylistService {
   }
 
   // -------------------------------------------------------------------
-  // 🔸 GET
+  // 🔸 READ
   // -------------------------------------------------------------------
 
   async getPlaylist(userId: string): Promise<iPlaylist> {
@@ -65,7 +65,6 @@ export class PlaylistService {
   // -------------------------------------------------------------------
   // 🔸 RECOMMENDATIONS
   // -------------------------------------------------------------------
-
   public async generateRecommendations(categories: string[], authors: string[]): Promise<any[]> {
     const recommendations = await Promise.all([
       ...categories.map(category =>
@@ -77,11 +76,21 @@ export class PlaylistService {
     ]);
 
     const flattenedRecommendations = recommendations.flat();
-    const uniqueBooks = Array.from(new Set(flattenedRecommendations.map(book => book._id.toString())))
-      .map(id => flattenedRecommendations.find(book => book._id.toString() === id));
+    const bookMap = new Map<string, any>();
+    for (const book of flattenedRecommendations) {
+      bookMap.set(book._id.toString(), book);
+    }
+    const uniqueBooks = Array.from(bookMap.values());
 
-    uniqueBooks.sort(() => Math.random() - 0.5);
+    this.shuffleArray(uniqueBooks); 
     return uniqueBooks.slice(0, 20);
+  }
+
+  private shuffleArray(array: any[]): void {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
   }
 
   // -------------------------------------------------------------------
