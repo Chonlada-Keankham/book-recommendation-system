@@ -8,10 +8,6 @@ import { Status } from 'src/enum/status.enum';
 import { BookCategory } from 'src/enum/book-category.enum';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { PlaylistService } from 'src/playlist/playlist.service';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { ApiOperation } from '@nestjs/swagger';
 
 @Injectable()
 export class BookService {
@@ -87,7 +83,6 @@ export class BookService {
     return result;
   }
 
-
   // -------------------------------------------------------------------
   // 🔸 CREATE
   // -------------------------------------------------------------------
@@ -98,21 +93,21 @@ export class BookService {
         { book_en: createBookDto.book_en }
       ]
     });
-  
+
     if (existingBook) {
       throw new Error('This book is already in the system.');
     }
-  
+
     const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
     const newBook = new this.bookModel({
       ...createBookDto,
-      img: `${BACKEND_URL}/uploads/book${filename}`, 
+      img: `${BACKEND_URL}/uploads/book${filename}`,
       deleted_at: null
     });
-  
+
     return newBook.save();
   }
-    
+
   // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
@@ -129,11 +124,9 @@ export class BookService {
         {
           _id: id,
           status: { $ne: Status.DELETED },
-          deleted_at: null
+          deleted_at: null,
         },
-        {
-          $inc: { view: 1 }
-        },
+        { $inc: { view: 1 } },
         { new: true }
       ).exec();
   
@@ -145,7 +138,7 @@ export class BookService {
         book.img = `${process.env.BACKEND_URL}/uploads/book${book.img}`;
       }
   
-      await this.redisClient.set(redisKey, 'true', 'EX', 300);
+      await this.redisClient.set(redisKey, 'true', 'EX', 300);  // Set to prevent multiple views
   
       return book;
     }
@@ -156,33 +149,38 @@ export class BookService {
       deleted_at: null,
     }).exec();
   }
-    
+  
   async findBooksByCategory(category: BookCategory, ip: string): Promise<{
-    books: iBook[],
-    total: number
+    books: iBook[];
+    total: number;
   }> {
     const total = await this.bookModel.countDocuments({
       category,
       status: { $ne: Status.DELETED },
       deleted_at: null,
     });
-
+  
     const books = await this.bookModel.find({
       category,
       status: { $ne: Status.DELETED },
       deleted_at: null,
     }).exec();
-
+  
     for (const book of books) {
       const redisKey = `viewed:${book._id}:${ip}`;
       const viewed = await this.redisClient.get(redisKey);
-
+  
       if (!viewed) {
         await this.bookModel.findByIdAndUpdate(book._id, { $inc: { view: 1 } }).exec();
-        await this.redisClient.set(redisKey, 'true', 'EX', 300);
+  
+        if (book.img) {
+          book.img = `${process.env.BACKEND_URL}/uploads/book${book.img}`;
+        }
+  
+        await this.redisClient.set(redisKey, 'true', 'EX', 300);  
       }
     }
-
+  
     return { books, total };
   }
 
@@ -203,42 +201,6 @@ export class BookService {
     }
 
     return books;
-  }
-
-  async depthSearch(
-    category?: string,
-    author?: string,
-    minViews?: number,
-    maxViews?: number,
-    page = 1,
-    limit = 10
-  ): Promise<{
-    data: iBook[];
-    total: number
-  }> {
-    const skip = (page - 1) * limit;
-    const aggregation: PipelineStage[] = [];
-
-    if (category) aggregation.push({ $match: { category } });
-    if (author) aggregation.push({ $match: { author } });
-    if (minViews !== undefined || maxViews !== undefined) {
-      const viewFilter: any = {};
-      if (minViews !== undefined) viewFilter.$gte = minViews;
-      if (maxViews !== undefined) viewFilter.$lte = maxViews;
-      aggregation.push({ $match: { view: viewFilter } });
-    }
-
-    const totalResult = await this.bookModel.aggregate([
-      ...aggregation,
-      { $count: "total" }]);
-    const total = totalResult[0]?.total || 0;
-
-    aggregation.push({ $sort: { view: -1 } });
-    aggregation.push({ $skip: skip });
-    aggregation.push({ $limit: limit });
-
-    const books = await this.bookModel.aggregate(aggregation);
-    return { data: books, total };
   }
 
   // -------------------------------------------------------------------
@@ -273,65 +235,67 @@ export class BookService {
   async uploadBookCover(bookId: string, filename: string): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
-  
+
     book.img = `/uploads/book/${filename}`;
-  
+
     return await book.save();
   }
-  
+
   // -------------------------------------------------------------------
   // 🔸 RECOMMENDATION
   // -------------------------------------------------------------------
-  async recommendBooksForGuest(
-    category: BookCategory,
-    bookId: string,
-    limit?: number
-  ): Promise<{ book: iBook; recommendedBooks: iBook[] }> {
+  async recommendBooksForGuest(category: BookCategory, bookId: string, ip: string): Promise<{ book: iBook; recommendedBooks: iBook[] }> {
     if (!Types.ObjectId.isValid(bookId)) {
       throw new BadRequestException('Invalid book ID format.');
     }
-
-    if (!category) {
-      throw new BadRequestException('Category is required.');
-    }
-
-    const book = await this.bookModel.findOneAndUpdate(
-      {
-        _id: bookId,
+  
+    const redisKey = `viewed:${bookId}:${ip}`;
+    const viewed = await this.redisClient.get(redisKey);
+  
+    if (!viewed) {
+      const book = await this.bookModel.findOneAndUpdate(
+        {
+          _id: bookId,
+          status: { $ne: Status.DELETED },
+          deleted_at: null,
+        },
+        { $inc: { view: 1 } },
+        { new: true }
+      ).exec();
+  
+      if (!book) {
+        throw new NotFoundException('Book not found.');
+      }
+  
+      if (book.img) {
+        book.img = `${process.env.BACKEND_URL}/uploads/book${book.img}`;
+      }
+  
+      await this.redisClient.set(redisKey, 'true', 'EX', 300);  // Prevent multiple views
+  
+      const recommendedBooks = await this.bookModel.find({
+        category,
+        _id: { $ne: bookId },
         status: { $ne: Status.DELETED },
         deleted_at: null,
-      },
-      { $inc: { view: 1 } },
-      { new: true }
-    ).exec();
-
-    if (!book) {
-      throw new NotFoundException('Book not found.');
+      }).sort({ view: -1 });
+  
+      return { book, recommendedBooks };
     }
-
-    const query = this.bookModel.find({
-      category,
-      _id: { $ne: bookId },
+  
+    return await this.bookModel.findOne({
+      _id: bookId,
       status: { $ne: Status.DELETED },
       deleted_at: null,
-    }).sort({ view: -1 });
-
-    if (limit && limit > 0) {
-      query.limit(limit);
-    }
-
-    const recommendedBooks = await query.exec();
-
-    return { book, recommendedBooks };
+    }).exec().then((book) => {
+      return { book, recommendedBooks: [] };
+    });
   }
-
-  async recommendBooksForMember(
-    userId: string,
-    currentBookId: string
-  ): Promise<iBook[]> {
+  
+  async recommendBooksForMember(userId: string, currentBookId: string, ip: string): Promise<iBook[]> {
     const playlist = await this.playlistService.getPlaylist(userId);
     if (!playlist) throw new NotFoundException('Playlist not found');
-
+  
     const currentBook = await this.bookModel.findOneAndUpdate(
       {
         _id: currentBookId,
@@ -341,9 +305,21 @@ export class BookService {
       { $inc: { view: 1 } },
       { new: true }
     ).exec();
-
+  
     if (!currentBook) throw new NotFoundException('Current book not found');
-
+  
+    // ปรับให้ตรวจสอบและแก้ไข img ของ currentBook
+    if (currentBook.img) {
+      currentBook.img = `${process.env.BACKEND_URL}/uploads/book${currentBook.img}`;
+    }
+  
+    // Prevent multiple views
+    const redisKey = `viewed:${currentBookId}:${ip}`;
+    const viewed = await this.redisClient.get(redisKey);
+    if (!viewed) {
+      await this.redisClient.set(redisKey, 'true', 'EX', 300);
+    }
+  
     const seen = new Set<string>();
     const dedup = (books: iBook[]) =>
       books.filter((b) => {
@@ -352,40 +328,44 @@ export class BookService {
         seen.add(id);
         return true;
       });
-
-    const group1 = await this.bookModel
-      .find({
-        category: currentBook.category,
-        _id: { $ne: currentBookId },
-        status: { $ne: Status.DELETED },
-        deleted_at: null,
-      })
-      .sort({ view: -1, createdAt: -1 })
-      .exec();
-
-    const group2 = await this.bookModel
-      .find({
-        category: { $in: playlist.categories },
-        _id: { $ne: currentBookId },
-        status: { $ne: Status.DELETED },
-        deleted_at: null,
-      })
-      .sort({ createdAt: -1 })
-      .exec();
-
-    const group3 = await this.bookModel
-      .find({
-        author: { $in: playlist.authors },
-        _id: { $ne: currentBookId },
-        status: { $ne: Status.DELETED },
-        deleted_at: null,
-      })
-      .sort({ createdAt: -1 })
-      .exec();
-
-    return [...dedup(group1), ...dedup(group2), ...dedup(group3)];
+  
+    const group1 = await this.bookModel.find({
+      category: currentBook.category,
+      _id: { $ne: currentBookId },
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    }).sort({ view: -1, createdAt: -1 }).exec();
+  
+    const group2 = await this.bookModel.find({
+      category: { $in: playlist.categories },
+      _id: { $ne: currentBookId },
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    }).sort({ createdAt: -1 }).exec();
+  
+    const group3 = await this.bookModel.find({
+      author: { $in: playlist.authors },
+      _id: { $ne: currentBookId },
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    }).sort({ createdAt: -1 }).exec();
+  
+    // สำหรับหนังสือแนะนำในแต่ละกลุ่ม ให้แก้ไข img ของหนังสือที่แนะนำด้วย
+    const recommendedBooks = [
+      ...dedup(group1),
+      ...dedup(group2),
+      ...dedup(group3),
+    ];
+  
+    recommendedBooks.forEach((recommendedBook) => {
+      if (recommendedBook.img) {
+        recommendedBook.img = `${process.env.BACKEND_URL}/uploads/book${recommendedBook.img}`;
+      }
+    });
+  
+    return recommendedBooks;
   }
-
+  
   // -------------------------------------------------------------------
   // 🔸 DELETE
   // -------------------------------------------------------------------

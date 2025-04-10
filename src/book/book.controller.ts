@@ -124,86 +124,57 @@ async getBook(@Param('id') id: string, @Req() request: Request) {
       total: result.total,
     };
   }
-  
-  @Get('/depth-search')
-  async depthSearch(
-    @Query('page') page = '1',
-    @Query('limit') limit = '10',
-    @Query('category') category?: string,
-    @Query('author') author?: string,
-    @Query('minViews') minViews?: string,
-    @Query('maxViews') maxViews?: string,
-  ) {
-    const result = await this.bookService.depthSearch(
-      category,
-      author,
-      minViews ? parseInt(minViews) : undefined,
-      maxViews ? parseInt(maxViews) : undefined,
-      parseInt(page),
-      parseInt(limit),
-    );
-    return {
-      statusCode: 200,
-      message: 'Books found',
-      data: result.data,
-      total: result.total,
-    };
-  }
-
 
   // ---------- Recommendation ----------
   @Get('/recommend/guest')
   async recommendForGuest(
     @Query('category') category: string,
     @Query('bookId') bookId: string,
-    @Query('limit') limit?: string,
+    @Req() request: Request
   ) {
     if (!Object.values(BookCategory).includes(category as BookCategory)) {
       throw new BadRequestException('Invalid category');
     }
-
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    if (limit && isNaN(parsedLimit)) {
-      throw new BadRequestException('Limit must be a number');
-    }
-
+  
     const categoryEnum = category as BookCategory;
-
-    const books = await this.bookService.recommendBooksForGuest(
+  
+    const ip =
+      Array.isArray(request.headers['x-forwarded-for'])
+        ? request.headers['x-forwarded-for'][0]
+        : request.headers['x-forwarded-for'] || request.connection.remoteAddress || request.socket.remoteAddress;
+  
+    const { book, recommendedBooks } = await this.bookService.recommendBooksForGuest(
       categoryEnum,
       bookId,
-      parsedLimit
+      ip as string
     );
-
+  
     return {
       statusCode: HttpStatus.OK,
       message: 'Recommended books found',
-      data: books,
+      data: { book, recommendedBooks },
     };
   }
-
+      
   @Get('/recommend/member')
   async recommendForMember(
     @Query('userId') userId: string,
     @Query('bookId') bookId: string,
+    @Req() request: Request,  
   ) {
-    if (!Types.ObjectId.isValid(userId)) {
-      throw new BadRequestException('Invalid user ID');
-    }
-
-    if (!Types.ObjectId.isValid(bookId)) {
-      throw new BadRequestException('Invalid book ID');
-    }
-
-    const recommendedBooks = await this.bookService.recommendBooksForMember(userId, bookId);
-
+    const ip = Array.isArray(request.headers['x-forwarded-for'])
+      ? request.headers['x-forwarded-for'][0]
+      : request.headers['x-forwarded-for'] || request.connection.remoteAddress;
+  
+    const recommendedBooks = await this.bookService.recommendBooksForMember(userId, bookId, ip);
+  
     return {
       statusCode: HttpStatus.OK,
-      message: 'Recommended books for member retrieved successfully.',
+      message: 'Recommended books found',
       data: recommendedBooks,
     };
   }
-
+  
   @Get('/random')
   async getRandomBooks(
     @Query('category') category: string,
