@@ -217,6 +217,25 @@ export class BookController {
     };
   }
 
+  // ---------- Increase View by API (NEW) ----------
+@Post('/increase-view/:id')
+async increaseView(
+  @Param('id') id: string,
+  @Req() request: Request,
+) {
+  const ip = typeof request.headers['x-forwarded-for'] === 'string'
+    ? request.headers['x-forwarded-for']
+    : request.ip;
+
+  const book = await this.bookService.increaseViewAfterDelay(id, ip);
+
+  return {
+    statusCode: HttpStatus.OK,
+    message: 'View increased successfully',
+    data: book,
+  };
+}
+
   // ----------------Update----------
   @Put('/update-all-short-description')
   async updateAllShortDescriptions(@Body('short_description') shortDescription: string) {

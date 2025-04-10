@@ -133,7 +133,7 @@ export class BookService {
       }
 
       if (book.img) {
-        book.img = `${process.env.BACKEND_URL}/uploads/book${book.img}`;
+        book.img =`${process.env.BACKEND_URL}/uploads/book${book.img}`;
       }
 
       await this.redisClient.set(redisKey, 'true', 'EX', 300);
@@ -366,39 +366,43 @@ export class BookService {
       status: { $ne: Status.DELETED },
       deleted_at: null,
     })
-    .sort({ view: -1 })
-    .limit(topN)
-    .select('book_th book_en img author category view')
-    .lean();
+      .sort({ view: -1 })
+      .limit(topN)
+      .select('book_th book_en img author category view')
+      .lean();  
   
     if (topBooks.length === 0) {
       throw new NotFoundException('No books available for recommendation.');
     }
   
     const today = new Date().toISOString().slice(0, 10); 
-    const seed = today.split('-').join(''); 
-    let pseudoRandomSeed = parseInt(seed);
+    const seed = today.split('-').join('');
+    let pseudoRandomSeed = parseInt(seed, 10);
   
     const random = () => {
       const x = Math.sin(pseudoRandomSeed++) * 10000;
       return x - Math.floor(x);
     };
   
-    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-  
     const shuffled = topBooks
       .map(book => {
         if (book.img) {
-          book.img = `${BACKEND_URL}${book.img}`;
+          if (book.img.startsWith('http')) {
+            try {
+              const url = new URL(book.img);
+              book.img = url.pathname;  
+            } catch (err) {
+            }
+          }
         }
-        return { book, sort: random() }; 
+        return { book, sort: random() };
       })
       .sort((a, b) => a.sort - b.sort)
       .map(({ book }) => book);
   
     return shuffled;
   }
-
+  
     // -------------------------------------------------------------------
   // 🔸 DELETE
   // -------------------------------------------------------------------
@@ -436,8 +440,41 @@ export class BookService {
 
     return books; 
   }
+
+  // -------------------------------------------------------------------
+// 🔸 INCREASE VIEW AFTER DELAY (NEW)
+// -------------------------------------------------------------------
+
+async increaseViewAfterDelay(bookId: string, ip: string): Promise<iBook> {
+  if (!Types.ObjectId.isValid(bookId)) {
+    throw new BadRequestException('Invalid Book ID');
+  }
+
+  const redisKey = `viewed_api:${bookId}:${ip}`;
+  const viewed = await this.redisClient.get(redisKey);
+
+  if (viewed) {
+    throw new BadRequestException('You have already viewed this book recently.');
+  }
+
+  const book = await this.bookModel.findOneAndUpdate(
+    {
+      _id: bookId,
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    },
+    { $inc: { view: 1 } },
+    { new: true }
+  ).exec();
+
+  if (!book) {
+    throw new NotFoundException('Book not found.');
+  }
+
+  await this.redisClient.set(redisKey, 'true', 'EX', 300); // 5 นาที กัน view ซ้ำ
+  return book;
 }
-function seedrandom(today: string) {
-  throw new Error('Function not implemented.');
+
 }
+
 
