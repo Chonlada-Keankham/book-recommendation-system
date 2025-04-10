@@ -69,10 +69,10 @@ export class PlaylistService {
   public async generateRecommendations(categories: string[], authors: string[]): Promise<any[]> {
     const recommendations = await Promise.all([
       ...categories.map(category =>
-        this.bookService.findRandomBooksByCategory(category, 3)
+        this.bookService.findRandomBooksByCategory(category)
       ),
       ...authors.map(author =>
-        this.bookService.findPopularBooksByAuthor(author, 3)
+        this.bookService.findPopularBooksByAuthor(author)
       ),
     ]);
 

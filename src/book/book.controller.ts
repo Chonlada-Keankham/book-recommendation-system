@@ -1,12 +1,11 @@
 import { extname } from 'path';
 import { BookCategory } from 'src/enum/book-category.enum';
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Put, Query, Req, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Put, Query, Req, Res, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { BookService } from './book.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateBookDto } from './dto/create-book.dto';
 import { diskStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Types } from 'mongoose';
 import { Request } from 'express';
 
 @ApiTags('Book')
@@ -15,30 +14,31 @@ export class BookController {
   constructor(private readonly bookService: BookService) { }
 
   // ----------------Create----------
-@Post('/create')
-async createBook(@Body() createBookDto: CreateBookDto, @UploadedFile() file: Express.Multer.File) {
-  const book = await this.bookService.createBook(createBookDto, file.filename);  
-  return {
-    statusCode: 201,
-    message: 'Book created successfully',
-    data: book,
-  };
-}
+  @Post('/create')
+  async createBook(@Body() createBookDto: CreateBookDto, @UploadedFile() file: Express.Multer.File) {
+    const book = await this.bookService.createBook(createBookDto, file.filename);
+    return {
+      statusCode: 201,
+      message: 'Book created successfully',
+      data: book,
+    };
+  }
 
-@Get('/find-one/:id')
-async getBook(@Param('id') id: string, @Req() request: Request) {
-  const ip = typeof request.headers['x-forwarded-for'] === 'string'
-    ? request.headers['x-forwarded-for']
-    : request.ip;
+  // ----------------Get----------
+  @Get('/find-one/:id')
+  async getBook(@Param('id') id: string, @Req() request: Request) {
+    const ip = typeof request.headers['x-forwarded-for'] === 'string'
+      ? request.headers['x-forwarded-for']
+      : request.ip;
 
-  const book = await this.bookService.findOneByIdAndUpdateView(id, ip);
+    const book = await this.bookService.findOneByIdAndUpdateView(id, ip);
 
-  return {
-    statusCode: 200,
-    message: 'Book found',
-    book: book,  
-  };
-}
+    return {
+      statusCode: 200,
+      message: 'Book found',
+      book: book,
+    };
+  }
 
   @Get('/find-all')
   async findAll(@Req() request: Request) {
@@ -58,7 +58,7 @@ async getBook(@Param('id') id: string, @Req() request: Request) {
   async getNovelBooks(@Req() request: Request) {
     const ip = typeof request.headers['x-forwarded-for'] === 'string'
       ? request.headers['x-forwarded-for']
-      : request.ip;  
+      : request.ip;
     const result = await this.bookService.findBooksByCategory(BookCategory.NOVEL, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
     return {
       statusCode: 200,
@@ -67,14 +67,14 @@ async getBook(@Param('id') id: string, @Req() request: Request) {
       total: result.total,
     };
   }
-  
+
   @Get('/business')
   async getBusinessBooks(@Req() request: Request) {
     const ip = typeof request.headers['x-forwarded-for'] === 'string'
       ? request.headers['x-forwarded-for']
-      : request.ip;  
+      : request.ip;
     const result = await this.bookService.findBooksByCategory(BookCategory.BUSINESS, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
-  
+
     return {
       statusCode: 200,
       message: 'Books found',
@@ -82,12 +82,12 @@ async getBook(@Param('id') id: string, @Req() request: Request) {
       total: result.total,
     };
   }
-  
+
   @Get('/sport')
   async getSportBooks(@Req() request: Request) {
     const ip = typeof request.headers['x-forwarded-for'] === 'string'
       ? request.headers['x-forwarded-for']
-      : request.ip;  
+      : request.ip;
     const result = await this.bookService.findBooksByCategory(BookCategory.SPORT, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
     return {
       statusCode: 200,
@@ -96,12 +96,12 @@ async getBook(@Param('id') id: string, @Req() request: Request) {
       total: result.total,
     };
   }
-  
+
   @Get('/travel')
   async getTravelBooks(@Req() request: Request) {
     const ip = typeof request.headers['x-forwarded-for'] === 'string'
       ? request.headers['x-forwarded-for']
-      : request.ip;  
+      : request.ip;
     const result = await this.bookService.findBooksByCategory(BookCategory.TRAVEL, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
     return {
       statusCode: 200,
@@ -110,12 +110,12 @@ async getBook(@Param('id') id: string, @Req() request: Request) {
       total: result.total,
     };
   }
-  
+
   @Get('/education')
   async getEducationBooks(@Req() request: Request) {
     const ip = typeof request.headers['x-forwarded-for'] === 'string'
       ? request.headers['x-forwarded-for']
-      : request.ip;  
+      : request.ip;
     const result = await this.bookService.findBooksByCategory(BookCategory.EDUCATION, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
     return {
       statusCode: 200,
@@ -135,52 +135,51 @@ async getBook(@Param('id') id: string, @Req() request: Request) {
     if (!Object.values(BookCategory).includes(category as BookCategory)) {
       throw new BadRequestException('Invalid category');
     }
-  
+
     const categoryEnum = category as BookCategory;
-  
+
     const ip =
       Array.isArray(request.headers['x-forwarded-for'])
         ? request.headers['x-forwarded-for'][0]
         : request.headers['x-forwarded-for'] || request.connection.remoteAddress || request.socket.remoteAddress;
-  
+
     const { book, recommendedBooks } = await this.bookService.recommendBooksForGuest(
       categoryEnum,
       bookId,
       ip as string
     );
-  
+
     return {
       statusCode: HttpStatus.OK,
       message: 'Recommended books found',
       data: { book, recommendedBooks },
     };
   }
-      
+
   @Get('/recommend/member')
   async recommendForMember(
     @Query('userId') userId: string,
     @Query('bookId') bookId: string,
-    @Req() request: Request,  
+    @Req() request: Request,
   ) {
     const ip = Array.isArray(request.headers['x-forwarded-for'])
       ? request.headers['x-forwarded-for'][0]
       : request.headers['x-forwarded-for'] || request.connection.remoteAddress;
-  
+
     const recommendedBooks = await this.bookService.recommendBooksForMember(userId, bookId, ip);
-  
+
     return {
       statusCode: HttpStatus.OK,
       message: 'Recommended books found',
       data: recommendedBooks,
     };
   }
-  
+
   @Get('/random')
   async getRandomBooks(
     @Query('category') category: string,
-    @Query('limit') limit = '10'
   ) {
-    const books = await this.bookService.findRandomBooksByCategory(category, parseInt(limit));
+    const books = await this.bookService.findRandomBooksByCategory(category);
     return {
       statusCode: HttpStatus.OK,
       message: 'Random books fetched successfully',
@@ -191,9 +190,8 @@ async getBook(@Param('id') id: string, @Req() request: Request) {
   @Get('/popular')
   async getPopularBooks(
     @Query('author') author: string,
-    @Query('limit') limit = '10'
   ) {
-    const books = await this.bookService.findPopularBooksByAuthor(author, parseInt(limit));
+    const books = await this.bookService.findPopularBooksByAuthor(author);
     return {
       statusCode: HttpStatus.OK,
       message: 'Popular books fetched successfully',
@@ -235,7 +233,7 @@ async getBook(@Param('id') id: string, @Req() request: Request) {
       data: book,
     };
   }
-  
+
   // ---------- Delete ----------
   @Delete('/delete-one/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
