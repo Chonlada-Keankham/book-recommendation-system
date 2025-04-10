@@ -360,6 +360,7 @@ export class BookService {
     return [...dedup(group1), ...dedup(group2), ...dedup(group3)];
   }
 
+  
   // -------------------------------------------------------------------
   // 🔸 DELETE
   // -------------------------------------------------------------------
@@ -398,3 +399,7 @@ export class BookService {
     return books; 
   }
 }
+function seedrandom(today: string) {
+  throw new Error('Function not implemented.');
+}
+

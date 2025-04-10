@@ -176,6 +176,7 @@ export class BookController {
     };
   }
 
+
   @Get('/random')
   async getRandomBooks(
     @Query('category') category: string,
