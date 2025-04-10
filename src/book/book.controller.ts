@@ -60,7 +60,7 @@ export class BookController {
       ? request.headers['x-forwarded-for']
       : request.ip;
   
-    const result = await this.bookService.findNovelBooks(ip);  // ฟังก์ชันสำหรับหมวด Novel
+    const result = await this.bookService.findNovelBooks(ip);  
     return {
       statusCode: 200,
       message: 'Books found',
@@ -75,7 +75,7 @@ export class BookController {
       ? request.headers['x-forwarded-for']
       : request.ip;
   
-    const result = await this.bookService.findTravelBooks(ip);  // ฟังก์ชันสำหรับหมวด Travel
+    const result = await this.bookService.findTravelBooks(ip);  
     return {
       statusCode: 200,
       message: 'Books found',
@@ -90,7 +90,7 @@ export class BookController {
       ? request.headers['x-forwarded-for']
       : request.ip;
   
-    const result = await this.bookService.findBusinessBooks(ip);  // ฟังก์ชันสำหรับหมวด Business
+    const result = await this.bookService.findBusinessBooks(ip);  
     return {
       statusCode: 200,
       message: 'Books found',
@@ -105,7 +105,7 @@ export class BookController {
       ? request.headers['x-forwarded-for']
       : request.ip;
   
-    const result = await this.bookService.findSportBooks(ip);  // ฟังก์ชันสำหรับหมวด Sport
+    const result = await this.bookService.findSportBooks(ip);  
     return {
       statusCode: 200,
       message: 'Books found',
@@ -120,7 +120,7 @@ export class BookController {
       ? request.headers['x-forwarded-for']
       : request.ip;
   
-    const result = await this.bookService.findEducationBooks(ip);  // ฟังก์ชันสำหรับหมวด Education
+    const result = await this.bookService.findEducationBooks(ip);  
     return {
       statusCode: 200,
       message: 'Books found',
@@ -271,8 +271,8 @@ export class BookController {
     })
   }))
   async updateBookCoverByCategory(
-    @Query('category') category: string,  // ใช้ @Query แทน @Body
-    @UploadedFile() file: Express.Multer.File  // รับไฟล์ภาพจาก form-data
+    @Query('category') category: string,  
+    @UploadedFile() file: Express.Multer.File  
   ) {
     const updatedBooks = await this.bookService.updateBookCoverByCategory(category, file.filename);
 

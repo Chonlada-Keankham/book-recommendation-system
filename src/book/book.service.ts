@@ -1,7 +1,7 @@
 import { Redis } from 'ioredis';
 import { InjectModel } from '@nestjs/mongoose';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, Put, UploadedFile, UseInterceptors, forwardRef } from '@nestjs/common';
-import { Model, PipelineStage, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { iBook } from './interface/book.interface';
 import { CreateBookDto } from './dto/create-book.dto';
 import { Status } from 'src/enum/status.enum';
@@ -179,27 +179,22 @@ export class BookService {
     return { books, total };
   }
   
-  // ฟังก์ชันหาหนังสือในหมวดนิยาย
   async findNovelBooks(ip: string): Promise<{ books: iBook[]; total: number }> {
     return this.findBooksByCategory(BookCategory.NOVEL, ip);
   }
   
-  // ฟังก์ชันหาหนังสือในหมวดการเดินทาง
   async findTravelBooks(ip: string): Promise<{ books: iBook[]; total: number }> {
     return this.findBooksByCategory(BookCategory.TRAVEL, ip);
   }
   
-  // ฟังก์ชันหาหนังสือในหมวดธุรกิจ
   async findBusinessBooks(ip: string): Promise<{ books: iBook[]; total: number }> {
     return this.findBooksByCategory(BookCategory.BUSINESS, ip);
   }
   
-  // ฟังก์ชันหาหนังสือในหมวดกีฬา
   async findSportBooks(ip: string): Promise<{ books: iBook[]; total: number }> {
     return this.findBooksByCategory(BookCategory.SPORT, ip);
   }
   
-  // ฟังก์ชันหาหนังสือในหมวดการศึกษา
   async findEducationBooks(ip: string): Promise<{ books: iBook[]; total: number }> {
     return this.findBooksByCategory(BookCategory.EDUCATION, ip);
   }
@@ -389,19 +384,17 @@ export class BookService {
 
 //------------------------------------
   async updateBookCoverByCategory(category: string, filename: string): Promise<iBook[]> {
-    // ค้นหาหนังสือทั้งหมดในหมวดหมู่ที่กำหนด
     const books = await this.bookModel.find({ category });
 
     if (!books || books.length === 0) {
       throw new NotFoundException('No books found in this category.');
     }
 
-    // อัปเดตหน้าปกของหนังสือทั้งหมดในหมวดหมู่นั้น
     for (let book of books) {
-      book.img = `/uploads/book/${filename}`; // อัปเดตหน้าปก
-      await book.save(); // บันทึกการอัปเดต
+      book.img = `/uploads/book/${filename}`; 
+      await book.save(); 
     }
 
-    return books; // คืนค่าหนังสือที่ถูกอัปเดต
+    return books; 
   }
 }
