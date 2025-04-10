@@ -1,11 +1,12 @@
 import { extname } from 'path';
 import { BookCategory } from 'src/enum/book-category.enum';
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Put, Query, Req, Res, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Put, Query, Req, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { BookService } from './book.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateBookDto } from './dto/create-book.dto';
 import { diskStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Types } from 'mongoose';
 import { Request } from 'express';
 
 @ApiTags('Book')
@@ -24,7 +25,6 @@ export class BookController {
     };
   }
 
-  // ----------------Get----------
   @Get('/find-one/:id')
   async getBook(@Param('id') id: string, @Req() request: Request) {
     const ip = typeof request.headers['x-forwarded-for'] === 'string'
@@ -59,7 +59,8 @@ export class BookController {
     const ip = typeof request.headers['x-forwarded-for'] === 'string'
       ? request.headers['x-forwarded-for']
       : request.ip;
-    const result = await this.bookService.findBooksByCategory(BookCategory.NOVEL, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
+  
+    const result = await this.bookService.findNovelBooks(ip);  // ฟังก์ชันสำหรับหมวด Novel
     return {
       statusCode: 200,
       message: 'Books found',
@@ -67,42 +68,14 @@ export class BookController {
       total: result.total,
     };
   }
-
-  @Get('/business')
-  async getBusinessBooks(@Req() request: Request) {
-    const ip = typeof request.headers['x-forwarded-for'] === 'string'
-      ? request.headers['x-forwarded-for']
-      : request.ip;
-    const result = await this.bookService.findBooksByCategory(BookCategory.BUSINESS, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
-
-    return {
-      statusCode: 200,
-      message: 'Books found',
-      data: result.books,
-      total: result.total,
-    };
-  }
-
-  @Get('/sport')
-  async getSportBooks(@Req() request: Request) {
-    const ip = typeof request.headers['x-forwarded-for'] === 'string'
-      ? request.headers['x-forwarded-for']
-      : request.ip;
-    const result = await this.bookService.findBooksByCategory(BookCategory.SPORT, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
-    return {
-      statusCode: 200,
-      message: 'Books found',
-      data: result.books,
-      total: result.total,
-    };
-  }
-
+  
   @Get('/travel')
   async getTravelBooks(@Req() request: Request) {
     const ip = typeof request.headers['x-forwarded-for'] === 'string'
       ? request.headers['x-forwarded-for']
       : request.ip;
-    const result = await this.bookService.findBooksByCategory(BookCategory.TRAVEL, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
+  
+    const result = await this.bookService.findTravelBooks(ip);  // ฟังก์ชันสำหรับหมวด Travel
     return {
       statusCode: 200,
       message: 'Books found',
@@ -110,13 +83,44 @@ export class BookController {
       total: result.total,
     };
   }
-
+  
+  @Get('/business')
+  async getBusinessBooks(@Req() request: Request) {
+    const ip = typeof request.headers['x-forwarded-for'] === 'string'
+      ? request.headers['x-forwarded-for']
+      : request.ip;
+  
+    const result = await this.bookService.findBusinessBooks(ip);  // ฟังก์ชันสำหรับหมวด Business
+    return {
+      statusCode: 200,
+      message: 'Books found',
+      data: result.books,
+      total: result.total,
+    };
+  }
+  
+  @Get('/sport')
+  async getSportBooks(@Req() request: Request) {
+    const ip = typeof request.headers['x-forwarded-for'] === 'string'
+      ? request.headers['x-forwarded-for']
+      : request.ip;
+  
+    const result = await this.bookService.findSportBooks(ip);  // ฟังก์ชันสำหรับหมวด Sport
+    return {
+      statusCode: 200,
+      message: 'Books found',
+      data: result.books,
+      total: result.total,
+    };
+  }
+  
   @Get('/education')
   async getEducationBooks(@Req() request: Request) {
     const ip = typeof request.headers['x-forwarded-for'] === 'string'
       ? request.headers['x-forwarded-for']
       : request.ip;
-    const result = await this.bookService.findBooksByCategory(BookCategory.EDUCATION, ip);  // เพิ่ม ip ในการเรียกฟังก์ชัน
+  
+    const result = await this.bookService.findEducationBooks(ip);  // ฟังก์ชันสำหรับหมวด Education
     return {
       statusCode: 200,
       message: 'Books found',
@@ -124,35 +128,29 @@ export class BookController {
       total: result.total,
     };
   }
-
+  
   // ---------- Recommendation ----------
   @Get('/recommend/guest')
   async recommendForGuest(
     @Query('category') category: string,
     @Query('bookId') bookId: string,
-    @Req() request: Request
   ) {
     if (!Object.values(BookCategory).includes(category as BookCategory)) {
       throw new BadRequestException('Invalid category');
     }
 
+
     const categoryEnum = category as BookCategory;
 
-    const ip =
-      Array.isArray(request.headers['x-forwarded-for'])
-        ? request.headers['x-forwarded-for'][0]
-        : request.headers['x-forwarded-for'] || request.connection.remoteAddress || request.socket.remoteAddress;
-
-    const { book, recommendedBooks } = await this.bookService.recommendBooksForGuest(
+    const books = await this.bookService.recommendBooksForGuest(
       categoryEnum,
       bookId,
-      ip as string
     );
 
     return {
       statusCode: HttpStatus.OK,
       message: 'Recommended books found',
-      data: { book, recommendedBooks },
+      data: books,
     };
   }
 
@@ -160,17 +158,20 @@ export class BookController {
   async recommendForMember(
     @Query('userId') userId: string,
     @Query('bookId') bookId: string,
-    @Req() request: Request,
   ) {
-    const ip = Array.isArray(request.headers['x-forwarded-for'])
-      ? request.headers['x-forwarded-for'][0]
-      : request.headers['x-forwarded-for'] || request.connection.remoteAddress;
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
 
-    const recommendedBooks = await this.bookService.recommendBooksForMember(userId, bookId, ip);
+    if (!Types.ObjectId.isValid(bookId)) {
+      throw new BadRequestException('Invalid book ID');
+    }
+
+    const recommendedBooks = await this.bookService.recommendBooksForMember(userId, bookId);
 
     return {
       statusCode: HttpStatus.OK,
-      message: 'Recommended books found',
+      message: 'Recommended books for member retrieved successfully.',
       data: recommendedBooks,
     };
   }
@@ -178,6 +179,7 @@ export class BookController {
   @Get('/random')
   async getRandomBooks(
     @Query('category') category: string,
+    @Query('limit') limit = '10'
   ) {
     const books = await this.bookService.findRandomBooksByCategory(category);
     return {
@@ -190,6 +192,7 @@ export class BookController {
   @Get('/popular')
   async getPopularBooks(
     @Query('author') author: string,
+    @Query('limit') limit = '10'
   ) {
     const books = await this.bookService.findPopularBooksByAuthor(author);
     return {
@@ -256,4 +259,27 @@ export class BookController {
     };
   }
 
+  //-----------------------------------
+  @Put('/update-cover-by-category')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: './uploads/book',
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, uniqueSuffix + extname(file.originalname));
+      }
+    })
+  }))
+  async updateBookCoverByCategory(
+    @Query('category') category: string,  // ใช้ @Query แทน @Body
+    @UploadedFile() file: Express.Multer.File  // รับไฟล์ภาพจาก form-data
+  ) {
+    const updatedBooks = await this.bookService.updateBookCoverByCategory(category, file.filename);
+
+    return {
+      statusCode: 200,
+      message: 'Book covers updated successfully',
+      data: updatedBooks,
+    };
+  }
 }
