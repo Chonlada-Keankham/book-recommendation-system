@@ -146,23 +146,25 @@ export class UserService {
     return user;
   }
 
-  async findAll(
-    page: number = 1,
-    limit: number = 10): Promise<{
-      users: iUser[],
-      total: number
-    }> {
-    const skip = (page - 1) * limit;
-    const total = await this.userModel.countDocuments({
-      status: { $ne: Status.DELETED },
-      deleted_at: null,
-    });
-    const users = await this.userModel.find(
-      { status: { $ne: Status.DELETED }, deleted_at: null },
-    ).skip(skip).limit(limit).exec();
+async findAll(page: number = 1, limit: number = 10): Promise<{
+  users: iUser[],
+  total: number
+}> {
+  const skip = (page - 1) * limit;
+  const total = await this.userModel.countDocuments({
+    status: { $ne: Status.DELETED },
+    deleted_at: null,
+  });
+  const users = await this.userModel.find(
+    { status: { $ne: Status.DELETED }, deleted_at: null },
+  )
+  .sort({ createdAt: -1 }) 
+  .skip(skip)
+  .limit(limit)
+  .exec();
 
-    return { users, total };
-  }
+  return { users, total };
+}
 
   // -------------------------------------------------------------------
   // 🔸 UPDATE
@@ -207,12 +209,15 @@ export class UserService {
 
   async uploadProfileImage(
     userId: string,
-    filename: string): Promise<iUser> {
+    filename: string
+  ): Promise<iUser> {
     const user = await this.userModel.findById(userId);
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
-    user.profileImage = `/uploads/profile/${filename}`;
-    return user.save();
+    user.profileImage = `/uploads/profile/${filename}`; // <<< Save path รูปใหม่
+    return user.save(); // <<< บันทึกลง database
   }
 
   async uploadBackgroundImage(

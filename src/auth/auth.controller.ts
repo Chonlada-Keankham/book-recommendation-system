@@ -1,7 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
 import { ConfigService } from '@nestjs/config';
-import { Body, Controller, Get, HttpStatus, NotFoundException, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { RefreshTokenDto } from './dto/refresh-token-auth.dto';
@@ -13,7 +13,6 @@ import { LoginMemberDto } from './dto/login-member-auth.dto';
 import { LoginEmployeeDto } from './dto/login-employee-auth.dto';
 import { RolesGuard } from './guard/role.guard';
 import { Roles } from 'src/decorator/roles.decorator';
-import bcrypt from 'bcryptjs';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -25,41 +24,22 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) { }
 
-  // -------------------------------------------------------------------
-  // 🔸 LOGIN
-  // -------------------------------------------------------------------
-
+  // ---------------------- LOGIN ----------------------
   @Post('/login-member')
   @ApiOperation({ summary: 'Member login only' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Member login successful',
-  })
   async loginMember(@Body() loginMemberDto: LoginMemberDto) {
-    try {
-      const user = await this.authService.validateMember(loginMemberDto);
+    const user = await this.authService.validateMember(loginMemberDto);
 
-      if (user.role !== UserRole.MEMBER) {
-        throw new UnauthorizedException({
-          statusCode: 401,
-          message: 'Only members can login here',
-          error: 'Unauthorized',
-        });
-      }
-
-      const tokens = await this.authService.login(user);
-      return {
-        statusCode: HttpStatus.OK,
-        message: 'Member login successful',
-        data: tokens,
-      };
-    } catch (error) {
-      throw new UnauthorizedException({
-        statusCode: 401,
-        message: error.message || 'Invalid credentials',
-        error: 'Unauthorized',
-      });
+    if (user.role !== UserRole.MEMBER) {
+      throw new UnauthorizedException('Only members can login here');
     }
+
+    const tokens = await this.authService.login(user);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Member login successful',
+      data: tokens,
+    };
   }
 
   @Post('/login-employee')
@@ -73,53 +53,33 @@ export class AuthController {
       data: tokens,
     };
   }
-  
-  // -------------------------------------------------------------------
-  // 🔸 REFRESH TOKEN
-  // -------------------------------------------------------------------
 
+  // ---------------------- REFRESH TOKEN ----------------------
   @Post('/refresh')
-  @ApiOperation({ summary: 'Refresh token' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Access token refreshed successfully',
-  })
+  @ApiOperation({ summary: 'Refresh access token' })
   async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
-    try {
-      const tokens = await this.authService.refreshAccessToken(refreshTokenDto);
-      return {
-        statusCode: HttpStatus.OK,
-        message: 'Access token refreshed successfully',
-        data: tokens,
-      };
-    } catch (error) {
-      throw new UnauthorizedException({
-        statusCode: 401,
-        message: 'Invalid or expired refresh token',
-        error: 'Unauthorized',
-      });
-    }
+    const tokens = await this.authService.refreshAccessToken(refreshTokenDto);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Access token refreshed successfully',
+      data: tokens,
+    };
   }
 
-  // -------------------------------------------------------------------
-  // 🔸 PROFILE
-  // -------------------------------------------------------------------
-
+  // ---------------------- PROFILE ----------------------
   @Get('/profile')
   @ApiOperation({ summary: 'Get user profile (JWT Required)' })
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() request) {
+    const { password, ...userWithoutPassword } = request.user;  // <<< 🔥 ตัด password ออก
     return {
       statusCode: HttpStatus.OK,
       message: 'User profile fetched successfully',
-      data: request.user,
+      data: userWithoutPassword,
     };
   }
 
-  // -------------------------------------------------------------------
-  // 🔸 ROLE-BASED ACCESS
-  // -------------------------------------------------------------------
-
+  // ---------------------- ROLE-BASED ACCESS ----------------------
   @UseGuards(RolesGuard)
   @Roles(UserRole.EMPLOYEE)
   @Get('/employee-only')
@@ -131,10 +91,7 @@ export class AuthController {
     };
   }
 
-  // -------------------------------------------------------------------
-  // 🔸 PASSWORD RESET
-  // -------------------------------------------------------------------
-
+  // ---------------------- PASSWORD RESET ----------------------
   @Post('/send-password-reset-link')
   @ApiOperation({ summary: 'Send password reset link to email' })
   async sendPasswordResetLink(@Body() dto: RequestPasswordResetDto) {
@@ -143,7 +100,7 @@ export class AuthController {
       statusCode: HttpStatus.OK,
       message: response.message,
       resetLink: response.resetLink,
-      token: response,
+      token: response.resetToken,
     };
   }
 
@@ -156,6 +113,4 @@ export class AuthController {
       message: response.message,
     };
   }
-
-
 }

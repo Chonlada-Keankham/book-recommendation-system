@@ -1,17 +1,17 @@
-import { LoginEmployeeDto } from './dto/login-employee-auth.dto';
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UserService } from './../user/user.service';
+import { UserService } from 'src/user/user.service';
 import { iUser } from 'src/user/interface/user.interface';
-import * as bcrypt from 'bcryptjs';
 import { ConfigService } from '@nestjs/config';
 import { RefreshTokenDto } from './dto/refresh-token-auth.dto';
-import * as jwt from 'jsonwebtoken';
+import { LoginMemberDto } from './dto/login-member-auth.dto';
+import { LoginEmployeeDto } from './dto/login-employee-auth.dto';
 import { RequestPasswordResetDto } from './dto/request-pass-auth.dto';
 import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
 import { Status } from 'src/enum/status.enum';
 import { UserRole } from 'src/enum/user-role.enum';
-import { LoginMemberDto } from './dto/login-member-auth.dto';
+import * as bcrypt from 'bcryptjs';
+import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
@@ -21,16 +21,10 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) { }
 
-  // -------------------------------------------------------------------
-  // 🔸 VALIDATION
-  // -------------------------------------------------------------------
-
+  // ---------------------- VALIDATE USER ----------------------
   async validateMember(loginMemberDto: LoginMemberDto): Promise<iUser> {
     const { email, password } = loginMemberDto;
     const user = await this.userService.findOneByEmail(email);
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
     const isPasswordMatching = await bcrypt.compare(password, user.password);
     if (!isPasswordMatching) {
       throw new UnauthorizedException('Invalid credentials');
@@ -41,34 +35,31 @@ export class AuthService {
   async validateEmployee(loginEmployeeDto: LoginEmployeeDto): Promise<iUser> {
     const { employeeId, password } = loginEmployeeDto;
     const user = await this.userService.findByEmployeeId(employeeId);
-
-    if (!user || user.role !== UserRole.EMPLOYEE) {
+    const isPasswordMatching = await bcrypt.compare(password, user.password);
+    if (!user || !isPasswordMatching) {
       throw new UnauthorizedException('Invalid employeeId or password');
     }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid employeeId or password');
-    }
-
     return user;
   }
 
-  // -------------------------------------------------------------------
-  // 🔸 LOGIN / REFRESH TOKEN
-  // -------------------------------------------------------------------
-
+  // ---------------------- LOGIN / REFRESH ----------------------
   async login(user: iUser): Promise<{
     access_token: string;
     refresh_token: string;
   }> {
-    const payload = {
-      email: user.email,
-      sub: user._id,
-      role: user.role,
-    };
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
-    const refreshToken = this.jwtService.sign({ sub: user._id }, { expiresIn: '7d' });
+    const payload = { email: user.email, sub: user._id, role: user.role };
+    const secret = this.configService.get<string>('JWT_SECRET');
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: '1h',
+      secret,
+    });
+
+    const refreshToken = this.jwtService.sign({ sub: user._id }, {
+      expiresIn: '7d',
+      secret,
+    });
+
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
@@ -77,55 +68,48 @@ export class AuthService {
 
   async refreshAccessToken(refreshTokenDto: RefreshTokenDto): Promise<{ access_token: string }> {
     try {
-      const payload = this.jwtService.verify(refreshTokenDto.refresh_token);
+      const payload = this.jwtService.verify(refreshTokenDto.refresh_token, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+      });
       const user = await this.userService.findOneById(payload.sub);
       if (!user || user.status === Status.DELETED) {
         throw new UnauthorizedException('User not found or is deleted');
       }
-      const newAccessToken = this.jwtService.sign(
+
+      const accessToken = this.jwtService.sign(
         { email: user.email, sub: user._id, role: user.role },
-        { expiresIn: '1h' },
+        { expiresIn: '1h', secret: this.configService.get<string>('JWT_SECRET') }
       );
-      return { access_token: newAccessToken };
+
+      return { access_token: accessToken };
     } catch (error) {
-      if (error instanceof jwt.JsonWebTokenError) {
-        throw new UnauthorizedException('Invalid or expired refresh token');
-      }
-      throw new UnauthorizedException('Token verification failed');
+      throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
 
-  // -------------------------------------------------------------------
-  // 🔸 PASSWORD RESET
-  // -------------------------------------------------------------------
-
+  // ---------------------- PASSWORD RESET ----------------------
   async sendPasswordResetLink(requestPasswordResetDto: RequestPasswordResetDto) {
     const { email } = requestPasswordResetDto;
-    
-    const user = await this.userService.findOneByEmail(email);   // << ที่นี่เลย
-  
-    if (!user) {
-      throw new NotFoundException('User with this email not found');
-    }
-  
-    // ➡️ ใส่เพิ่มตรงนี้
-    if (user.role !== 'member') {
+    const user = await this.userService.findOneByEmail(email);
+    if (!user || user.role !== UserRole.MEMBER) {
       throw new UnauthorizedException('Only members can reset password');
     }
-  
-    const payload = { email: user.email, sub: user._id.toString() };
-    const resetToken = this.jwtService.sign(payload, { expiresIn: '1h' });
-  
+
+    const resetToken = this.jwtService.sign(
+      { email: user.email, sub: user._id.toString() },
+      { expiresIn: '1h', secret: this.configService.get<string>('JWT_SECRET') }
+    );
+
     const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
     const resetLink = `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
-  
+
     return {
       message: 'Password reset link generated successfully',
       resetToken,
       resetLink,
     };
   }
-  
+
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const { token, newPassword } = resetPasswordDto;
     try {
@@ -134,24 +118,16 @@ export class AuthService {
       });
 
       const user = await this.userService.findOneByEmail(decoded.email);
-
       if (!user) {
         throw new NotFoundException('User not found');
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-
       await this.userService.updatePassword(user._id, hashedPassword);
 
       return { message: 'Password reset successful' };
     } catch (error) {
-      if (error instanceof jwt.TokenExpiredError) {
-        throw new BadRequestException('Token has expired');
-      }
-      if (error instanceof jwt.JsonWebTokenError) {
-        throw new BadRequestException('Invalid token');
-      }
-      throw new BadRequestException(error.message || 'An error occurred during password reset');
+      throw new BadRequestException('Invalid or expired token');
     }
   }
 }

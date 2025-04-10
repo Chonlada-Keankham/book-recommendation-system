@@ -47,36 +47,41 @@ export class UserController {
   @Get('/find-one/:id')
   async findOneById(@Param('id') id: string) {
     const user = await this.userService.findOneById(id);
+    const { password, ...userWithoutPassword } = user;  
     return {
       statusCode: HttpStatus.OK,
       message: 'User found',
-      data: user
+      data: userWithoutPassword
     };
   }
-
+  
   @Get('/find-email/:email')
   async findOneByEmail(@Param('email') email: string) {
     const user = await this.userService.findOneByEmail(email);
+    const { password, ...userWithoutPassword } = user;  
     return {
       statusCode: HttpStatus.OK,
       message: 'User found',
-      data: user
+      data: userWithoutPassword
     };
   }
-
+  
   @Get('/find-all')
-  async findAll(
-    @Query('page') page = 1,
-    @Query('limit') limit = 10) {
+  async findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
     const result = await this.userService.findAll(page, limit);
+    const usersWithoutPassword = result.users.map(user => {
+      const { password, ...rest } = user;  
+      return rest;
+    });
+  
     return {
       statusCode: HttpStatus.OK,
       message: 'Users found',
-      data: result.users,
+      data: usersWithoutPassword,
       total: result.total
     };
   }
-
+    
   // ---------- Update ----------
   @Put('/update-one/:id')
   async updateOne(
@@ -130,43 +135,10 @@ export class UserController {
     storage: diskStorage({
       destination: './uploads/profile',
       filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const userId = req.params.id;
         const ext = extname(file.originalname);
-        cb(null, `${uniqueSuffix}${ext}`);
-      }
-    }),
-    fileFilter: (req, file, cb) => {
-      if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
-        return cb(new BadRequestException('Only image files are allowed!'), false);
-      }
-      cb(null, true);
-    },
-    limits: { fileSize: 5 * 1024 * 1024 }
-  }))
-  async uploadProfile(
-    @Param('id') userId: string,
-    @UploadedFile() file: Express.Multer.File
-  ) {
-    if (!file || !file.filename) {
-      throw new BadRequestException('File is missing or invalid.');
-    }
-
-    const result = await this.userService.uploadProfileImage(userId, file.filename);
-    return {
-      statusCode: 200,
-      message: 'Profile image uploaded',
-      data: result
-    };
-  }
-
-  @Post('/upload/background/:id')
-  @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads/background',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = extname(file.originalname);
-        cb(null, `${uniqueSuffix}${ext}`);
+        const uniqueSuffix = Date.now();
+        cb(null, `${userId}-${uniqueSuffix}${ext}`); // 🔥 ตั้งชื่อปลอดภัย
       }
     }),
     fileFilter: (req, file, cb) => {
@@ -177,14 +149,41 @@ export class UserController {
     },
     limits: { fileSize: 5 * 1024 * 1024 },
   }))
-  async uploadBackground(
-    @Param('id') userId: string,
-    @UploadedFile() file: Express.Multer.File
-  ) {
+  async uploadProfile(@Param('id') userId: string, @UploadedFile() file: Express.Multer.File) {
     if (!file || !file.filename) {
       throw new BadRequestException('File is missing or invalid.');
     }
-
+    const result = await this.userService.uploadProfileImage(userId, file.filename);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Profile image uploaded successfully',
+      data: result,
+    };
+  }
+  
+  @Post('/upload/background/:id')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: './uploads/background',
+      filename: (req, file, cb) => {
+        const userId = req.params.id;
+        const ext = extname(file.originalname);
+        const uniqueSuffix = Date.now();
+        cb(null, `${userId}-${uniqueSuffix}${ext}`); 
+      }
+    }),
+    fileFilter: (req, file, cb) => {
+      if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+        return cb(new BadRequestException('Only image files are allowed!'), false);
+      }
+      cb(null, true);
+    },
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }))
+  async uploadBackground(@Param('id') userId: string, @UploadedFile() file: Express.Multer.File) {
+    if (!file || !file.filename) {
+      throw new BadRequestException('File is missing or invalid.');
+    }
     const result = await this.userService.uploadBackgroundImage(userId, file.filename);
     return {
       statusCode: 200,
@@ -192,7 +191,7 @@ export class UserController {
       data: result
     };
   }
-
+  
   // ---------- Delete ----------
   @Delete('/soft-delete/:id')
   async softDelete(@Param('id') id: string) {
