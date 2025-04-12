@@ -368,7 +368,7 @@ export class BookService {
     })
       .sort({ view: -1 })
       .limit(topN)
-      .select('book_th book_en img author category view')
+      .select('book_th book_en img author category view short_description') // << เพิ่มตรงนี้
       .lean();  
   
     if (topBooks.length === 0) {
@@ -402,7 +402,7 @@ export class BookService {
   
     return shuffled;
   }
-  
+    
     // -------------------------------------------------------------------
   // 🔸 DELETE
   // -------------------------------------------------------------------
