@@ -239,38 +239,32 @@ export class BookService {
     if (!Types.ObjectId.isValid(bookId)) {
       throw new BadRequestException('Invalid book ID format.');
     }
-
+  
     if (!category) {
       throw new BadRequestException('Category is required.');
     }
-
-    const book = await this.bookModel.findOneAndUpdate(
-      {
-        _id: bookId,
-        status: { $ne: Status.DELETED },
-        deleted_at: null,
-      },
-      { $inc: { view: 1 } },
-      { new: true }
-    ).exec();
-
+  
+    // ✅ เปลี่ยนจาก findOneAndUpdate ➔ เป็น findOne เฉยๆ
+    const book = await this.bookModel.findOne({
+      _id: bookId,
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    }).exec();
+  
     if (!book) {
       throw new NotFoundException('Book not found.');
     }
-
-    const query = this.bookModel.find({
+  
+    const recommendedBooks = await this.bookModel.find({
       category,
       _id: { $ne: bookId },
       status: { $ne: Status.DELETED },
       deleted_at: null,
-    }).sort({ view: -1 });
-
-
-    const recommendedBooks = await query.exec();
-
+    }).sort({ view: -1 }).exec();
+  
     return { book, recommendedBooks };
   }
-
+  
   async recommendBooksForMember(
     userId: string,
     currentBookId: string

@@ -1,14 +1,15 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') { // <<< เพิ่ม 'jwt'
+  constructor(private readonly configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: 'yourSecretKey',
+      secretOrKey: configService.get<string>('JWT_SECRET') || 'defaultSecret',  // <<< ใส่ default ไว้เพื่อกัน null
     });
   }
 
@@ -16,6 +17,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!payload || !payload.sub || !payload.email) {
       throw new UnauthorizedException('Invalid token');
     }
-    return { _id: payload.sub, email: payload.email, role: payload.role }; 
+    return { _id: payload.sub, email: payload.email, role: payload.role };
   }
 }

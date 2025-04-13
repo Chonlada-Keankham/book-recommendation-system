@@ -6,32 +6,21 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { LocalStrategy } from './strategy/local.strategy';
 import { JwtStrategy } from './strategy/jwt.strategy';
-import { MailerModule } from '@nestjs-modules/mailer';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule,  
     forwardRef(() => UserModule),
     PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'qlAlZQYEa0hsTWxe8ST6RIQR8GRfBc',
-      signOptions: { expiresIn: '60m' }
+    JwtModule.registerAsync({   
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),  
+        signOptions: { expiresIn: '60m' },
+      }),
     }),
-    MailerModule.forRoot({
-      transport: {
-        service: 'smtp',
-        host: 'smtp.example.com', 
-        port: 587, 
-        auth: {
-          user: process.env.EMAIL_USER, 
-          pass: process.env.EMAIL_PASSWORD,
-        },
-      },
-      defaults: {
-        from: '"No Reply" <no-reply@example.com>',
-      },
-    }),
-    ConfigModule, 
   ],
   controllers: [AuthController],
   providers: [
@@ -41,4 +30,4 @@ import { ConfigModule } from '@nestjs/config';
   ],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

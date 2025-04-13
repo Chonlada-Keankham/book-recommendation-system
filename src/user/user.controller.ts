@@ -14,10 +14,10 @@ import { RolesGuard } from 'src/auth/guard/role.guard';
 import { UserRole } from 'src/enum/user-role.enum';
 
 @ApiTags('User')
-@UseGuards(JwtAuthGuard) 
+@UseGuards(JwtAuthGuard)
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   // ---------- Register ----------
   @Post('/register-member')
@@ -43,6 +43,7 @@ export class UserController {
   }
 
   // ---------- Get ----------
+  @UseGuards(JwtAuthGuard)  
   @Get('/find-one/:id')
   @ApiOperation({ summary: 'Get user by ID' })
   async findOneById(@Param('id') id: string) {
@@ -54,7 +55,7 @@ export class UserController {
       data: userWithoutPassword
     };
   }
-
+  @UseGuards(JwtAuthGuard)
   @Get('/find-email/:email')
   @ApiOperation({ summary: 'Get user by email' })
   async findOneByEmail(@Param('email') email: string) {
