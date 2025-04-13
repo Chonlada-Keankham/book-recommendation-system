@@ -1,17 +1,18 @@
 import { Roles } from 'src/decorator/roles.decorator';
 import { extname } from 'path';
 import { UserService } from './user.service';
-import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RegisterUserDto } from './dto/register-member-user.dto';
 import { CreateEmployeeDto } from './dto/register-employee-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateProfileDto } from './dto/update-profile-user.dto';
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query, UploadedFile, UseInterceptors, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query, UploadedFile, UseInterceptors, UseGuards, ForbiddenException, Req } from '@nestjs/common';
 import { diskStorage } from 'multer';
 import { UserInterestDto } from './dto/interest-user.dto';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guard/role.guard';
 import { UserRole } from 'src/enum/user-role.enum';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('User')
 @UseGuards(JwtAuthGuard)
@@ -90,24 +91,8 @@ export class UserController {
   }
 
   // ---------- Update ----------
-  @Put('/update-interests/:id')
-  @ApiOperation({ summary: 'Update user interests' })
-  async updateInterests(
-    @Param('id') userId: string,
-    @Body() interestDto: UserInterestDto
-  ) {
-    const playlist = await this.userService.updateInterests(
-      userId,
-      interestDto.categories,
-      interestDto.authors
-    );
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Interests updated and playlist generated successfully',
-      data: playlist,
-    };
-  }
-
+  
+  
   // ---------- Upload ----------
   @Put('/update-profile/:id')
   @ApiConsumes('multipart/form-data')

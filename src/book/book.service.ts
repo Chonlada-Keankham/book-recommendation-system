@@ -243,7 +243,6 @@ export class BookService {
       throw new BadRequestException('Category is required.');
     }
   
-    // ✅ เปลี่ยนจาก findOneAndUpdate ➔ เป็น findOne เฉยๆ
     const book = await this.bookModel.findOne({
       _id: bookId,
       status: { $ne: Status.DELETED },

@@ -10,7 +10,6 @@ import { CommentModule } from './comment/comment.module';
 import { PlaylistModule } from './playlist/playlist.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from '@nestjs/cache-manager';
-import { databaseConfig } from './config/database.config';  
 import { NotificationModule } from './notification/notification.module';
 
 @Module({
@@ -29,7 +28,13 @@ import { NotificationModule } from './notification/notification.module';
 
     ScheduleModule.forRoot(),
 
-    MongooseModule.forRoot(databaseConfig.uri),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        uri: configService.get<string>('DATABASE_URI'),
+      }),
+    }),
 
     UserModule,
     AuthModule,

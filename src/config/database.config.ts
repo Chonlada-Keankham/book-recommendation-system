@@ -1,32 +1,31 @@
-
 export const databaseConfig = {
-  uri: process.env.DATABASE_URI || 'mongodb+srv://chonladakkc:14s8gNYixQGlHWcJ@cluster0.8xmiy.mongodb.net/pj-recommend?retryWrites=true&w=majority&appName=Cluster0',
+  uri: process.env.DATABASE_URI,
 };
 
 export const frontendConfig = {
-  url: process.env.frontendUrl || 'http://localhost:3000',
+  url: process.env.FRONTEND_URL,
 };
 
 export const backendConfig = {
-  url: process.env.BACKEND_URL || 'https://6193-2001-fb1-2d-d1bf-519e-c229-ff27-16bb.ngrok-free.app',
+  url: process.env.BACKEND_URL,
 };
 
 export const jwtConfig = {
-  secret: process.env.JWT_SECRET || 'qlAlZQYEa0hsTWxe8ST6RIQR8GRfBc',
-  expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+  secret: process.env.JWT_SECRET,
+  expiresIn: process.env.JWT_EXPIRES_IN,
 };
 
 export const fileConfig = {
-  profilePath: process.env.PROFILE_PATH || './uploads/profile',
-  backgroundPath: process.env.BACKGROUND_PATH || './uploads/background',
-  maxFileSize: process.env.MAX_FILE_SIZE || 5242880,
+  profilePath: process.env.PROFILE_PATH,
+  backgroundPath: process.env.BACKGROUND_PATH,
+  maxFileSize: process.env.MAX_FILE_SIZE,
 };
 
 export const redisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
+  host: process.env.REDIS_HOST,
+  port: parseInt(process.env.REDIS_PORT || '6379', 10),
 };
 
 export const baseConfig = {
-  baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+  baseUrl: process.env.BASE_URL,
 };

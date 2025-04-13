@@ -112,8 +112,8 @@ export class AuthService {
       { expiresIn: '1h', secret: this.configService.get<string>('JWT_SECRET') }
     );
 
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
-    const resetLink = `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+    const FRONTEND_URL = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const resetLink = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(resetToken)}`;
 
     return {
       message: 'Password reset link generated successfully',
