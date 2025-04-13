@@ -24,9 +24,16 @@ export class BookService {
       host: redisConfig.host,
       port: redisConfig.port,
       password: redisConfig.password,
-      tls: redisConfig.tls,
+      tls: {}, 
     });
-    
+
+    this.redisClient.on('connect', () => {
+      console.log('🔌 Redis connected successfully');
+    });
+
+    this.redisClient.on('error', (err) => {
+      console.error('❌ Redis connection error:', err);
+    });
   }
 
   // -------------------------------------------------------------------
