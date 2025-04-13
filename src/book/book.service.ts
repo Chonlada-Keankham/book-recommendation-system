@@ -20,11 +20,12 @@ export class BookService {
     private readonly playlistService: PlaylistService,
   ) {
     this.redisClient = new Redis({
-      host: 'localhost',
-      port: 6379,
-      password: '',
-      db: 0,
+      host: process.env.REDIS_HOST,
+      port: Number(process.env.REDIS_PORT),
+      password: process.env.REDIS_PASSWORD,
+      tls: {}, 
     });
+    
   }
 
   // -------------------------------------------------------------------
