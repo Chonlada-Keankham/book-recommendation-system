@@ -20,21 +20,7 @@ export class BookService {
     @Inject(forwardRef(() => PlaylistService))
     private readonly playlistService: PlaylistService,
   ) {
-    this.redisClient = new Redis({
-      host: redisConfig.host,
-      port: redisConfig.port,
-      password: redisConfig.password,
-      tls: {}, 
-    });
-
-    this.redisClient.on('connect', () => {
-      console.log('🔌 Redis connected successfully');
-    });
-
-    this.redisClient.on('error', (err) => {
-      console.error('❌ Redis connection error:', err);
-    });
-  }
+    this.redisClient = new Redis(redisConfig.url);  }
 
   // -------------------------------------------------------------------
   // 🔸 UTILITIES
