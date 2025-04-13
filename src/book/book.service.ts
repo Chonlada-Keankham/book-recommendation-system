@@ -191,6 +191,20 @@ export class BookService {
     }).exec();
   }
 
+  async findOneById(id: string): Promise<iBook> {
+    const book = await this.bookModel.findOne({
+      _id: id,
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    }).exec();
+  
+    if (!book) {
+      throw new NotFoundException(`Book with ID ${id} not found.`);
+    }
+  
+    return book;
+  }
+  
   // -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------
@@ -318,7 +332,6 @@ export class BookService {
     let recommendedBooks: iBook[];
 
     if (!playlist) {
-      // ถ้าไม่มี playlist ก็ fallback ตามหมวดหมู่
       const fallbackBooks = await this.bookModel.find({
         category: currentBook.category,
         _id: { $ne: bookId },

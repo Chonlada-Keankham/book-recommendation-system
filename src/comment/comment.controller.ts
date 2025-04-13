@@ -1,27 +1,16 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, Req } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
-import { Request } from 'express';
 
-@ApiTags('Comment')
 @Controller('comment')
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
-  // ----------------Create----------
-  @Post('/create-comment')
-  @ApiOperation({ summary: 'Create a new comment' })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Comment created successfully.',
-  })
-  async createOne(
-    @Body() createCommentDto: CreateCommentDto,
-    @Req() req: Request
-  ) {
-    const comment = await this.commentService.createComment(createCommentDto, req);
+  // 🔸 CREATE
+  @Post('/create')
+  async createComment(@Body() createCommentDto: CreateCommentDto) {
+    const comment = await this.commentService.createComment(createCommentDto);
     return {
       statusCode: HttpStatus.CREATED,
       message: 'Comment created successfully',
@@ -29,15 +18,10 @@ export class CommentController {
     };
   }
 
-  // ----------------Get----------
-  @Get('/find-one/:id')
-  @ApiOperation({ summary: 'Find a comment by ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Comment found.',
-  })
-  async findOneById(@Param('id') id: string) {
-    const comment = await this.commentService.findOneById(id);
+  // 🔸 READ
+  @Get('/find-one/:commentId')
+  async findComment(@Param('commentId') commentId: string) {
+    const comment = await this.commentService.findCommentById(commentId);
     return {
       statusCode: HttpStatus.OK,
       message: 'Comment found',
@@ -45,13 +29,18 @@ export class CommentController {
     };
   }
 
-  // ----------------Update----------
-  @Patch('/update-comment/:commentId')
-  @ApiOperation({ summary: 'Update a comment by ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Comment updated successfully.',
-  })
+  @Get('/find-all/:bookId')
+  async findCommentsByBookId(@Param('bookId') bookId: string) {
+    const comments = await this.commentService.findCommentsByBookId(bookId);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Comments found',
+      data: comments,
+    };
+  }
+
+  // 🔸 UPDATE
+  @Put('/update/:commentId')
   async updateComment(
     @Param('commentId') commentId: string,
     @Body() updateCommentDto: UpdateCommentDto
@@ -64,38 +53,11 @@ export class CommentController {
     };
   }
 
-  // ----------------Soft Delete----------
-  @Delete('/soft-delete/:bookId/:userId')
-  @ApiOperation({ summary: 'Soft delete a comment by book ID and user ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Comment soft deleted successfully.',
-  })
-  async softDelete(
-    @Param('bookId') bookId: string,
-    @Param('userId') userId: string
-  ) {
-    const comment = await this.commentService.softDelete(bookId, userId);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Comment soft deleted successfully',
-      data: comment,
-    };
-  }
-
-  // ----------------Hard Delete----------
-  @Delete('/delete/:bookId/:userId')
+  // 🔸 DELETE
+  @Delete('/delete/:commentId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a comment by book ID and user ID' })
-  @ApiResponse({
-    status: HttpStatus.NO_CONTENT,
-    description: 'Comment deleted successfully.',
-  })
-  async deleteOne(
-    @Param('bookId') bookId: string,
-    @Param('userId') userId: string
-  ) {
-    await this.commentService.deleteById(bookId, userId);
+  async deleteComment(@Param('commentId') commentId: string) {
+    await this.commentService.deleteComment(commentId);
     return {
       statusCode: HttpStatus.NO_CONTENT,
       message: 'Comment deleted successfully',

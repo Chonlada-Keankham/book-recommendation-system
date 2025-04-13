@@ -1,19 +1,6 @@
-import { IsMongoId, IsOptional, IsString } from 'class-validator';
-import { Types } from 'mongoose';
+import { IsNotEmpty } from 'class-validator';
+
 export class UpdateCommentDto {
-  @IsOptional()
-  @IsMongoId()
-  commentId?: Types.ObjectId;
-
-  @IsOptional()
-  @IsString()
-  content?: string;
-
-  @IsOptional()
-  @IsMongoId()
-  user?: Types.ObjectId;
-
-  @IsOptional()
-  @IsMongoId()
-  book?: Types.ObjectId;
+  @IsNotEmpty()
+  content: string;
 }
