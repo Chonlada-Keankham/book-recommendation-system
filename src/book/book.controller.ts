@@ -37,7 +37,6 @@ export class BookController {
     };
   }
   // ----------------Read----------
-
   @Get('/find-one/:id')
   async getBook(@Param('id') id: string, @Req() request: Request) {
     const ip = typeof request.headers['x-forwarded-for'] === 'string'
@@ -77,7 +76,7 @@ export class BookController {
       total: result.total,
     };
   }
-  
+
   @Get('/travel')
   async getTravelBooks() {
     const result = await this.bookService.findTravelBooks();
@@ -88,7 +87,7 @@ export class BookController {
       total: result.total,
     };
   }
-  
+
   @Get('/business')
   async getBusinessBooks() {
     const result = await this.bookService.findBusinessBooks();
@@ -99,7 +98,7 @@ export class BookController {
       total: result.total,
     };
   }
-  
+
   @Get('/sport')
   async getSportBooks() {
     const result = await this.bookService.findSportBooks();
@@ -110,7 +109,7 @@ export class BookController {
       total: result.total,
     };
   }
-  
+
   @Get('/education')
   async getEducationBooks() {
     const result = await this.bookService.findEducationBooks();
@@ -121,29 +120,26 @@ export class BookController {
       total: result.total,
     };
   }
-  
+
   // ---------- Recommendation ----------
   @Get('/recommend/guest')
   async recommendForGuest(
     @Query('category') category: string,
     @Query('bookId') bookId: string,
+    @Req() req: Request
   ) {
-    if (!Object.values(BookCategory).includes(category as BookCategory)) {
-      throw new BadRequestException('Invalid category');
-    }
+    const ip = typeof req.headers['x-forwarded-for'] === 'string' ? req.headers['x-forwarded-for'] : req.ip;
 
-
-    const categoryEnum = category as BookCategory;
-
-    const books = await this.bookService.recommendBooksForGuest(
-      categoryEnum,
+    const { currentBook, recommendedBooks } = await this.bookService.recommendBooksForGuest(
+      category as BookCategory,
       bookId,
+      ip
     );
 
     return {
-      statusCode: HttpStatus.OK,
-      message: 'Recommended books found',
-      data: books,
+      statusCode: 200,
+      message: 'Recommended books for guest',
+      data: { book: currentBook, recommendedBooks },
     };
   }
 
@@ -151,21 +147,15 @@ export class BookController {
   async recommendForMember(
     @Query('userId') userId: string,
     @Query('bookId') bookId: string,
+    @Req() req: Request
   ) {
-    if (!Types.ObjectId.isValid(userId)) {
-      throw new BadRequestException('Invalid user ID');
-    }
-
-    if (!Types.ObjectId.isValid(bookId)) {
-      throw new BadRequestException('Invalid book ID');
-    }
-
-    const recommendedBooks = await this.bookService.recommendBooksForMember(userId, bookId);
+    const ip = typeof req.headers['x-forwarded-for'] === 'string' ? req.headers['x-forwarded-for'] : req.ip;
+    const { currentBook, recommendedBooks } = await this.bookService.recommendBooksForMember(userId, bookId, ip);
 
     return {
-      statusCode: HttpStatus.OK,
-      message: 'Recommended books for member retrieved successfully.',
-      data: recommendedBooks,
+      statusCode: 200,
+      message: 'Recommended books for member',
+      data: { book: currentBook, recommendedBooks },
     };
   }
 
