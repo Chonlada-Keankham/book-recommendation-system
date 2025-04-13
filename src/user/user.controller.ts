@@ -1,7 +1,7 @@
 import { extname } from 'path';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { RegisterUserDto } from './dto/register-member-user.dto';
 import { CreateEmployeeDto } from './dto/register-employee-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -38,42 +38,42 @@ export class UserController {
       message: 'Employee registered successfully',
       data: {
         employee: user,
-        initialPassword: password, 
+        initialPassword: password,
       },
     };
   }
-  
+
   // ---------- Get ----------
   @Get('/find-one/:id')
   async findOneById(@Param('id') id: string) {
     const user = await this.userService.findOneById(id);
-    const { password, ...userWithoutPassword } = user;  
+    const { password, ...userWithoutPassword } = user;
     return {
       statusCode: HttpStatus.OK,
       message: 'User found',
       data: userWithoutPassword
     };
   }
-  
+
   @Get('/find-email/:email')
   async findOneByEmail(@Param('email') email: string) {
     const user = await this.userService.findOneByEmail(email);
-    const { password, ...userWithoutPassword } = user;  
+    const { password, ...userWithoutPassword } = user;
     return {
       statusCode: HttpStatus.OK,
       message: 'User found',
       data: userWithoutPassword
     };
   }
-  
+
   @Get('/find-all')
   async findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
     const result = await this.userService.findAll(page, limit);
     const usersWithoutPassword = result.users.map(user => {
-      const { password, ...rest } = user;  
+      const { password, ...rest } = user;
       return rest;
     });
-  
+
     return {
       statusCode: HttpStatus.OK,
       message: 'Users found',
@@ -81,20 +81,8 @@ export class UserController {
       total: result.total
     };
   }
-    
-  // ---------- Update ----------
-  @Put('/update-one/:id')
-  async updateOne(
-    @Param('id') id: string,
-    @Body() updateUserDto: UpdateUserDto) {
-    const user = await this.userService.updateOne(id, updateUserDto);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'User updated successfully',
-      data: user
-    };
-  }
 
+  // ---------- Update ----------
   @Put('/update-interests/:id')
   @ApiOperation({ summary: 'Update user interests and generate playlist' })
   @ApiResponse({
@@ -116,79 +104,34 @@ export class UserController {
       data: playlist,
     };
   }
-  
-  @Patch('/update-profile/:id')
-  async updateProfile(
-    @Param('id') userId: string,
-    @Body() dto: UpdateProfileDto) {
-    const user = await this.userService.updateProfile(userId, dto);
-    return {
-      statusCode: 200,
-      message: 'Profile updated',
-      data: user
-    };
-  }
+
 
   // ---------- Upload ----------
-  @Post('/upload/profile/:id')
+  @Put('/update-profile/:id')
+  @ApiOperation({ summary: 'Update user profile and upload profile image' })
+  @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
       destination: './uploads/profile',
       filename: (req, file, cb) => {
-        const userId = req.params.id;
-        const ext = extname(file.originalname);
-        const uniqueSuffix = Date.now();
-        cb(null, `${userId}-${uniqueSuffix}${ext}`); // 🔥 ตั้งชื่อปลอดภัย
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`);
       }
     }),
-    fileFilter: (req, file, cb) => {
-      if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
-        return cb(new BadRequestException('Only image files are allowed!'), false);
-      }
-      cb(null, true);
-    },
-    limits: { fileSize: 5 * 1024 * 1024 },
   }))
-  async uploadProfile(@Param('id') userId: string, @UploadedFile() file: Express.Multer.File) {
-    if (!file || !file.filename) {
-      throw new BadRequestException('File is missing or invalid.');
-    }
-    const result = await this.userService.uploadProfileImage(userId, file.filename);
+  async updateProfile(
+    @Param('id') id: string,
+    @Body() updateProfileDto: UpdateProfileDto,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    const profileFilename = file?.filename;
+
+    const user = await this.userService.updateUserProfile(id, updateProfileDto, profileFilename);
+
     return {
       statusCode: HttpStatus.OK,
-      message: 'Profile image uploaded successfully',
-      data: result,
-    };
-  }
-  
-  @Post('/upload/background/:id')
-  @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads/background',
-      filename: (req, file, cb) => {
-        const userId = req.params.id;
-        const ext = extname(file.originalname);
-        const uniqueSuffix = Date.now();
-        cb(null, `${userId}-${uniqueSuffix}${ext}`); 
-      }
-    }),
-    fileFilter: (req, file, cb) => {
-      if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
-        return cb(new BadRequestException('Only image files are allowed!'), false);
-      }
-      cb(null, true);
-    },
-    limits: { fileSize: 5 * 1024 * 1024 },
-  }))
-  async uploadBackground(@Param('id') userId: string, @UploadedFile() file: Express.Multer.File) {
-    if (!file || !file.filename) {
-      throw new BadRequestException('File is missing or invalid.');
-    }
-    const result = await this.userService.uploadBackgroundImage(userId, file.filename);
-    return {
-      statusCode: 200,
-      message: 'Background image uploaded',
-      data: result
+      message: 'Profile updated successfully',
+      data: user,
     };
   }
   

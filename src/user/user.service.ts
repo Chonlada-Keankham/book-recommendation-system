@@ -10,6 +10,7 @@ import { Status } from 'src/enum/status.enum';
 import { UserRole } from 'src/enum/user-role.enum';
 import { CreateEmployeeDto } from './dto/register-employee-user.dto';
 import { iPlaylist } from 'src/playlist/interface/playlist.interface';
+import { UpdateProfileDto } from './dto/update-profile-user.dto';
 
 @Injectable()
 export class UserService {
@@ -169,29 +170,6 @@ async findAll(page: number = 1, limit: number = 10): Promise<{
   // -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------
-
-  async updateOne(
-    userId: string,
-    updateUserDto: UpdateUserDto): Promise<iUser> {
-    const user = await this.userModel.findById(userId);
-    if (!user) throw new NotFoundException('User not found');
-    await this.checkUserExists(updateUserDto, userId);
-
-    const updatedUser = await this.userModel.updateOne(
-      { _id: userId },
-      {
-        $set: {
-          ...updateUserDto,
-          updated_at: new Date(),
-          password: updateUserDto.password ? await bcrypt.hash(updateUserDto.password, 10) : user.password,
-        },
-      },
-    );
-
-    if (updatedUser.modifiedCount === 0) throw new InternalServerErrorException('Failed to update user');
-    return await this.userModel.findById(userId);
-  }
-
   async updatePassword
     (userId: string,
       hashedPassword: string): Promise<void> {
@@ -207,50 +185,37 @@ async findAll(page: number = 1, limit: number = 10): Promise<{
     if (result.modifiedCount === 0) throw new BadRequestException('Failed to update password');
   }
 
-  async uploadProfileImage(
+  async updateUserProfile(
     userId: string,
-    filename: string
+    updateProfileDto: UpdateProfileDto,
+    profileFilename?: string
   ): Promise<iUser> {
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    user.profileImage = `/uploads/profile/${filename}`; // <<< Save path รูปใหม่
-    return user.save(); // <<< บันทึกลง database
-  }
-
-  async uploadBackgroundImage(
-    userId: string,
-    filename: string): Promise<iUser> {
-    const user = await this.userModel.findById(userId);
-    if (!user) throw new NotFoundException('User not found');
-
-    user.backgroundImage = `/uploads/background/${filename}`;
-    return user.save();
-  }
-
-  async updateProfile(
-    userId: string,
-    updateUserDto: Partial<UpdateUserDto>): Promise<iUser> {
-    const user = await this.userModel.findById(userId);
-    if (!user) throw new NotFoundException('User not found');
-
-    if (updateUserDto.email && updateUserDto.email !== user.email) {
-      throw new BadRequestException('Email cannot be changed');
-    }
-
-    await this.checkUserExists(updateUserDto, userId);
-
-    user.first_name = updateUserDto.first_name || user.first_name;
-    user.last_name = updateUserDto.last_name || user.last_name;
-    user.phone = updateUserDto.phone || user.phone;
-    user.username = updateUserDto.username || user.username;
+    user.first_name = updateProfileDto.first_name || user.first_name;
+    user.last_name = updateProfileDto.last_name || user.last_name;
+    user.phone = updateProfileDto.phone || user.phone;
+    user.username = updateProfileDto.username || user.username;
     user.updated_at = new Date();
 
-    return user.save();
-  }
+    if (profileFilename) {
+      user.profileImage = `/uploads/profile/${profileFilename}`;
+    }
 
+    if (updateProfileDto.password) {
+      if (updateProfileDto.password !== updateProfileDto.confirmPassword) {
+        throw new BadRequestException('Password and Confirm Password do not match.');
+      }
+
+      user.password = await this.hashPassword(updateProfileDto.password);
+    }
+
+    return await user.save();
+  }
+  
   async updateInterests(
     userId: string,
     categories: string[],
@@ -275,7 +240,7 @@ async findAll(page: number = 1, limit: number = 10): Promise<{
 
     return playlist;
   }
-
+  
   // -------------------------------------------------------------------
   // 🔸 DELETE
   // -------------------------------------------------------------------
