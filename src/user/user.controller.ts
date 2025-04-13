@@ -91,8 +91,24 @@ export class UserController {
   }
 
   // ---------- Update ----------
-  
-  
+  @Put('/update-interests/:id')
+  @ApiOperation({ summary: 'Update user interests' })
+  async updateInterests(
+    @Param('id') id: string,
+    @Body() interestDto: UserInterestDto
+  ) {
+    const playlist = await this.userService.updateInterests(
+      id,
+      interestDto.categories,
+      interestDto.authors,
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Interests updated successfully',
+      data: playlist,
+    };
+  }
+
   // ---------- Upload ----------
   @Put('/update-profile/:id')
   @ApiConsumes('multipart/form-data')
@@ -102,26 +118,26 @@ export class UserController {
       destination: './uploads/profile',
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, `${uniqueSuffix}${extname(file.originalname)}`); 
+        cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
       }
     }),
   }))
-    async updateProfile(
+  async updateProfile(
     @Param('id') id: string,
     @Body() updateProfileDto: UpdateProfileDto,
     @UploadedFile() file?: Express.Multer.File
   ) {
     const user = await this.userService.updateUserProfile(id, updateProfileDto, file?.filename);
-  
+
     const { password, refreshToken, ...userWithoutSensitiveInfo } = user.toObject();
-  
+
     return {
       statusCode: HttpStatus.OK,
       message: 'Profile updated successfully',
-      data: userWithoutSensitiveInfo,  
+      data: userWithoutSensitiveInfo,
     };
   }
-  
+
   // ---------- Delete ----------
   @Delete('/soft-delete/:id')
   @ApiOperation({ summary: 'Soft delete user' })
