@@ -137,7 +137,6 @@ export class BookService {
       throw new NotFoundException(`Book with ID ${id} not found.`);
     }
   
-    // ✅ ปรับ path รูป
     if (book.img && !book.img.startsWith('http')) {
       book.img = `${process.env.BACKEND_URL}${book.img.startsWith('/') ? '' : '/'}${book.img}`;
     }

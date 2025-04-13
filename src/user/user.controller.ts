@@ -43,18 +43,20 @@ export class UserController {
   }
 
   // ---------- Get ----------
-  @UseGuards(JwtAuthGuard)  
+  @UseGuards(JwtAuthGuard)
   @Get('/find-one/:id')
   @ApiOperation({ summary: 'Get user by ID' })
   async findOneById(@Param('id') id: string) {
-    const user = await this.userService.findOneById(id);
-    const { password, ...userWithoutPassword } = user;
+    const user = await this.userService.findOneById(id); // <<< user จะมี .toObject() แล้ว
+    const { password, refreshToken, ...userWithoutSensitiveInfo } = user.toObject(); // <<< ✅ ไม่มี error
     return {
       statusCode: HttpStatus.OK,
       message: 'User found',
-      data: userWithoutPassword
+      data: userWithoutSensitiveInfo,
     };
   }
+
+
   @UseGuards(JwtAuthGuard)
   @Get('/find-email/:email')
   @ApiOperation({ summary: 'Get user by email' })
@@ -115,25 +117,26 @@ export class UserController {
       destination: './uploads/profile',
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`);
+        cb(null, `${uniqueSuffix}${extname(file.originalname)}`); 
       }
     }),
   }))
-  async updateProfile(
+    async updateProfile(
     @Param('id') id: string,
     @Body() updateProfileDto: UpdateProfileDto,
     @UploadedFile() file?: Express.Multer.File
   ) {
-    const profileFilename = file?.filename;
-    const user = await this.userService.updateUserProfile(id, updateProfileDto, profileFilename);
-
+    const user = await this.userService.updateUserProfile(id, updateProfileDto, file?.filename);
+  
+    const { password, refreshToken, ...userWithoutSensitiveInfo } = user.toObject();
+  
     return {
       statusCode: HttpStatus.OK,
       message: 'Profile updated successfully',
-      data: user,
+      data: userWithoutSensitiveInfo,  
     };
   }
-
+  
   // ---------- Delete ----------
   @Delete('/soft-delete/:id')
   @ApiOperation({ summary: 'Soft delete user' })

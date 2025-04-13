@@ -11,6 +11,7 @@ import { UserRole } from 'src/enum/user-role.enum';
 import { CreateEmployeeDto } from './dto/register-employee-user.dto';
 import { iPlaylist } from 'src/playlist/interface/playlist.interface';
 import { UpdateProfileDto } from './dto/update-profile-user.dto';
+import { UserDocument } from './schema/user.schema';
 
 @Injectable()
 export class UserService {
@@ -125,7 +126,7 @@ export class UserService {
     }).exec();
   }
 
-  async findOneById(id: string): Promise<iUser> {
+  async findOneById(id: string): Promise<UserDocument> {
     const user = await this.userModel.findOne({
       _id: id,
       status: { $ne: Status.DELETED },
@@ -195,7 +196,7 @@ export class UserService {
     userId: string,
     updateProfileDto: UpdateProfileDto,
     profileFilename?: string
-  ): Promise<iUser> {
+  ): Promise<UserDocument> {
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
