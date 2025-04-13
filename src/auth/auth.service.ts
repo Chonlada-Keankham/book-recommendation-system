@@ -11,7 +11,6 @@ import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
 import { Status } from 'src/enum/status.enum';
 import { UserRole } from 'src/enum/user-role.enum';
 import * as bcrypt from 'bcryptjs';
-import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {

@@ -82,76 +82,70 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 CREATE
   // -------------------------------------------------------------------
-  async createBook(createBookDto: CreateBookDto, filename: string): Promise<iBook> {
-    const existingBook = await this.bookModel.findOne({
-      $or: [
-        { book_th: createBookDto.book_th },
-        { book_en: createBookDto.book_en }
-      ]
+  async createBook(createBookDto: CreateBookDto, file?: Express.Multer.File): Promise<iBook> {
+    const existing = await this.bookModel.findOne({
+      $or: [{ book_th: createBookDto.book_th }, { book_en: createBookDto.book_en }]
     });
-
-    if (existingBook) {
-      throw new Error('This book is already in the system.');
-    }
-
+    if (existing) throw new ConflictException('Book already exists.');
+  
     const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+    
+    const imgPath = file ? `${BACKEND_URL}/uploads/book/${file.filename}` : '';
+  
     const newBook = new this.bookModel({
       ...createBookDto,
-      img: `${BACKEND_URL}/uploads/book${filename}`,
-      deleted_at: null
+      img: imgPath,
+      short_description: createBookDto.short_description || '',  
+      deleted_at: null,
     });
-
+  
     return newBook.save();
   }
 
-  // -------------------------------------------------------------------
+    // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
   async findOneByIdAndUpdateView(id: string, ip: string): Promise<iBook> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ID format.');
     }
-
+  
     const redisKey = `viewed:${id}:${ip}`;
     const viewed = await this.redisClient.get(redisKey);
-
+  
+    let book: iBook;
     if (!viewed) {
-      const book = await this.bookModel.findOneAndUpdate(
+      book = await this.bookModel.findOneAndUpdate(
         {
           _id: id,
           status: { $ne: Status.DELETED },
-          deleted_at: null
+          deleted_at: null,
         },
-        {
-          $inc: { view: 1 }
-        },
-        { new: true }
+        { $inc: { view: 1 } },
+        { new: true },
       ).exec();
-
-      if (!book) {
-        throw new NotFoundException(`Book with ID ${id} not found.`);
-      }
-
-      if (book.img) {
-        book.img =`${process.env.BACKEND_URL}/uploads/book${book.img}`;
-      }
-
       await this.redisClient.set(redisKey, 'true', 'EX', 300);
-
-      return book;
+    } else {
+      book = await this.bookModel.findOne({
+        _id: id,
+        status: { $ne: Status.DELETED },
+        deleted_at: null,
+      }).exec();
     }
-
-    return await this.bookModel.findOne({
-      _id: id,
-      status: { $ne: Status.DELETED },
-      deleted_at: null,
-    }).exec();
+  
+    if (!book) {
+      throw new NotFoundException(`Book with ID ${id} not found.`);
+    }
+  
+    // ✅ ปรับ path รูป
+    if (book.img && !book.img.startsWith('http')) {
+      book.img = `${process.env.BACKEND_URL}${book.img.startsWith('/') ? '' : '/'}${book.img}`;
+    }
+  
+    return book;
   }
-
-  async findBooksByCategory(
-    category: BookCategory,
-    ip: string
-  ): Promise<{
+  
+  async findBooksByCategory(category: BookCategory): Promise<{
     books: iBook[];
     total: number;
   }> {
@@ -167,59 +161,36 @@ export class BookService {
       deleted_at: null,
     }).exec();
   
-    for (const book of books) {
-      const redisKey = `viewed:${book._id}:${ip}`;
-      const viewed = await this.redisClient.get(redisKey);
-  
-      if (!viewed) {
-        await this.bookModel.findByIdAndUpdate(book._id, { $inc: { view: 1 } }).exec();
-        await this.redisClient.set(redisKey, 'true', 'EX', 300);
-      }
-    }
-  
     return { books, total };
   }
-  
-  async findNovelBooks(ip: string): Promise<{ books: iBook[]; total: number }> {
-    return this.findBooksByCategory(BookCategory.NOVEL, ip);
+      
+  async findNovelBooks(): Promise<{ books: iBook[]; total: number }> {
+    return this.findBooksByCategory(BookCategory.NOVEL);
   }
   
-  async findTravelBooks(ip: string): Promise<{ books: iBook[]; total: number }> {
-    return this.findBooksByCategory(BookCategory.TRAVEL, ip);
+  async findTravelBooks(): Promise<{ books: iBook[]; total: number }> {
+    return this.findBooksByCategory(BookCategory.TRAVEL);
   }
   
-  async findBusinessBooks(ip: string): Promise<{ books: iBook[]; total: number }> {
-    return this.findBooksByCategory(BookCategory.BUSINESS, ip);
+  async findBusinessBooks(): Promise<{ books: iBook[]; total: number }> {
+    return this.findBooksByCategory(BookCategory.BUSINESS);
   }
   
-  async findSportBooks(ip: string): Promise<{ books: iBook[]; total: number }> {
-    return this.findBooksByCategory(BookCategory.SPORT, ip);
+  async findSportBooks(): Promise<{ books: iBook[]; total: number }> {
+    return this.findBooksByCategory(BookCategory.SPORT);
   }
   
-  async findEducationBooks(ip: string): Promise<{ books: iBook[]; total: number }> {
-    return this.findBooksByCategory(BookCategory.EDUCATION, ip);
+  async findEducationBooks(): Promise<{ books: iBook[]; total: number }> {
+    return this.findBooksByCategory(BookCategory.EDUCATION);
   }
-  
-  async findAll(ip: string): Promise<iBook[]> {
-    const books = await this.bookModel.find({
+    
+  async findAll(): Promise<iBook[]> {
+    return this.bookModel.find({
       status: { $ne: Status.DELETED },
       deleted_at: null,
     }).exec();
-
-    for (const book of books) {
-      const redisKey = `viewed:${book._id}:${ip}`;
-      const viewed = await this.redisClient.get(redisKey);
-
-      if (!viewed) {
-        await this.bookModel.findByIdAndUpdate(book._id, { $inc: { view: 1 } }).exec();
-        await this.redisClient.set(redisKey, 'true', 'EX', 300);
-      }
-    }
-
-    return books;
-  }
-
-
+  }  
+   
   // -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------

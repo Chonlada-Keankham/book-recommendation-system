@@ -16,14 +16,27 @@ export class BookController {
 
   // ----------------Create----------
   @Post('/create')
-  async createBook(@Body() createBookDto: CreateBookDto, @UploadedFile() file: Express.Multer.File) {
-    const book = await this.bookService.createBook(createBookDto, file.filename);
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: './uploads/book',
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+      }
+    })
+  }))
+  async createBook(
+    @Body() createBookDto: CreateBookDto,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    const book = await this.bookService.createBook(createBookDto, file);
     return {
       statusCode: 201,
       message: 'Book created successfully',
       data: book,
     };
   }
+  // ----------------Read----------
 
   @Get('/find-one/:id')
   async getBook(@Param('id') id: string, @Req() request: Request) {
@@ -46,7 +59,7 @@ export class BookController {
       ? request.headers['x-forwarded-for']
       : request.ip;
 
-    const books = await this.bookService.findAll(ip);
+    const books = await this.bookService.findAll();
     return {
       statusCode: 200,
       message: 'Books found',
@@ -55,12 +68,8 @@ export class BookController {
   }
 
   @Get('/novel')
-  async getNovelBooks(@Req() request: Request) {
-    const ip = typeof request.headers['x-forwarded-for'] === 'string'
-      ? request.headers['x-forwarded-for']
-      : request.ip;
-  
-    const result = await this.bookService.findNovelBooks(ip);  
+  async getNovelBooks() {
+    const result = await this.bookService.findNovelBooks();
     return {
       statusCode: 200,
       message: 'Books found',
@@ -70,12 +79,8 @@ export class BookController {
   }
   
   @Get('/travel')
-  async getTravelBooks(@Req() request: Request) {
-    const ip = typeof request.headers['x-forwarded-for'] === 'string'
-      ? request.headers['x-forwarded-for']
-      : request.ip;
-  
-    const result = await this.bookService.findTravelBooks(ip);  
+  async getTravelBooks() {
+    const result = await this.bookService.findTravelBooks();
     return {
       statusCode: 200,
       message: 'Books found',
@@ -85,12 +90,8 @@ export class BookController {
   }
   
   @Get('/business')
-  async getBusinessBooks(@Req() request: Request) {
-    const ip = typeof request.headers['x-forwarded-for'] === 'string'
-      ? request.headers['x-forwarded-for']
-      : request.ip;
-  
-    const result = await this.bookService.findBusinessBooks(ip);  
+  async getBusinessBooks() {
+    const result = await this.bookService.findBusinessBooks();
     return {
       statusCode: 200,
       message: 'Books found',
@@ -100,12 +101,8 @@ export class BookController {
   }
   
   @Get('/sport')
-  async getSportBooks(@Req() request: Request) {
-    const ip = typeof request.headers['x-forwarded-for'] === 'string'
-      ? request.headers['x-forwarded-for']
-      : request.ip;
-  
-    const result = await this.bookService.findSportBooks(ip);  
+  async getSportBooks() {
+    const result = await this.bookService.findSportBooks();
     return {
       statusCode: 200,
       message: 'Books found',
@@ -115,12 +112,8 @@ export class BookController {
   }
   
   @Get('/education')
-  async getEducationBooks(@Req() request: Request) {
-    const ip = typeof request.headers['x-forwarded-for'] === 'string'
-      ? request.headers['x-forwarded-for']
-      : request.ip;
-  
-    const result = await this.bookService.findEducationBooks(ip);  
+  async getEducationBooks() {
+    const result = await this.bookService.findEducationBooks();
     return {
       statusCode: 200,
       message: 'Books found',
@@ -178,14 +171,14 @@ export class BookController {
 
   @Get('/recommendations/daily')
   async getDailyRecommendations(
-    @Query('limit') limit = '10' 
+    @Query('limit') limit = '10'
   ) {
     const books = await this.bookService.getDailyRecommendedBooks();
 
     return {
       statusCode: HttpStatus.OK,
       message: 'Daily recommended books fetched successfully',
-      date: new Date().toISOString().slice(0, 10), 
+      date: new Date().toISOString().slice(0, 10),
       total: books.length,
       data: books,
     };
@@ -218,23 +211,23 @@ export class BookController {
   }
 
   // ---------- Increase View by API (NEW) ----------
-@Post('/increase-view/:id')
-async increaseView(
-  @Param('id') id: string,
-  @Req() request: Request,
-) {
-  const ip = typeof request.headers['x-forwarded-for'] === 'string'
-    ? request.headers['x-forwarded-for']
-    : request.ip;
+  @Post('/increase-view/:id')
+  async increaseView(
+    @Param('id') id: string,
+    @Req() request: Request,
+  ) {
+    const ip = typeof request.headers['x-forwarded-for'] === 'string'
+      ? request.headers['x-forwarded-for']
+      : request.ip;
 
-  const book = await this.bookService.increaseViewAfterDelay(id, ip);
+    const book = await this.bookService.increaseViewAfterDelay(id, ip);
 
-  return {
-    statusCode: HttpStatus.OK,
-    message: 'View increased successfully',
-    data: book,
-  };
-}
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'View increased successfully',
+      data: book,
+    };
+  }
 
   // ----------------Update----------
   @Put('/update-all-short-description')
@@ -305,8 +298,8 @@ async increaseView(
     })
   }))
   async updateBookCoverByCategory(
-    @Query('category') category: string,  
-    @UploadedFile() file: Express.Multer.File  
+    @Query('category') category: string,
+    @UploadedFile() file: Express.Multer.File
   ) {
     const updatedBooks = await this.bookService.updateBookCoverByCategory(category, file.filename);
 

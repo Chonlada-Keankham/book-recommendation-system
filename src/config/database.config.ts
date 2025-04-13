@@ -8,7 +8,7 @@ export const frontendConfig = {
 };
 
 export const backendConfig = {
-  url: process.env.BACKEND_URL || 'https://19cb-2001-fb1-2d-d1bf-519e-c229-ff27-16bb.ngrok-free.app',
+  url: process.env.BACKEND_URL || 'https://6193-2001-fb1-2d-d1bf-519e-c229-ff27-16bb.ngrok-free.app',
 };
 
 export const jwtConfig = {
