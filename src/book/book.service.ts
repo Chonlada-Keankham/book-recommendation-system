@@ -9,18 +9,18 @@ import { BookCategory } from 'src/enum/book-category.enum';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { PlaylistService } from 'src/playlist/playlist.service';
 import { shuffle } from 'lodash';
-import { redisConfig } from 'src/config/database.config';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class BookService {
-  private redisClient: Redis;
 
   constructor(
     @InjectModel('Book') private readonly bookModel: Model<iBook>,
     @Inject(forwardRef(() => PlaylistService))
     private readonly playlistService: PlaylistService,
+    private readonly redisService: RedisService,
   ) {
-    this.redisClient = new Redis(redisConfig.url);  }
+  }
 
   // -------------------------------------------------------------------
   // 🔸 UTILITIES
@@ -107,7 +107,7 @@ export class BookService {
     }
 
     const redisKey = `viewed:${id}:${ip}`;
-    const viewed = await this.redisClient.get(redisKey);
+    const viewed = await this.redisService.get(redisKey);
 
     let book: iBook;
     if (!viewed) {
@@ -120,7 +120,7 @@ export class BookService {
         { $inc: { view: 1 } },
         { new: true },
       ).exec();
-      await this.redisClient.set(redisKey, 'true', 'EX', 300);
+      await this.redisService.set(redisKey, 'true', 300);
     } else {
       book = await this.bookModel.findOne({
         _id: id,
@@ -192,14 +192,14 @@ export class BookService {
       status: { $ne: Status.DELETED },
       deleted_at: null,
     }).exec();
-  
+
     if (!book) {
       throw new NotFoundException(`Book with ID ${id} not found.`);
     }
-  
+
     return book;
   }
-  
+
   // -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------
@@ -251,7 +251,7 @@ export class BookService {
     }
 
     const redisKey = `viewed_guest:${bookId}:${ip}`;
-    const viewed = await this.redisClient.get(redisKey);
+    const viewed = await this.redisService.get(redisKey);
 
     let currentBook: iBook;
 
@@ -265,7 +265,7 @@ export class BookService {
         { $inc: { view: 1 } },
         { new: true }
       ).exec();
-      await this.redisClient.set(redisKey, 'true', 'EX', 300);
+      await this.redisService.set(redisKey, 'true', 300);
     } else {
       currentBook = await this.bookModel.findOne({
         _id: bookId,
@@ -297,7 +297,7 @@ export class BookService {
     const playlist = await this.playlistService.getPlaylist(userId);
 
     const redisKey = `viewed_member:${bookId}:${ip}`;
-    const viewed = await this.redisClient.get(redisKey);
+    const viewed = await this.redisService.get(redisKey);
 
     let currentBook: iBook;
 
@@ -311,7 +311,7 @@ export class BookService {
         { $inc: { view: 1 } },
         { new: true }
       ).exec();
-      await this.redisClient.set(redisKey, 'true', 'EX', 300);
+      await this.redisService.set(redisKey, 'true', 300);
     } else {
       currentBook = await this.bookModel.findOne({
         _id: bookId,
@@ -454,7 +454,7 @@ export class BookService {
     }
 
     const redisKey = `viewed_api:${bookId}:${ip}`;
-    const viewed = await this.redisClient.get(redisKey);
+    const viewed = await this.redisService.get(redisKey);
 
     if (viewed) {
       throw new BadRequestException('You have already viewed this book recently.');
@@ -474,7 +474,7 @@ export class BookService {
       throw new NotFoundException('Book not found.');
     }
 
-    await this.redisClient.set(redisKey, 'true', 'EX', 300); // 5 นาที กัน view ซ้ำ
+    await this.redisService.set(redisKey, 'true', 300);
     return book;
   }
 

@@ -11,6 +11,7 @@ import { PlaylistModule } from './playlist/playlist.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from '@nestjs/cache-manager';
 import { NotificationModule } from './notification/notification.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   
@@ -43,6 +44,7 @@ import { NotificationModule } from './notification/notification.module';
     CommentModule,
     PlaylistModule,
     NotificationModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [
