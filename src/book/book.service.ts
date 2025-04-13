@@ -9,6 +9,7 @@ import { BookCategory } from 'src/enum/book-category.enum';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { PlaylistService } from 'src/playlist/playlist.service';
 import { shuffle } from 'lodash';
+import { redisConfig } from 'src/config/database.config';
 
 @Injectable()
 export class BookService {
@@ -20,10 +21,10 @@ export class BookService {
     private readonly playlistService: PlaylistService,
   ) {
     this.redisClient = new Redis({
-      host: process.env.REDIS_HOST,
-      port: Number(process.env.REDIS_PORT),
-      password: process.env.REDIS_PASSWORD,
-      tls: {}, 
+      host: redisConfig.host,
+      port: redisConfig.port,
+      password: redisConfig.password,
+      tls: redisConfig.tls,
     });
     
   }
