@@ -1,107 +1,286 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { iComment } from './interface/comment.interface';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
+import { UserService } from 'src/user/user.service';
 import { BookService } from 'src/book/book.service';
 import { Status } from 'src/enum/status.enum';
+import { Request } from 'express';
 
 @Injectable()
 export class CommentService {
   constructor(
-    @InjectModel('Comment') private readonly commentModel: Model<iComment>,
+    @InjectModel('Comment')
+    private readonly commentModel: Model<iComment>,
+    private readonly userService: UserService,
     private readonly bookService: BookService,
   ) {}
 
-  // 🔸 CREATE
-  async createComment(createCommentDto: CreateCommentDto): Promise<iComment> {
-    const bookExists = await this.bookService.findOneByIdAndUpdateView(createCommentDto.book.toString(), '');
-    if (!bookExists) throw new NotFoundException('Book not found');
+  // -------------------------------------------------------------------
+  // 🔸 CREATE COMMENT
+  // -------------------------------------------------------------------
+  async createComment(createCommentDto: CreateCommentDto, req: Request): Promise<iComment> {
+    try {
+      const user = await this.userService.findOneById(createCommentDto.user.toString());
+      if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
 
-    const newComment = new this.commentModel({
-      ...createCommentDto,
-      status: Status.ACTIVE,
-      deleted_at: null,
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+      const book = await this.bookService.findOneByIdAndUpdateView(
+        createCommentDto.book.toString(),
+        ip?.toString() || ''
+      );
+      if (!book) throw new HttpException('Book not found', HttpStatus.NOT_FOUND);
 
-    return newComment.save();
+      const existingComment = await this.commentModel.findOne({ book: createCommentDto.book });
+
+      if (existingComment) {
+        const userComments = existingComment.users.find(
+          u => u.user.toString() === createCommentDto.user.toString()
+        );
+
+        if (userComments) {
+          const existingUserComment = userComments.comments.find(
+            comment => comment.content.trim() === createCommentDto.content.trim()
+          );
+
+          if (!existingUserComment) {
+            userComments.comments.push({
+              _id: new Types.ObjectId(),
+              content: createCommentDto.content.trim(),
+              created_at: new Date(),
+              updated_at: new Date(),
+              replies: [],  // ✅ เพิ่มตรงนี้
+            });
+          } else {
+            throw new HttpException('Duplicate comment found', HttpStatus.BAD_REQUEST);
+          }
+        } else {
+          existingComment.users.push({
+            user: createCommentDto.user,
+            comments: [
+              {
+                _id: new Types.ObjectId(),
+                content: createCommentDto.content.trim(),
+                created_at: new Date(),
+                updated_at: new Date(),
+                replies: [], // ✅ เพิ่มตรงนี้
+              },
+            ],
+          });
+        }
+
+        await existingComment.save();
+        return existingComment;
+      }
+
+      const newComment = new this.commentModel({
+        book: createCommentDto.book,
+        status: Status.ACTIVE,
+        deleted_at: null,
+        users: [
+          {
+            user: createCommentDto.user,
+            comments: [
+              {
+                _id: new Types.ObjectId(),
+                content: createCommentDto.content.trim(),
+                created_at: new Date(),
+                updated_at: new Date(),
+                replies: [], // ✅ เพิ่มตรงนี้
+              },
+            ],
+          },
+        ],
+      });
+
+      return await newComment.save();
+    } catch (error) {
+      console.error(error);
+      throw new HttpException('Failed to create comment.', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
+  // -------------------------------------------------------------------
   // 🔸 READ
-  async findCommentById(commentId: string): Promise<iComment> {
+  // -------------------------------------------------------------------
+  async findOneById(id: string): Promise<any> {
+    try {
+      const comment = await this.commentModel.findOne({
+        'users.comments._id': new Types.ObjectId(id),
+      }).populate('users.user').exec();
+
+      if (!comment) {
+        throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
+      }
+
+      const userComment = comment.users
+        .map(user => user.comments.find(c => c._id.toString() === id))
+        .find(c => c !== undefined);
+
+      if (!userComment) {
+        throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
+      }
+
+      return userComment;
+    } catch (error) {
+      throw new HttpException('Failed to find comment.', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  // -------------------------------------------------------------------
+  // 🔸 UPDATE COMMENT
+  // -------------------------------------------------------------------
+  async updateComment(commentId: string, updateCommentDto: UpdateCommentDto): Promise<iComment> {
+    try {
+      const { content, user, book } = updateCommentDto;
+
+      const existingComment = await this.commentModel.findOne({
+        book: book,
+        'users.user': user,
+      });
+
+      if (!existingComment) throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
+
+      const userComments = existingComment.users.find(u => u.user.toString() === user.toString());
+      if (!userComments) throw new HttpException('User has not commented on this book', HttpStatus.NOT_FOUND);
+
+      const commentIndex = userComments.comments.findIndex(
+        comment => comment._id.toString() === commentId.toString()
+      );
+
+      if (commentIndex === -1) throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
+
+      userComments.comments[commentIndex].content = content.trim();
+      userComments.comments[commentIndex].updated_at = new Date();
+
+      await existingComment.save();
+      return existingComment;
+    } catch (error) {
+      throw new HttpException('Failed to update comment.', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+// -------------------------------------------------------------------
+// 🔸 DELETE COMMENT
+// -------------------------------------------------------------------
+async deleteComment(commentId: string): Promise<boolean> {
+  const comment = await this.commentModel.findOne({
+    _id: commentId,
+    status: { $ne: Status.DELETED },
+    deleted_at: null,
+  });
+
+  if (!comment) throw new NotFoundException('Comment not found');
+
+  await this.commentModel.deleteOne({ _id: commentId });
+  return true;
+}
+
+  // -------------------------------------------------------------------
+  // 🔸 CREATE REPLY
+  // -------------------------------------------------------------------
+  async createReply(commentId: string, userId: string, content: string): Promise<iComment> {
     const comment = await this.commentModel.findOne({
-      _id: commentId,
+      'users.comments._id': commentId,
       status: { $ne: Status.DELETED },
       deleted_at: null,
-    }).populate('user', 'username');
+    });
 
     if (!comment) {
       throw new NotFoundException('Comment not found');
     }
 
+    let replied = false;
+
+    for (const userBlock of comment.users) {
+      for (const cmt of userBlock.comments) {
+        if (cmt._id.toString() === commentId) {
+          cmt.replies.push({
+            _id: new Types.ObjectId(),
+            user: new Types.ObjectId(userId),
+            content: content.trim(),
+            created_at: new Date(),
+            updated_at: new Date(),
+          });
+          replied = true;
+          break;
+        }
+      }
+      if (replied) break;
+    }
+
+    if (!replied) {
+      throw new NotFoundException('Comment not found for reply');
+    }
+
+    await comment.save();
     return comment;
   }
 
-  async findCommentsByBookId(bookId: string): Promise<iComment[]> {
-    const comments = await this.commentModel.find({
-      book: bookId,
+  // -------------------------------------------------------------------
+  // 🔸 UPDATE REPLY
+  // -------------------------------------------------------------------
+  async updateReply(replyId: string, newContent: string): Promise<iComment> {
+    const comment = await this.commentModel.findOne({
+      'users.comments.replies._id': replyId,
       status: { $ne: Status.DELETED },
       deleted_at: null,
-    }).populate('user', 'username');
-
-    if (!comments.length) {
-      throw new NotFoundException('No comments found for this book.');
-    }
-
-    return comments;
-  }
-
-  // 🔸 UPDATE
-  async updateComment(commentId: string, updateCommentDto: UpdateCommentDto): Promise<iComment> {
-    const commentDoc = await this.commentModel.findOne({
-      'users.comments._id': new Types.ObjectId(commentId),
     });
-  
-    if (!commentDoc) {
-      throw new NotFoundException('Comment not found.');
+
+    if (!comment) {
+      throw new NotFoundException('Reply not found');
     }
-  
+
     let updated = false;
-  
-    for (const user of commentDoc.users) {
-      for (const cmt of user.comments) {
-        if (cmt._id.toString() === commentId) {
-          cmt.content = updateCommentDto.content.trim();
-          cmt.updated_at = new Date();
+
+    for (const userBlock of comment.users) {
+      for (const cmt of userBlock.comments) {
+        const reply = cmt.replies.find(r => r._id.toString() === replyId);
+        if (reply) {
+          reply.content = newContent.trim();
+          reply.updated_at = new Date();
           updated = true;
           break;
         }
       }
       if (updated) break;
     }
-  
+
     if (!updated) {
-      throw new NotFoundException('Comment not found.');
+      throw new NotFoundException('Reply not found');
     }
-  
-    await commentDoc.save();
-    return commentDoc;
+
+    await comment.save();
+    return comment;
   }
-  
-  // 🔸 DELETE
-  async deleteComment(commentId: string): Promise<boolean> {
+
+  // -------------------------------------------------------------------
+  // 🔸 DELETE REPLY
+  // -------------------------------------------------------------------
+  async deleteReply(replyId: string): Promise<boolean> {
     const comment = await this.commentModel.findOne({
-      _id: commentId,
+      'users.comments.replies._id': replyId,
       status: { $ne: Status.DELETED },
       deleted_at: null,
     });
 
-    if (!comment) throw new NotFoundException('Comment not found');
+    if (!comment) {
+      throw new NotFoundException('Reply not found');
+    }
 
-    await this.commentModel.deleteOne({ _id: commentId });
+    for (const userBlock of comment.users) {
+      for (const cmt of userBlock.comments) {
+        const index = cmt.replies.findIndex(r => r._id.toString() === replyId);
+        if (index !== -1) {
+          cmt.replies.splice(index, 1);
+          break;
+        }
+      }
+    }
+
+    await comment.save();
     return true;
   }
 }
