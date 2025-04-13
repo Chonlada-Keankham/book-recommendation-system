@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
-import { redisConfig } from 'src/config/database.config'; // ✅ เปลี่ยนเป็น path ที่ถูกต้อง
+import { redisConfig } from 'src/config/database.config'; // ✅ ระวัง path
 
 @Injectable()
 export class RedisService {
@@ -11,17 +11,17 @@ export class RedisService {
   }
 
   async get(key: string): Promise<string | null> {
-    return await this.client.get(key);
+    return this.client.get(key);
   }
 
-  async set(key: string, value: string, expireSeconds?: number): Promise<'OK'> {
-    if (expireSeconds) {
-      return await this.client.set(key, value, 'EX', expireSeconds);
+  async set(key: string, value: string, expirySeconds?: number): Promise<string> {
+    if (expirySeconds) {
+      return this.client.set(key, value, 'EX', expirySeconds); 
     }
-    return await this.client.set(key, value);
+    return this.client.set(key, value); 
   }
 
-  async del(key: string): Promise<number> {
-    return await this.client.del(key);
+  async disconnect() {
+    await this.client.quit();
   }
 }
