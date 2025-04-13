@@ -8,6 +8,8 @@ import { BookService } from 'src/book/book.service';
 
 @Injectable()
 export class PlaylistService {
+  private readonly RECOMMENDED_LIMIT = 20; // 🔥 กำหนดจำนวนหนังสือแนะนำ
+
   constructor(
     @InjectModel('Playlist')
     private readonly playlistModel: Model<iPlaylist>,
@@ -37,16 +39,14 @@ export class PlaylistService {
     if (!playlist) {
       throw new NotFoundException('Playlist not found for this user.');
     }
-    if (updatePlaylistDto.categories) {
-      playlist.categories = updatePlaylistDto.categories;
-    }
-    if (updatePlaylistDto.authors) {
-      playlist.authors = updatePlaylistDto.authors;
-    }
+
+    playlist.categories = updatePlaylistDto.categories || playlist.categories;
+    playlist.authors = updatePlaylistDto.authors || playlist.authors;
     playlist.recommendedBooks = await this.generateRecommendations(
       playlist.categories,
       playlist.authors,
     );
+
     return playlist.save();
   }
 
@@ -65,31 +65,40 @@ export class PlaylistService {
   // -------------------------------------------------------------------
   // 🔸 RECOMMENDATIONS
   // -------------------------------------------------------------------
+
   public async generateRecommendations(categories: string[], authors: string[]): Promise<any[]> {
     const recommendations = await Promise.all([
-      ...categories.map(category =>
-        this.bookService.findRandomBooksByCategory(category)
-      ),
-      ...authors.map(author =>
-        this.bookService.findPopularBooksByAuthor(author)
-      ),
+      ...categories.map(category => this.safeFindRandomBooksByCategory(category)),
+      ...authors.map(author => this.safeFindPopularBooksByAuthor(author)),
     ]);
 
     const flattenedRecommendations = recommendations.flat();
-    const bookMap = new Map<string, any>();
-    for (const book of flattenedRecommendations) {
-      bookMap.set(book._id.toString(), book);
-    }
-    const uniqueBooks = Array.from(bookMap.values());
+    const uniqueBooks = Array.from(new Map(flattenedRecommendations.map(book => [book._id.toString(), book])).values());
 
-    this.shuffleArray(uniqueBooks); 
-    return uniqueBooks.slice(0, 20);
+    this.shuffleArray(uniqueBooks);
+    return uniqueBooks.slice(0, this.RECOMMENDED_LIMIT); 
   }
 
   private shuffleArray(array: any[]): void {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [array[i], array[j]] = [array[j], array[i]];
+    }
+  }
+
+  private async safeFindRandomBooksByCategory(category: string) {
+    try {
+      return await this.bookService.findRandomBooksByCategory(category);
+    } catch (error) {
+      return []; 
+    }
+  }
+
+  private async safeFindPopularBooksByAuthor(author: string) {
+    try {
+      return await this.bookService.findPopularBooksByAuthor(author);
+    } catch (error) {
+      return []; 
     }
   }
 

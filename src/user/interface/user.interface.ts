@@ -13,7 +13,7 @@ export interface iUser {
     status: Status;
     employeeId?: string;
     profileImage?: string;
-    backgroundImage?: string;
+    refreshToken?: string;
     created_at: Date;
     updated_at: Date;
     deleted_at?: Date;

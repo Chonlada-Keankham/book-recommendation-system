@@ -113,4 +113,9 @@ export class AuthController {
       message: response.message,
     };
   }
+
+  async logout(userId: string): Promise<void> {
+    await this.userService.updateUserRefreshToken(userId, null);  // 🔥 ลบ refreshToken
+  }
+  
 }

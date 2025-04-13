@@ -97,10 +97,8 @@ employeeId?: string;
 @Prop({ default: null })
 profileImage?: string;
 
-@Prop({ default: null })
-backgroundImage?: string;
-
-
+@Prop()
+refreshToken?: string;
 }
 
 export type UserDocument = User & Document;

@@ -1,25 +1,27 @@
+import { Roles } from 'src/decorator/roles.decorator';
 import { extname } from 'path';
 import { UserService } from './user.service';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { RegisterUserDto } from './dto/register-member-user.dto';
 import { CreateEmployeeDto } from './dto/register-employee-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateProfileDto } from './dto/update-profile-user.dto';
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query, UploadedFile, UseInterceptors, UseGuards } from '@nestjs/common';
 import { diskStorage } from 'multer';
 import { UserInterestDto } from './dto/interest-user.dto';
+import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/guard/role.guard';
+import { UserRole } from 'src/enum/user-role.enum';
 
 @ApiTags('User')
+@UseGuards(JwtAuthGuard) 
 @Controller('user')
 export class UserController {
-  constructor(
-    private readonly userService: UserService,
-  ) { }
-
+  constructor(private readonly userService: UserService) {}
 
   // ---------- Register ----------
   @Post('/register-member')
+  @ApiOperation({ summary: 'Register new member' })
   async registerMember(@Body() registerUserDto: RegisterUserDto) {
     const user = await this.userService.registerMember(registerUserDto);
     return {
@@ -36,15 +38,13 @@ export class UserController {
     return {
       statusCode: HttpStatus.CREATED,
       message: 'Employee registered successfully',
-      data: {
-        employee: user,
-        initialPassword: password,
-      },
+      data: { employee: user, initialPassword: password },
     };
   }
 
   // ---------- Get ----------
   @Get('/find-one/:id')
+  @ApiOperation({ summary: 'Get user by ID' })
   async findOneById(@Param('id') id: string) {
     const user = await this.userService.findOneById(id);
     const { password, ...userWithoutPassword } = user;
@@ -56,6 +56,7 @@ export class UserController {
   }
 
   @Get('/find-email/:email')
+  @ApiOperation({ summary: 'Get user by email' })
   async findOneByEmail(@Param('email') email: string) {
     const user = await this.userService.findOneByEmail(email);
     const { password, ...userWithoutPassword } = user;
@@ -66,7 +67,10 @@ export class UserController {
     };
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYEE)
   @Get('/find-all')
+  @ApiOperation({ summary: 'Get all users (Employee only)' })
   async findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
     const result = await this.userService.findAll(page, limit);
     const usersWithoutPassword = result.users.map(user => {
@@ -84,11 +88,7 @@ export class UserController {
 
   // ---------- Update ----------
   @Put('/update-interests/:id')
-  @ApiOperation({ summary: 'Update user interests and generate playlist' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Interests updated and playlist generated successfully.'
-  })
+  @ApiOperation({ summary: 'Update user interests' })
   async updateInterests(
     @Param('id') userId: string,
     @Body() interestDto: UserInterestDto
@@ -105,11 +105,10 @@ export class UserController {
     };
   }
 
-
   // ---------- Upload ----------
   @Put('/update-profile/:id')
-  @ApiOperation({ summary: 'Update user profile and upload profile image' })
   @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Update user profile and upload profile image' })
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
       destination: './uploads/profile',
@@ -125,7 +124,6 @@ export class UserController {
     @UploadedFile() file?: Express.Multer.File
   ) {
     const profileFilename = file?.filename;
-
     const user = await this.userService.updateUserProfile(id, updateProfileDto, profileFilename);
 
     return {
@@ -134,9 +132,10 @@ export class UserController {
       data: user,
     };
   }
-  
+
   // ---------- Delete ----------
   @Delete('/soft-delete/:id')
+  @ApiOperation({ summary: 'Soft delete user' })
   async softDelete(@Param('id') id: string) {
     const user = await this.userService.softDelete(id);
     return {
@@ -147,6 +146,7 @@ export class UserController {
   }
 
   @Delete('/delete-one/:id')
+  @ApiOperation({ summary: 'Delete user permanently' })
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteById(@Param('id') id: string) {
     await this.userService.deleteById(id);

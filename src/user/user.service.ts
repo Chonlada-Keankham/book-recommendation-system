@@ -99,7 +99,7 @@ export class UserService {
     const hashedPassword = await this.hashPassword(randomPassword);
     const username = createEmployeeDto.username || `${createEmployeeDto.first_name.toLowerCase()}${createEmployeeDto.last_name.toLowerCase()}`;
     const employeeId = await this.generateEmployeeId();
-  
+
     const newUser = new this.userModel({
       ...createEmployeeDto,
       password: hashedPassword,
@@ -108,11 +108,11 @@ export class UserService {
       employeeId: employeeId,
       deleted_at: null,
     });
-  
+
     const createdUser = await newUser.save();
     return { user: createdUser, password: randomPassword };
   }
-  
+
   // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
@@ -147,42 +147,48 @@ export class UserService {
     return user;
   }
 
-async findAll(page: number = 1, limit: number = 10): Promise<{
-  users: iUser[],
-  total: number
-}> {
-  const skip = (page - 1) * limit;
-  const total = await this.userModel.countDocuments({
-    status: { $ne: Status.DELETED },
-    deleted_at: null,
-  });
-  const users = await this.userModel.find(
-    { status: { $ne: Status.DELETED }, deleted_at: null },
-  )
-  .sort({ createdAt: -1 }) 
-  .skip(skip)
-  .limit(limit)
-  .exec();
+  async findAll(page: number = 1, limit: number = 10): Promise<{
+    users: iUser[],
+    total: number
+  }> {
+    const skip = (page - 1) * limit;
+    const total = await this.userModel.countDocuments({
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    });
+    const users = await this.userModel.find(
+      { status: { $ne: Status.DELETED }, deleted_at: null },
+    )
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec();
 
-  return { users, total };
-}
+    return { users, total };
+  }
 
   // -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------
-  async updatePassword
-    (userId: string,
-      hashedPassword: string): Promise<void> {
+  async updatePassword(
+    userId: string,
+    hashedPassword: string): Promise<void> {
     const user = await this.userModel.findById(userId);
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
-    const result = await this.userModel.updateOne(
+    user.password = hashedPassword;
+    await user.save();
+  }
+
+  async updateUserRefreshToken(
+    userId: string,
+    refreshToken: string | null): Promise<void> {
+    await this.userModel.updateOne(
       { _id: userId },
-      { $set: { password: hashedPassword } }
+      { $set: { refreshToken } }
     );
-
-    if (result.matchedCount === 0) throw new NotFoundException('User not found');
-    if (result.modifiedCount === 0) throw new BadRequestException('Failed to update password');
   }
 
   async updateUserProfile(
@@ -215,7 +221,7 @@ async findAll(page: number = 1, limit: number = 10): Promise<{
 
     return await user.save();
   }
-  
+
   async updateInterests(
     userId: string,
     categories: string[],
@@ -240,7 +246,7 @@ async findAll(page: number = 1, limit: number = 10): Promise<{
 
     return playlist;
   }
-  
+
   // -------------------------------------------------------------------
   // 🔸 DELETE
   // -------------------------------------------------------------------

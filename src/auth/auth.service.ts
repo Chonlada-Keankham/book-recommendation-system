@@ -60,6 +60,8 @@ export class AuthService {
       secret,
     });
 
+    await this.userService.updateUserRefreshToken(user._id, refreshToken);
+
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
@@ -71,9 +73,14 @@ export class AuthService {
       const payload = this.jwtService.verify(refreshTokenDto.refresh_token, {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
+
       const user = await this.userService.findOneById(payload.sub);
       if (!user || user.status === Status.DELETED) {
         throw new UnauthorizedException('User not found or is deleted');
+      }
+
+      if (user.refreshToken !== refreshTokenDto.refresh_token) {
+        throw new UnauthorizedException('Invalid refresh token');
       }
 
       const accessToken = this.jwtService.sign(
@@ -129,5 +136,10 @@ export class AuthService {
     } catch (error) {
       throw new BadRequestException('Invalid or expired token');
     }
+  }
+
+  async logout(userId: string): Promise<void> {
+    await this.userService.updateUserRefreshToken(userId, null);
+
   }
 }
