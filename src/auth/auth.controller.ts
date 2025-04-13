@@ -7,7 +7,7 @@ import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { RefreshTokenDto } from './dto/refresh-token-auth.dto';
 import { RequestPasswordResetDto } from './dto/request-pass-auth.dto';
 import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from 'src/enum/user-role.enum';
 import { LoginMemberDto } from './dto/login-member-auth.dto';
 import { LoginEmployeeDto } from './dto/login-employee-auth.dto';

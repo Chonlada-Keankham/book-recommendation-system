@@ -1,5 +1,5 @@
 import { PlaylistService } from 'src/playlist/playlist.service';
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { iUser } from './interface/user.interface';
 import { Model, Types } from 'mongoose';

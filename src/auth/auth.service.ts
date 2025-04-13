@@ -24,13 +24,19 @@ export class AuthService {
   async validateMember(loginMemberDto: LoginMemberDto): Promise<iUser> {
     const { email, password } = loginMemberDto;
     const user = await this.userService.findOneByEmail(email);
+  
+    if (!user || !user.password) {  
+      throw new UnauthorizedException('Invalid credentials');
+    }
+  
     const isPasswordMatching = await bcrypt.compare(password, user.password);
     if (!isPasswordMatching) {
       throw new UnauthorizedException('Invalid credentials');
     }
+  
     return user;
   }
-
+    
   async validateEmployee(loginEmployeeDto: LoginEmployeeDto): Promise<iUser> {
     const { employeeId, password } = loginEmployeeDto;
     const user = await this.userService.findByEmployeeId(employeeId);
