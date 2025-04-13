@@ -15,10 +15,10 @@ async function bootstrap() {
 
   // เปิดใช้งาน CORS สำหรับการเข้าถึงจาก localhost:3000
   app.enableCors({
-    origin: 'http://localhost:3000',
-    credentials: true,
+      origin: true, 
+      credentials: true,
   });
-
+  
   // ตั้งค่า Swagger สำหรับเอกสาร API
   const config = new DocumentBuilder()
     .setTitle('API Documentation')

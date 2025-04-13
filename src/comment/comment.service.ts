@@ -133,35 +133,36 @@ export class CommentService {
   // 🔸 UPDATE COMMENT
   // -------------------------------------------------------------------
   async updateComment(commentId: string, updateCommentDto: UpdateCommentDto): Promise<iComment> {
-    try {
-      const { content, user, book } = updateCommentDto;
-
-      const existingComment = await this.commentModel.findOne({
-        book: book,
-        'users.user': user,
-      });
-
-      if (!existingComment) throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
-
-      const userComments = existingComment.users.find(u => u.user.toString() === user.toString());
-      if (!userComments) throw new HttpException('User has not commented on this book', HttpStatus.NOT_FOUND);
-
-      const commentIndex = userComments.comments.findIndex(
-        comment => comment._id.toString() === commentId.toString()
-      );
-
-      if (commentIndex === -1) throw new HttpException('Comment not found', HttpStatus.NOT_FOUND);
-
-      userComments.comments[commentIndex].content = content.trim();
-      userComments.comments[commentIndex].updated_at = new Date();
-
-      await existingComment.save();
-      return existingComment;
-    } catch (error) {
-      throw new HttpException('Failed to update comment.', HttpStatus.INTERNAL_SERVER_ERROR);
+    const commentDoc = await this.commentModel.findOne({
+      'users.comments._id': new Types.ObjectId(commentId),
+    });
+  
+    if (!commentDoc) {
+      throw new NotFoundException('Comment not found.');
     }
+  
+    let updated = false;
+  
+    for (const user of commentDoc.users) {
+      for (const cmt of user.comments) {
+        if (cmt._id.toString() === commentId) {
+          cmt.content = updateCommentDto.content.trim();
+          cmt.updated_at = new Date();
+          updated = true;
+          break;
+        }
+      }
+      if (updated) break;
+    }
+  
+    if (!updated) {
+      throw new NotFoundException('Comment not found.');
+    }
+  
+    await commentDoc.save();
+    return commentDoc;
   }
-
+  
 // -------------------------------------------------------------------
 // 🔸 DELETE COMMENT
 // -------------------------------------------------------------------

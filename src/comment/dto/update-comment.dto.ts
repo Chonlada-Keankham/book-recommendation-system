@@ -1,5 +1,7 @@
+import { IsNotEmpty, IsString } from 'class-validator';
+
 export class UpdateCommentDto {
-  user: string; // ObjectId เป็น string
-  book: string;
+  @IsNotEmpty()
+  @IsString()
   content: string;
 }
