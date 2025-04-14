@@ -40,29 +40,35 @@ export class AuthService {
   async validateEmployee(loginEmployeeDto: LoginEmployeeDto): Promise<iUser> {
     const { employeeId, password } = loginEmployeeDto;
     const user = await this.userService.findByEmployeeId(employeeId);
-    const isPasswordMatching = await bcrypt.compare(password, user.password);
-    if (!user || !isPasswordMatching) {
-      throw new UnauthorizedException('Invalid employeeId or password');
+  
+    if (!user || user.role !== UserRole.EMPLOYEE) { 
+      throw new UnauthorizedException('Only employees can login here');
     }
+  
+    const isPasswordMatching = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatching) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+  
     return user;
   }
-
+  
   // ---------------------- LOGIN / REFRESH ----------------------
 async login(user: iUser): Promise<{
   access_token: string;
   refresh_token: string;
 }> {
   const payload = { 
-    id: user._id,          // ✅ เพิ่ม id ให้ comment ใช้
+    id: user._id,          
     email: user.email,
     role: user.role,
-    sub: user._id          // ✅ sub ใช้สำหรับ Refresh Token มาตรฐาน
+    sub: user._id          
   };
 
   const secret = this.configService.get<string>('JWT_SECRET');
 
   const accessToken = this.jwtService.sign(payload, {
-    expiresIn: '1h',
+    expiresIn: '2h',
     secret,
   });
 
