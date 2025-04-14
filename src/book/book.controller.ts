@@ -52,10 +52,6 @@ export class BookController {
   
   @Get('/find-all')
   async findAll(@Req() request: Request) {
-    const ip = typeof request.headers['x-forwarded-for'] === 'string'
-      ? request.headers['x-forwarded-for']
-      : request.ip;
-
     const books = await this.bookService.findAll();
     return {
       statusCode: 200,
@@ -63,8 +59,7 @@ export class BookController {
       books: books,
     };
   }
-
-  @Get('/novel')
+    @Get('/novel')
   async getNovelBooks() {
     const result = await this.bookService.findNovelBooks();
     return {
