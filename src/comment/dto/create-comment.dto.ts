@@ -1,11 +1,11 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsMongoId, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateCommentDto {
+  @IsMongoId({ message: 'Book ID must be a valid MongoDB ObjectId.' })
   @IsNotEmpty()
-  @IsString()
-  book: string;
+  bookId: string;     // รับเป็น string, แต่ validate ว่าต้องเป็น ObjectId
 
-  @IsNotEmpty()
   @IsString()
+  @IsNotEmpty()
   content: string;
 }

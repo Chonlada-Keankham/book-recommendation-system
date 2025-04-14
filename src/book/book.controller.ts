@@ -45,7 +45,7 @@ export class BookController {
     return {
       statusCode: HttpStatus.OK,
       message: 'Book found',
-      data: book,
+      book: book,
     };
   }
   

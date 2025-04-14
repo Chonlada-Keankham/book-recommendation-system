@@ -1,8 +1,7 @@
-// src/comment/dto/create-reply.dto.ts
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 export class CreateReplyDto {
-  @IsNotEmpty()
   @IsString()
+  @IsNotEmpty()
   content: string;
 }

@@ -1,7 +1,7 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
 export class UpdateCommentDto {
-  @IsNotEmpty()
   @IsString()
-  content: string;
+  @IsOptional()
+  content?: string;   // 🖊️ อัปเดตเนื้อหาได้ ไม่บังคับกรอก
 }

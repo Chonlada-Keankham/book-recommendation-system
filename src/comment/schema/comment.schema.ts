@@ -1,45 +1,31 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
+export type CommentDocument = Comment & Document;
+
 @Schema({ timestamps: true })
 export class Comment {
   @Prop({ type: Types.ObjectId, ref: 'Book', required: true })
-  book: Types.ObjectId;
+  bookId: Types.ObjectId;
 
-  @Prop({ type: String, enum: ['active', 'deleted'], default: 'active' })
-  status: 'active' | 'deleted';
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  userId: Types.ObjectId;
 
-  @Prop({ type: Date, default: null })
-  deleted_at: Date | null;
+  @Prop({ required: true })
+  content: string;
 
   @Prop({
     type: [
       {
-        user: { type: Types.ObjectId, ref: 'User' },
-        comments: [
-          {
-            _id: { type: Types.ObjectId, default: () => new Types.ObjectId() },
-            content: String,
-            created_at: Date,
-            updated_at: Date,
-            deleted_at: { type: Date, default: null },
-            replies: [
-              {
-                _id: { type: Types.ObjectId, default: () => new Types.ObjectId() },
-                user: { type: Types.ObjectId, ref: 'User' },
-                content: String,
-                created_at: Date,
-                updated_at: Date,
-                deleted_at: { type: Date, default: null },
-              },
-            ],
-          },
-        ],
+        userId: { type: Types.ObjectId, ref: 'User', required: true },
+        content: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date },
       },
     ],
+    default: [],
   })
-  users: any[];
+  replies: Types.Array<any>;
 }
 
-export type CommentDocument = Comment & Document;
 export const CommentSchema = SchemaFactory.createForClass(Comment);

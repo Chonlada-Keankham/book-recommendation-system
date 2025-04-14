@@ -1,81 +1,66 @@
-import { AuthGuard } from '@nestjs/passport';
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
-import { CreateReplyDto } from './dto/reply-comment.dto';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { UpdateReplyDto } from './dto/up-reply-comment.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { CreateReplyDto } from './dto/reply-comment.dto';
 
-@ApiTags('Comment')
-@Controller('comment')
+@UseGuards(JwtAuthGuard)
+@Controller('comments')
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
-  // ---------- CREATE ----------
-  @Post('/create-comment')
-  @UseGuards(AuthGuard('jwt'))
-  async createComment(@Body() createCommentDto: CreateCommentDto, @Req() req: Request) {
-    const comment = await this.commentService.createComment(createCommentDto, req);
-    return {
-      statusCode: HttpStatus.CREATED,
-      message: 'Comment created successfully',
-      data: comment,
-    };
-  }
-  
-  @Post('/reply/:parentCommentId')
-  async createReply(@Param('parentCommentId') parentCommentId: string, @Body() createReplyDto: CreateReplyDto, @Req() req: any) {
-    const reply = await this.commentService.createReply(parentCommentId, createReplyDto, req);
-    return {
-      statusCode: HttpStatus.CREATED,
-      message: 'Reply created successfully',
-      data: reply,
-    };
+  // ---------- Create Comment ----------
+  @Post()
+  async createComment(@Body() createCommentDto: CreateCommentDto, @Req() req) {
+    const userId = req.user.id;
+    return this.commentService.createComment(createCommentDto, userId);
   }
 
-  // ---------- READ ----------
-  @Get('/find-all/:bookId')
-  async findAllByBook(@Param('bookId') bookId: string) {
-    const comments = await this.commentService.findAllByBookId(bookId);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Comments fetched successfully',
-      data: comments,
-    };
+  // ---------- Update Comment ----------
+  @Patch('/:commentId')
+  async updateComment(@Param('commentId') commentId: string, @Body() updateCommentDto: UpdateCommentDto, @Req() req) {
+    const userId = req.user.id;
+    return this.commentService.updateComment(commentId, updateCommentDto, userId);
   }
 
-  // ---------- UPDATE ----------
-  @Patch('/update-comment/:commentId')
-  async updateComment(@Param('commentId') commentId: string, @Body() updateCommentDto: UpdateCommentDto) {
-    const comment = await this.commentService.updateComment(commentId, updateCommentDto);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Comment updated successfully',
-      data: comment,
-    };
+  // ---------- Delete Comment ----------
+  @Delete('/:commentId')
+  async deleteComment(@Param('commentId') commentId: string, @Req() req) {
+    const userId = req.user.id;
+    return this.commentService.deleteComment(commentId, userId);
   }
 
-  @Patch('/update-reply/:replyId')
-  async updateReply(@Param('replyId') replyId: string, @Body() updateReplyDto: UpdateReplyDto) {
-    const reply = await this.commentService.updateReply(replyId, updateReplyDto);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Reply updated successfully',
-      data: reply,
-    };
+  // ---------- Create Reply ----------
+  @Post('/:commentId/reply')
+  async createReply(@Param('commentId') commentId: string, @Body() createReplyDto: CreateReplyDto, @Req() req) {
+    const userId = req.user.id;
+    return this.commentService.createReply(commentId, createReplyDto, userId);
   }
 
-  // ---------- DELETE (Hard Delete) ----------
-  @Delete('/delete-comment/:commentId')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteComment(@Param('commentId') commentId: string) {
-    await this.commentService.deleteComment(commentId);
+  // ---------- Update Reply ----------
+  @Patch('/:commentId/reply/:replyId')
+  async updateReply(
+    @Param('commentId') commentId: string,
+    @Param('replyId') replyId: string,
+    @Body() updateReplyDto: UpdateReplyDto,
+    @Req() req
+  ) {
+    const userId = req.user.id;
+    return this.commentService.updateReply(commentId, replyId, updateReplyDto, userId);
   }
 
-  @Delete('/delete-reply/:replyId')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteReply(@Param('replyId') replyId: string) {
-    await this.commentService.deleteReply(replyId);
+  // ---------- Delete Reply ----------
+  @Delete('/:commentId/reply/:replyId')
+  async deleteReply(@Param('commentId') commentId: string, @Param('replyId') replyId: string, @Req() req) {
+    const userId = req.user.id;
+    return this.commentService.deleteReply(commentId, replyId, userId);
+  }
+
+  // ---------- Find Comments of a Book ----------
+  @Get('/book/:bookId')
+  async findCommentsByBook(@Param('bookId') bookId: string) {
+    return this.commentService.findCommentsByBook(bookId);
   }
 }
