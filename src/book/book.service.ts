@@ -110,7 +110,7 @@ export class BookService {
       ).exec();
   
       await this.redisService.set(redisKey, 'true', 300);
-      await this.redisService.addViewedBook(ip, id); // บันทึกว่าดูหนังสือเล่มนี้แล้ว
+      await this.redisService.addViewedBook(ip, id); 
     } else {
       book = await this.bookModel.findOne({
         _id: id,
@@ -260,11 +260,17 @@ export class BookService {
       throw new BadRequestException('Invalid ID format.');
     }
   
-    const playlist = await this.playlistService.getPlaylist(userId);
-    const viewedBooks = await this.redisService.getViewedBooks(ip); 
+    let playlist: any = null;
+    try {
+      playlist = await this.playlistService.getPlaylist(userId);
+    } catch (error) {
+      // ❗ ถ้าไม่เจอ Playlist ก็ไม่เป็นไร ใช้ fallback
+    }
+  
+    const viewedBooks = await this.redisService.getViewedBooks(ip);
     const redisKey = `viewed_member:${bookId}:${ip}`;
     const viewed = await this.redisService.get(redisKey);
-    
+  
     let currentBook: iBook;
   
     if (!viewed) {
@@ -274,11 +280,12 @@ export class BookService {
           status: { $ne: Status.DELETED },
           deleted_at: null,
         },
-        { $inc: { view: 1 } }, 
+        { $inc: { view: 1 } },
         { new: true }
       ).exec();
+  
       await this.redisService.set(redisKey, 'true', 300);
-      await this.redisService.addViewedBook(ip, bookId); 
+      await this.redisService.addViewedBook(ip, bookId);
     } else {
       currentBook = await this.bookModel.findOne({
         _id: bookId,
@@ -293,7 +300,9 @@ export class BookService {
   
     let recommendedBooks: iBook[] = [];
   
-    if (!playlist) {
+    // ------------------- เงื่อนไขการแนะนำ -------------------
+    if (!playlist || (!playlist.categories?.length && !playlist.authors?.length)) {
+      // ❗ ไม่มี Playlist หรือ Playlist ว่าง ➔ แนะนำจาก "หมวดของ currentBook"
       recommendedBooks = await this.bookModel.find({
         category: currentBook.category,
         _id: { $nin: [...viewedBooks, bookId] },  
@@ -301,28 +310,30 @@ export class BookService {
         deleted_at: null,
       }).sort({ view: -1 }).exec();
     } else {
+      // ❗ มี Playlist ➔ แนะนำจาก "หมวดหมู่/ผู้แต่งที่สนใจ"
       let booksByCategory: iBook[] = [];
       let booksByAuthor: iBook[] = [];
   
-      if (playlist.categories && playlist.categories.length > 0) {
+      if (playlist.categories?.length > 0) {
         booksByCategory = await this.bookModel.find({
           category: { $in: playlist.categories },
-          _id: { $nin: [...viewedBooks, bookId] },  
+          _id: { $nin: [...viewedBooks, bookId] },
           status: { $ne: Status.DELETED },
           deleted_at: null,
         }).sort({ view: -1 }).exec();
       }
   
-      if (playlist.authors && playlist.authors.length > 0) {
+      if (playlist.authors?.length > 0) {
         booksByAuthor = await this.bookModel.find({
           author: { $in: playlist.authors },
-          _id: { $nin: [...viewedBooks, bookId] },  
+          _id: { $nin: [...viewedBooks, bookId] },
           status: { $ne: Status.DELETED },
           deleted_at: null,
         }).sort({ view: -1 }).exec();
       }
   
       if (booksByCategory.length === 0 && booksByAuthor.length === 0) {
+        // ❗ ไม่มีข้อมูลที่ตรงกับ Playlist ➔ fallback หมวดหมู่
         recommendedBooks = await this.bookModel.find({
           category: currentBook.category,
           _id: { $nin: [...viewedBooks, bookId] },
@@ -344,7 +355,8 @@ export class BookService {
   
     return { currentBook, recommendedBooks };
   }
-    
+  
+      
   async getDailyRecommendedBooks(topN = 50): Promise<iBook[]> {
     const topBooks = await this.bookModel.find({
       status: { $ne: Status.DELETED },
