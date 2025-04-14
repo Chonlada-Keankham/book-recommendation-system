@@ -4,12 +4,12 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') { // <<< เพิ่ม 'jwt'
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') { 
   constructor(private readonly configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'defaultSecret',  // <<< ใส่ default ไว้เพื่อกัน null
+      secretOrKey: configService.get<string>('JWT_SECRET') || 'defaultSecret',  
     });
   }
 

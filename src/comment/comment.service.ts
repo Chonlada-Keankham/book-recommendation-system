@@ -34,7 +34,7 @@ async updateComment(commentId: string, updateCommentDto: UpdateCommentDto, userI
   }
 
   comment.content = updateCommentDto.content.trim();
-  await comment.save(); // ✅ save() เฉยๆ ไม่ต้องยุ่งกับ updatedAt
+  await comment.save(); 
   return comment;
 }
 
@@ -71,7 +71,7 @@ async updateReply(commentId: string, replyId: string, updateReplyDto: UpdateRepl
   const comment = await this.commentModel.findById(commentId);
   if (!comment) throw new NotFoundException('Comment not found');
 
-  const reply = comment.replies.find(r => r._id.toString() === replyId); // ✅ ใช้ .find()
+  const reply = comment.replies.find(r => r._id.toString() === replyId); 
   if (!reply) throw new NotFoundException('Reply not found');
 
   if (reply.userId.toString() !== userId.toString()) {
@@ -97,7 +97,7 @@ async deleteReply(commentId: string, replyId: string, userId: string) {
     throw new ForbiddenException('You can only delete your own reply');
   }
 
-  comment.replies.splice(replyIndex, 1); // ✅ splice ออกจาก array
+  comment.replies.splice(replyIndex, 1); 
   await comment.save();
   return true;
 }
@@ -105,8 +105,8 @@ async deleteReply(commentId: string, replyId: string, userId: string) {
   // 🔸 Find All Comments for a Book
   async findCommentsByBook(bookId: string) {
     return this.commentModel.find({ bookId })
-      .populate('userId', 'username') // ดึงชื่อคนคอมเมนต์
-      .populate('replies.userId', 'username') // ดึงชื่อคนตอบกลับ
+      .populate('userId', 'username') 
+      .populate('replies.userId', 'username') 
       .sort({ createdAt: -1 });
   }
 }

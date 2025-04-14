@@ -1,21 +1,21 @@
 export interface iComment {
-  _id?: string;                      // MongoDB ID (optional)
+  _id?: string;                      
 
-  book_id: string;                   // อ้างอิงไปยังหนังสือ (_id ของ iBook)
+  book_id: string;                   
   
-  user_id: string;                   // อ้างอิงไปยังผู้ใช้ (_id ของ User)
+  user_id: string;                   
 
-  content: string;                   // เนื้อหาคอมเมนต์
+  content: string;                   
 
   replies: {
-    _id?: string;                    // MongoDB ID ของ reply (optional)
-    user_id: string;                 // อ้างอิงไปยังผู้ใช้ (_id ของ User)
-    content: string;                 // เนื้อหาการตอบกลับ
-    created_at: Date;                // วันเวลาสร้าง reply
-    updated_at?: Date;               // วันเวลาแก้ไข reply (optional)
+    _id?: string;                    
+    user_id: string;                 
+    content: string;                 
+    created_at: Date;               
+    updated_at?: Date;               
   }[];
 
-  created_at: Date;                  // วันเวลาสร้างคอมเมนต์
-  updated_at: Date;                  // วันเวลาอัปเดตคอมเมนต์
-  deleted_at?: Date;                 // (optional) วันเวลาลบคอมเมนต์ (soft delete)
+  created_at: Date;                  
+  updated_at: Date;                  
+  deleted_at?: Date;                
 }

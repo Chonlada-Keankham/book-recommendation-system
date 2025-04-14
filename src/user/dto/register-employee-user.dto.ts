@@ -11,7 +11,7 @@ export class CreateEmployeeDto {
     @IsNotEmpty({ message: 'Last name is required.' })
     @IsString()
     @Matches(/^[a-zA-Zก-๙]+$/, { message: 'Last name can only contain letters (Thai or English).' })
-    @Transform(({ value }) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase())  // เพิ่มการแปลงตัวแรกของนามสกุล
+    @Transform(({ value }) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase())  
     last_name: string;
 
     @IsOptional()

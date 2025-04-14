@@ -17,7 +17,7 @@ export class CommentController {
   // ---------- Create Comment ----------
   @Post('/create-comment')
   async createComment(@Body() createCommentDto: CreateCommentDto, @Req() req: Request) {
-    const userId = req.user['_id'];  // ✅ ดึง _id แทน id
+    const userId = req.user['_id'];  
     const comment = await this.commentService.createComment(createCommentDto, userId);
     return {
       statusCode: HttpStatus.CREATED,
@@ -31,7 +31,7 @@ export class CommentController {
   @ApiOperation({ summary: 'Update a comment' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Comment updated successfully.' })
   async updateComment(@Param('commentId') commentId: string, @Body() updateCommentDto: UpdateCommentDto, @Req() req: Request) {
-    const userId = req.user['_id'];  // ✅ ดึง _id แทน id
+    const userId = req.user['_id']; 
     const comment = await this.commentService.updateComment(commentId, updateCommentDto, userId);
     return {
       statusCode: HttpStatus.OK,
@@ -45,7 +45,7 @@ export class CommentController {
   @ApiOperation({ summary: 'Delete a comment' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Comment deleted successfully.' })
   async deleteComment(@Param('commentId') commentId: string, @Req() req: Request) {
-    const userId = req.user['_id'];  // ✅ ดึง _id แทน id
+    const userId = req.user['_id']; 
     await this.commentService.deleteComment(commentId, userId);
     return {
       statusCode: HttpStatus.OK,
@@ -59,7 +59,7 @@ export class CommentController {
   @ApiOperation({ summary: 'Reply to a comment' })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'Reply created successfully.' })
   async createReply(@Param('commentId') commentId: string, @Body() createReplyDto: CreateReplyDto, @Req() req: Request) {
-    const userId = req.user['_id'];  // ✅ ดึง _id แทน id
+    const userId = req.user['_id']; 
     const reply = await this.commentService.createReply(commentId, createReplyDto, userId);
     return {
       statusCode: HttpStatus.CREATED,
@@ -78,7 +78,7 @@ export class CommentController {
     @Body() updateReplyDto: UpdateReplyDto,
     @Req() req: Request
   ) {
-    const userId = req.user['_id'];  // ✅ ดึง _id แทน id
+    const userId = req.user['_id']; 
     const reply = await this.commentService.updateReply(commentId, replyId, updateReplyDto, userId);
     return {
       statusCode: HttpStatus.OK,
@@ -92,7 +92,7 @@ export class CommentController {
   @ApiOperation({ summary: 'Delete a reply' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Reply deleted successfully.' })
   async deleteReply(@Param('commentId') commentId: string, @Param('replyId') replyId: string, @Req() req: Request) {
-    const userId = req.user['_id'];  // ✅ ดึง _id แทน id
+    const userId = req.user['_id']; 
     await this.commentService.deleteReply(commentId, replyId, userId);
     return {
       statusCode: HttpStatus.OK,

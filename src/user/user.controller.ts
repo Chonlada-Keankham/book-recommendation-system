@@ -47,8 +47,8 @@ export class UserController {
   @Get('/find-one/:id')
   @ApiOperation({ summary: 'Get user by ID' })
   async findOneById(@Param('id') id: string) {
-    const user = await this.userService.findOneById(id); // <<< user จะมี .toObject() แล้ว
-    const { password, refreshToken, ...userWithoutSensitiveInfo } = user.toObject(); // <<< ✅ ไม่มี error
+    const user = await this.userService.findOneById(id); 
+    const { password, refreshToken, ...userWithoutSensitiveInfo } = user.toObject(); 
     return {
       statusCode: HttpStatus.OK,
       message: 'User found',

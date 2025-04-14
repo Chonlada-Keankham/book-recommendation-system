@@ -263,9 +263,7 @@ export class BookService {
     let playlist: any = null;
     try {
       playlist = await this.playlistService.getPlaylist(userId);
-    } catch (error) {
-      // ❗ ถ้าไม่เจอ Playlist ก็ไม่เป็นไร ใช้ fallback
-    }
+    } catch (error) {}
   
     const viewedBooks = await this.redisService.getViewedBooks(ip);
     const redisKey = `viewed_member:${bookId}:${ip}`;
@@ -300,9 +298,7 @@ export class BookService {
   
     let recommendedBooks: iBook[] = [];
   
-    // ------------------- เงื่อนไขการแนะนำ -------------------
     if (!playlist || (!playlist.categories?.length && !playlist.authors?.length)) {
-      // ❗ ไม่มี Playlist หรือ Playlist ว่าง ➔ แนะนำจาก "หมวดของ currentBook"
       recommendedBooks = await this.bookModel.find({
         category: currentBook.category,
         _id: { $nin: [...viewedBooks, bookId] },  
@@ -310,7 +306,6 @@ export class BookService {
         deleted_at: null,
       }).sort({ view: -1 }).exec();
     } else {
-      // ❗ มี Playlist ➔ แนะนำจาก "หมวดหมู่/ผู้แต่งที่สนใจ"
       let booksByCategory: iBook[] = [];
       let booksByAuthor: iBook[] = [];
   
@@ -333,7 +328,6 @@ export class BookService {
       }
   
       if (booksByCategory.length === 0 && booksByAuthor.length === 0) {
-        // ❗ ไม่มีข้อมูลที่ตรงกับ Playlist ➔ fallback หมวดหมู่
         recommendedBooks = await this.bookModel.find({
           category: currentBook.category,
           _id: { $nin: [...viewedBooks, bookId] },
@@ -388,7 +382,6 @@ export class BookService {
               const url = new URL(book.img);
               book.img = url.pathname;
             } catch (err) {
-              // หากเกิด error ไม่ทำอะไร
             }
           }
         }

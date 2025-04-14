@@ -75,7 +75,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get user profile (JWT Required)' })
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() request) {
-    const { password, ...userWithoutPassword } = request.user;  // <<< 🔥 ตัด password ออก
+    const { password, ...userWithoutPassword } = request.user;  
     return {
       statusCode: HttpStatus.OK,
       message: 'User profile fetched successfully',
@@ -119,7 +119,7 @@ export class AuthController {
   }
 
   async logout(userId: string): Promise<void> {
-    await this.userService.updateUserRefreshToken(userId, null);  // 🔥 ลบ refreshToken
+    await this.userService.updateUserRefreshToken(userId, null);  
   }
   
 }

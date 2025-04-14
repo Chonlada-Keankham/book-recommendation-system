@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { Schema as MongooseSchema } from 'mongoose';
 import { Status } from 'src/enum/status.enum';
-import { BookCategory } from 'src/enum/book-category.enum';  // นำเข้า enum สำหรับหมวดหมู่
+import { BookCategory } from 'src/enum/book-category.enum'; 
 
 @Schema({ timestamps: true })
 export class Notification {
@@ -17,31 +17,30 @@ export class Notification {
     @Prop({
          type: MongooseSchema.Types.ObjectId,
          ref: 'Book', required: true })
-    book: MongooseSchema.Types.ObjectId;  // เก็บ ObjectId ของหนังสือที่มีการแจ้งเตือน (เชื่อมโยงกับ Book Schema)
+    book: MongooseSchema.Types.ObjectId;  
 
     @Prop({ type: String })
-    book_th: string;  // ชื่อหนังสือภาษาไทย (จาก Book Schema)
+    book_th: string;  
 
     @Prop({ type: String })
-    book_en: string;  // ชื่อหนังสือภาษาอังกฤษ (จาก Book Schema)
+    book_en: string;  
 
     @Prop({ type: String })
-    img: string;  // รูปปกของหนังสือ (จาก Book Schema)
+    img: string; 
 
     @Prop({ type: String, enum: BookCategory })
-    category: BookCategory;  // หมวดหมู่ของหนังสือ (ใช้ enum จาก BookCategory)
+    category: BookCategory;  
 
     @Prop({ enum: Status, default: Status.ACTIVE })
-    status: Status;  // สถานะการแจ้งเตือน
+    status: Status; 
 
     @Prop()
-    isRead: boolean;  // สถานะการอ่าน (อ่านหรือยัง)
-
+    isRead: boolean;  
     @Prop()
-    notifyTime: Date;  // เวลาในการแจ้งเตือน
+    notifyTime: Date;  
 
     @Prop({ default: Date.now })
-    createdAt: Date;  // เวลาที่การแจ้งเตือนถูกสร้าง
+    createdAt: Date; 
 }
 
 export type NotificationDocument = Notification & Document;

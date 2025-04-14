@@ -11,13 +11,13 @@ export class RegisterUserDto {
   @IsNotEmpty({ message: 'Last name is required.' })
   @IsString()
   @Matches(/^[a-zA-Zก-๙]+$/, { message: 'Last name can only contain letters (Thai or English).' })
-  @Transform(({ value }) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase())  // เพิ่มการแปลงตัวแรกของนามสกุล
+  @Transform(({ value }) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase())  
   last_name: string;
 
   @IsNotEmpty({ message: 'Phone number is required.' })
   @IsString()
   @Length(10, 10, { message: 'Phone number must be exactly 10 digits long.' })
-  @Matches(/^(0\d{9})$/, { message: 'Phone number must be a valid Thai mobile number.' })  // รูปแบบเบอร์โทรศัพท์มือถือไทย
+  @Matches(/^(0\d{9})$/, { message: 'Phone number must be a valid Thai mobile number.' })  
   phone: string;
 
   @IsNotEmpty({ message: 'Email is required.' })

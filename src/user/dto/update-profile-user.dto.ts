@@ -28,7 +28,7 @@ export class UpdateProfileDto {
   username?: string;
 
   @ApiProperty({ type: 'string', format: 'binary', required: false })
-  profileImage?: any; // ✅ เอาแค่รูปโปรไฟล์
+  profileImage?: any; 
 
   @IsOptional()
   @IsString()
