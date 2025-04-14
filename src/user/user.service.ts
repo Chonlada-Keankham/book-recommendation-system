@@ -28,21 +28,35 @@ export class UserService {
 
   async checkUserExists(
     updateUserDto: UpdateUserDto | RegisterUserDto | CreateEmployeeDto,
-    userId?: string): Promise<void> {
+    userId?: string
+  ): Promise<void> {
     const filter: any[] = [];
-
-    if (updateUserDto.email) filter.push({ email: updateUserDto.email });
-    if (updateUserDto.username) filter.push({ username: updateUserDto.username });
-    if (updateUserDto.phone) filter.push({ phone: updateUserDto.phone });
+  
+    if (updateUserDto.email) {
+      filter.push({ email: updateUserDto.email });
+    }
+    if (updateUserDto.username) {
+      filter.push({ username: updateUserDto.username });
+    }
+    if (updateUserDto.phone) {
+      filter.push({ phone: updateUserDto.phone });
+    }
+  
     if (filter.length === 0) return;
-
+  
     const condition: any = { $or: filter };
-    if (userId) condition._id = { $ne: userId };
-
-    const user = await this.userModel.findOne(condition);
-    if (user) throw new ConflictException('Email, username, or phone number already exists.');
+  
+    if (userId) {
+      condition._id = { $ne: userId };
+    }
+      
+    const existingUser = await this.userModel.findOne(condition);
+  
+    if (existingUser) {
+      throw new ConflictException('Email, username, or phone number already exists.');
+    }
   }
-
+  
   async hashPassword(password: string): Promise<string> {
     const saltRounds = 10;
     return await bcrypt.hash(password, saltRounds);
@@ -264,8 +278,17 @@ export class UserService {
 
   async deleteById(userId: string): Promise<boolean> {
     const user = await this.userModel.findById(userId);
-    if (!user) throw new NotFoundException('User not found');
-    await this.userModel.deleteOne({ _id: userId });
+  
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+  
+    const result = await this.userModel.deleteOne({ _id: userId });
+  
+    if (result.deletedCount === 0) {
+      throw new NotFoundException('User could not be deleted or already deleted.');
+    }
+  
     return true;
   }
-}
+  }

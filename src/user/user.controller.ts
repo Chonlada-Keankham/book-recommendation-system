@@ -47,8 +47,8 @@ export class UserController {
   @Get('/find-one/:id')
   @ApiOperation({ summary: 'Get user by ID' })
   async findOneById(@Param('id') id: string) {
-    const user = await this.userService.findOneById(id); 
-    const { password, refreshToken, ...userWithoutSensitiveInfo } = user.toObject(); 
+    const user = await this.userService.findOneById(id);
+    const { password, refreshToken, ...userWithoutSensitiveInfo } = user.toObject();
     return {
       statusCode: HttpStatus.OK,
       message: 'User found',
@@ -56,8 +56,6 @@ export class UserController {
     };
   }
 
-
-  @UseGuards(JwtAuthGuard)
   @Get('/find-email/:email')
   @ApiOperation({ summary: 'Get user by email' })
   async findOneByEmail(@Param('email') email: string) {
@@ -70,8 +68,8 @@ export class UserController {
     };
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.EMPLOYEE)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.EMPLOYEE, UserRole.ADMIN)
   @Get('/find-all')
   @ApiOperation({ summary: 'Get all users (Employee only)' })
   async findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
@@ -138,6 +136,8 @@ export class UserController {
   }
 
   // ---------- Delete ----------
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @Delete('/soft-delete/:id')
   @ApiOperation({ summary: 'Soft delete user' })
   async softDelete(@Param('id') id: string) {
@@ -149,6 +149,8 @@ export class UserController {
     };
   }
 
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN) 
   @Delete('/delete-one/:id')
   @ApiOperation({ summary: 'Delete user permanently' })
   @HttpCode(HttpStatus.NO_CONTENT)
