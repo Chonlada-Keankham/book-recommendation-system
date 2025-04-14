@@ -1,12 +1,16 @@
 import { extname } from 'path';
 import { BookCategory } from 'src/enum/book-category.enum';
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query, Req, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query, Req, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { BookService } from './book.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateBookDto } from './dto/create-book.dto';
 import { diskStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Request } from 'express'; 
+import { Request } from 'express';
+import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/guard/role.guard';
+import { Roles } from 'src/decorator/roles.decorator';
+import { UserRole } from 'src/enum/user-role.enum';
 
 @ApiTags('Book')
 @Controller('book')
@@ -14,6 +18,8 @@ export class BookController {
   constructor(private readonly bookService: BookService) { }
 
   // ----------------Create----------
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @Post('/create')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
@@ -40,7 +46,7 @@ export class BookController {
   @Get('/find-one/:id')
   async findBookById(
     @Param('id') id: string,
-    @Req() req: Request  
+    @Req() req: Request
   ) {
     const book = await this.bookService.findOneByIdAndUpdateView(id, req);
     return {
@@ -49,7 +55,7 @@ export class BookController {
       books: book,
     };
   }
-  
+
   @Get('/find-all')
   async findAll(@Req() request: Request) {
     const books = await this.bookService.findAll();
@@ -59,7 +65,7 @@ export class BookController {
       books: books,
     };
   }
-    @Get('/novel')
+  @Get('/novel')
   async getNovelBooks() {
     const result = await this.bookService.findNovelBooks();
     return {
@@ -248,6 +254,8 @@ export class BookController {
   }
 
   // ---------- Delete ----------
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Delete('/delete-one/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteById(@Param('id') id: string) {
@@ -259,6 +267,8 @@ export class BookController {
     };
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Delete('/soft-delete/:id')
   async softDelete(@Param('id') id: string) {
     const book = await this.bookService.softDelete(id);
