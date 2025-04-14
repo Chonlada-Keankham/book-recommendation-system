@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Req } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
@@ -13,7 +14,8 @@ export class CommentController {
 
   // ---------- CREATE ----------
   @Post('/create-comment')
-  async createComment(@Body() createCommentDto: CreateCommentDto, @Req() req: any) {
+  @UseGuards(AuthGuard('jwt'))
+  async createComment(@Body() createCommentDto: CreateCommentDto, @Req() req: Request) {
     const comment = await this.commentService.createComment(createCommentDto, req);
     return {
       statusCode: HttpStatus.CREATED,
@@ -21,7 +23,7 @@ export class CommentController {
       data: comment,
     };
   }
-
+  
   @Post('/reply/:parentCommentId')
   async createReply(@Param('parentCommentId') parentCommentId: string, @Body() createReplyDto: CreateReplyDto, @Req() req: any) {
     const reply = await this.commentService.createReply(parentCommentId, createReplyDto, req);

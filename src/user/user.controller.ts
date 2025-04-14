@@ -12,7 +12,6 @@ import { UserInterestDto } from './dto/interest-user.dto';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guard/role.guard';
 import { UserRole } from 'src/enum/user-role.enum';
-import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('User')
 @UseGuards(JwtAuthGuard)
