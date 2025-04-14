@@ -4,8 +4,10 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { CreateReplyDto } from './dto/reply-comment.dto';
 import { UpdateReplyDto } from './dto/up-reply-comment.dto';
+import { ApiTags } from '@nestjs/swagger';
 
-@Controller('api/comment')
+@ApiTags('Comment')
+@Controller('comment')
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
