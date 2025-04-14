@@ -1,4 +1,3 @@
-import { Redis } from 'ioredis';
 import { InjectModel } from '@nestjs/mongoose';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, Put, UploadedFile, UseInterceptors, forwardRef } from '@nestjs/common';
 import { Model, Types } from 'mongoose';
@@ -10,6 +9,7 @@ import { UpdateBookDto } from './dto/update-book.dto';
 import { PlaylistService } from 'src/playlist/playlist.service';
 import { shuffle } from 'lodash';
 import { RedisService } from 'src/redis/redis.service';
+import { Request } from 'express'; 
 
 @Injectable()
 export class BookService {
@@ -101,14 +101,21 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
-  async findOneByIdAndUpdateView(id: string, ip: string): Promise<iBook> {
+  async findOneByIdAndUpdateView(id: string, req: Request): Promise<iBook> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ID format.');
     }
-
+  
+    // ✅ ดึง IP สะอาด ๆ
+    const ip = (
+      req.headers['x-forwarded-for'] as string || 
+      req.socket.remoteAddress || 
+      ''
+    ).split(',')[0].replace('::ffff:', '').trim();
+  
     const redisKey = `viewed:${id}:${ip}`;
     const viewed = await this.redisService.get(redisKey);
-
+  
     let book: iBook;
     if (!viewed) {
       book = await this.bookModel.findOneAndUpdate(
@@ -120,7 +127,7 @@ export class BookService {
         { $inc: { view: 1 } },
         { new: true },
       ).exec();
-      await this.redisService.set(redisKey, 'true', 300);
+      await this.redisService.set(redisKey, 'true', 300); // set 5 นาที
     } else {
       book = await this.bookModel.findOne({
         _id: id,
@@ -128,18 +135,14 @@ export class BookService {
         deleted_at: null,
       }).exec();
     }
-
+  
     if (!book) {
       throw new NotFoundException(`Book with ID ${id} not found.`);
     }
-
-    if (book.img && !book.img.startsWith('http')) {
-      book.img = `${process.env.BACKEND_URL}${book.img.startsWith('/') ? '' : '/'}${book.img}`;
-    }
-
+  
     return book;
   }
-
+  
   async findBooksByCategory(category: BookCategory): Promise<{
     books: iBook[];
     total: number;
@@ -371,7 +374,7 @@ export class BookService {
     })
       .sort({ view: -1 })
       .limit(topN)
-      .select('book_th book_en img author category view short_description') // << เพิ่มตรงนี้
+      .select('book_th book_en img author category view short_description') 
       .lean();
 
     if (topBooks.length === 0) {
@@ -475,7 +478,7 @@ export class BookService {
     }
 
     await this.redisService.set(redisKey, 'true', 300);
-    return book;
+        return book;
   }
 
 }
