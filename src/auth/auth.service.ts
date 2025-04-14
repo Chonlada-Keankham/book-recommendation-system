@@ -48,30 +48,36 @@ export class AuthService {
   }
 
   // ---------------------- LOGIN / REFRESH ----------------------
-  async login(user: iUser): Promise<{
-    access_token: string;
-    refresh_token: string;
-  }> {
-    const payload = { email: user.email, sub: user._id, role: user.role };
-    const secret = this.configService.get<string>('JWT_SECRET');
+async login(user: iUser): Promise<{
+  access_token: string;
+  refresh_token: string;
+}> {
+  const payload = { 
+    id: user._id,          // ✅ เพิ่ม id ให้ comment ใช้
+    email: user.email,
+    role: user.role,
+    sub: user._id          // ✅ sub ใช้สำหรับ Refresh Token มาตรฐาน
+  };
 
-    const accessToken = this.jwtService.sign(payload, {
-      expiresIn: '1h',
-      secret,
-    });
+  const secret = this.configService.get<string>('JWT_SECRET');
 
-    const refreshToken = this.jwtService.sign({ sub: user._id }, {
-      expiresIn: '7d',
-      secret,
-    });
+  const accessToken = this.jwtService.sign(payload, {
+    expiresIn: '1h',
+    secret,
+  });
 
-    await this.userService.updateUserRefreshToken(user._id, refreshToken);
+  const refreshToken = this.jwtService.sign({ sub: user._id }, {
+    expiresIn: '7d',
+    secret,
+  });
 
-    return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    };
-  }
+  await this.userService.updateUserRefreshToken(user._id, refreshToken);
+
+  return {
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  };
+}
 
   async refreshAccessToken(refreshTokenDto: RefreshTokenDto): Promise<{ access_token: string }> {
     try {

@@ -23,10 +23,9 @@ export const fileConfig = {
 
 export const redisConfig = {
   useRedis: process.env.USE_REDIS === 'true',  
-  host: process.env.REDIS_HOST,
+  host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379', 10),
-  password: process.env.REDIS_PASSWORD,
-  url: process.env.REDIS_URL,
+  password: process.env.REDIS_PASSWORD || undefined,
 };
 
 export const baseConfig = {

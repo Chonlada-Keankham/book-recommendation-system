@@ -1,139 +1,112 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
+import { Comment, CommentDocument } from './schema/comment.schema';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
-import { iComment } from './interface/comment.interface';
 import { CreateReplyDto } from './dto/reply-comment.dto';
 import { UpdateReplyDto } from './dto/up-reply-comment.dto';
 
 @Injectable()
 export class CommentService {
   constructor(
-    @InjectModel('Comment') private readonly commentModel: Model<iComment>,
+    @InjectModel(Comment.name) private readonly commentModel: Model<CommentDocument>,
   ) {}
 
-  // -------------------------------------------------------------------
-  // 🔸 CREATE COMMENT
-  // -------------------------------------------------------------------
-  async createComment(createCommentDto: CreateCommentDto, userId: string): Promise<iComment> {
-    const newComment = await this.commentModel.create({
-      book_id: new Types.ObjectId(createCommentDto.bookId),
-      user_id: new Types.ObjectId(userId),
-      content: createCommentDto.content,
+  // 🔸 Create Comment
+  async createComment(createCommentDto: CreateCommentDto, userId: string) {
+    const comment = new this.commentModel({
+      bookId: createCommentDto.bookId,
+      userId: userId,
+      content: createCommentDto.content.trim(),
       replies: [],
-      created_at: new Date(),
-      updated_at: new Date(),
     });
-    return newComment;
+    return await comment.save();
   }
 
-  // -------------------------------------------------------------------
-  // 🔸 UPDATE COMMENT
-  // -------------------------------------------------------------------
-  async updateComment(commentId: string, updateCommentDto: UpdateCommentDto, userId: string): Promise<iComment> {
-    const comment = await this.commentModel.findById(commentId);
-    if (!comment) throw new NotFoundException('Comment not found.');
-    if (comment.user_id.toString() !== userId) throw new ForbiddenException('You can only update your own comment.');
+// ---------- Update Comment ----------
+async updateComment(commentId: string, updateCommentDto: UpdateCommentDto, userId: string) {
+  const comment = await this.commentModel.findById(commentId);
+  if (!comment) throw new NotFoundException('Comment not found');
 
-    await this.commentModel.updateOne(
-      { _id: commentId },
-      {
-        $set: {
-          content: updateCommentDto.content,
-          updated_at: new Date(),
-        },
-      },
-    );
-
-    return this.commentModel.findById(commentId);
+  if (comment.userId.toString() !== userId.toString()) {
+    throw new ForbiddenException('You can only edit your own comment');
   }
 
-  // -------------------------------------------------------------------
-  // 🔸 DELETE COMMENT
-  // -------------------------------------------------------------------
-  async deleteComment(commentId: string, userId: string): Promise<void> {
-    const comment = await this.commentModel.findById(commentId);
-    if (!comment) throw new NotFoundException('Comment not found.');
-    if (comment.user_id.toString() !== userId) throw new ForbiddenException('You can only delete your own comment.');
+  comment.content = updateCommentDto.content.trim();
+  await comment.save(); // ✅ save() เฉยๆ ไม่ต้องยุ่งกับ updatedAt
+  return comment;
+}
 
-    await this.commentModel.deleteOne({ _id: commentId });
+// ---------- Delete Comment ----------
+async deleteComment(commentId: string, userId: string) {
+  const comment = await this.commentModel.findById(commentId);
+  if (!comment) throw new NotFoundException('Comment not found');
+
+  if (comment.userId.toString() !== userId.toString()) {
+    throw new ForbiddenException('You can only delete your own comment');
   }
 
-  // -------------------------------------------------------------------
-  // 🔸 CREATE REPLY
-  // -------------------------------------------------------------------
-  async createReply(commentId: string, createReplyDto: CreateReplyDto, userId: string): Promise<iComment> {
-    const comment = await this.commentModel.findById(commentId);
-    if (!comment) throw new NotFoundException('Comment not found.');
+  return await comment.deleteOne(); // ✅ ใช้ deleteOne() แทน remove()
+}
 
-    await this.commentModel.updateOne(
-      { _id: commentId },
-      {
-        $push: {
-          replies: {
-            user_id: new Types.ObjectId(userId),
-            content: createReplyDto.content,
-            created_at: new Date(),
-          },
-        },
-      },
-    );
+// ---------- Create Reply ----------
+async createReply(commentId: string, createReplyDto: CreateReplyDto, userId: string) {
+  const comment = await this.commentModel.findById(commentId);
+  if (!comment) throw new NotFoundException('Comment not found');
 
-    return this.commentModel.findById(commentId);
+  comment.replies.push({
+    userId: userId,
+    content: createReplyDto.content.trim(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  await comment.save();
+  return comment;
+}
+
+// ---------- Update Reply ----------
+async updateReply(commentId: string, replyId: string, updateReplyDto: UpdateReplyDto, userId: string) {
+  const comment = await this.commentModel.findById(commentId);
+  if (!comment) throw new NotFoundException('Comment not found');
+
+  const reply = comment.replies.find(r => r._id.toString() === replyId); // ✅ ใช้ .find()
+  if (!reply) throw new NotFoundException('Reply not found');
+
+  if (reply.userId.toString() !== userId.toString()) {
+    throw new ForbiddenException('You can only edit your own reply');
   }
 
-  // -------------------------------------------------------------------
-  // 🔸 UPDATE REPLY
-  // -------------------------------------------------------------------
-  async updateReply(commentId: string, replyId: string, updateReplyDto: UpdateReplyDto, userId: string): Promise<iComment> {
-    const comment = await this.commentModel.findById(commentId);
-    if (!comment) throw new NotFoundException('Comment not found.');
+  reply.content = updateReplyDto.content.trim();
+  reply.updatedAt = new Date();
 
-    const reply = comment.replies.find(r => r._id?.toString() === replyId);
-    if (!reply) throw new NotFoundException('Reply not found.');
-    if (reply.user_id.toString() !== userId) throw new ForbiddenException('You can only update your own reply.');
+  await comment.save();
+  return comment;
+}
 
-    await this.commentModel.updateOne(
-      { _id: commentId, 'replies._id': replyId },
-      {
-        $set: {
-          'replies.$.content': updateReplyDto.content,
-          'replies.$.updated_at': new Date(),
-        },
-      },
-    );
+// ---------- Delete Reply ----------
+async deleteReply(commentId: string, replyId: string, userId: string) {
+  const comment = await this.commentModel.findById(commentId);
+  if (!comment) throw new NotFoundException('Comment not found');
 
-    return this.commentModel.findById(commentId);
+  const replyIndex = comment.replies.findIndex(r => r._id.toString() === replyId);
+  if (replyIndex === -1) throw new NotFoundException('Reply not found');
+
+  if (comment.replies[replyIndex].userId.toString() !== userId.toString()) {
+    throw new ForbiddenException('You can only delete your own reply');
   }
 
-  // -------------------------------------------------------------------
-  // 🔸 DELETE REPLY
-  // -------------------------------------------------------------------
-  async deleteReply(commentId: string, replyId: string, userId: string): Promise<iComment> {
-    const comment = await this.commentModel.findById(commentId);
-    if (!comment) throw new NotFoundException('Comment not found.');
+  comment.replies.splice(replyIndex, 1); // ✅ splice ออกจาก array
+  await comment.save();
+  return true;
+}
 
-    const reply = comment.replies.find(r => r._id?.toString() === replyId);
-    if (!reply) throw new NotFoundException('Reply not found.');
-    if (reply.user_id.toString() !== userId) throw new ForbiddenException('You can only delete your own reply.');
-
-    await this.commentModel.updateOne(
-      { _id: commentId },
-      { $pull: { replies: { _id: new Types.ObjectId(replyId) } } },
-    );
-
-    return this.commentModel.findById(commentId);
-  }
-
-  // -------------------------------------------------------------------
-  // 🔸 FIND COMMENTS BY BOOK
-  // -------------------------------------------------------------------
-  async findCommentsByBook(bookId: string): Promise<iComment[]> {
-    const comments = await this.commentModel.find({
-      book_id: new Types.ObjectId(bookId),
-    }).sort({ created_at: -1 }); // คอมเมนต์ล่าสุดขึ้นก่อน
-
-    return comments;
+  // 🔸 Find All Comments for a Book
+  async findCommentsByBook(bookId: string) {
+    return this.commentModel.find({ bookId })
+      .populate('userId', 'username') // ดึงชื่อคนคอมเมนต์
+      .populate('replies.userId', 'username') // ดึงชื่อคนตอบกลับ
+      .sort({ createdAt: -1 });
   }
 }
