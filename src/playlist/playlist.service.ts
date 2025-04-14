@@ -15,6 +15,9 @@ export class PlaylistService {
     private readonly bookService: BookService,
   ) {}
 
+  // -------------------------------------------------------------------
+  // 🔸 FIND PLAYLIST
+  // -------------------------------------------------------------------
   async findPlaylist(userId: string): Promise<iPlaylist | null> {
     return this.playlistModel.findOne({ user: userId });
   }
@@ -56,20 +59,22 @@ export class PlaylistService {
   // 🔸 UPDATE
   // -------------------------------------------------------------------
   async updatePlaylist(userId: string, updatePlaylistDto: UpdatePlaylistDto): Promise<iPlaylist> {
-    const playlist = await this.playlistModel.findOne({ user: userId }) as Document & iPlaylist;
+    const playlist = await this.playlistModel.findOne({ user: userId });
 
     if (!playlist) {
       throw new NotFoundException('Playlist not found for this user.');
     }
 
-    playlist.categories = updatePlaylistDto.categories || playlist.categories;
-    playlist.authors = updatePlaylistDto.authors || playlist.authors;
-    playlist.recommendedBooks = await this.generateRecommendations(
-      playlist.categories,
-      playlist.authors,
+    const playlistDoc = playlist as Document & iPlaylist;
+
+    playlistDoc.categories = updatePlaylistDto.categories || playlistDoc.categories;
+    playlistDoc.authors = updatePlaylistDto.authors || playlistDoc.authors;
+    playlistDoc.recommendedBooks = await this.generateRecommendations(
+      playlistDoc.categories,
+      playlistDoc.authors,
     );
 
-    return playlist.save();
+    return playlistDoc.save();
   }
 
   // -------------------------------------------------------------------
@@ -86,7 +91,7 @@ export class PlaylistService {
   // -------------------------------------------------------------------
   // 🔸 RECOMMENDATIONS
   // -------------------------------------------------------------------
-  public async generateRecommendations(categories: string[], authors: string[]): Promise<any[]> {
+  public async generateRecommendations(categories: string[] = [], authors: string[] = []): Promise<any[]> {
     const recommendations = await Promise.all([
       ...categories.map(category => this.safeFindRandomBooksByCategory(category)),
       ...authors.map(author => this.safeFindPopularBooksByAuthor(author)),
@@ -103,6 +108,7 @@ export class PlaylistService {
     try {
       return await this.bookService.findRandomBooksByCategory(category);
     } catch (error) {
+      console.error(`Error finding books by category [${category}]:`, error);
       return [];
     }
   }
@@ -111,6 +117,7 @@ export class PlaylistService {
     try {
       return await this.bookService.findPopularBooksByAuthor(author);
     } catch (error) {
+      console.error(`Error finding books by author [${author}]:`, error);
       return [];
     }
   }
