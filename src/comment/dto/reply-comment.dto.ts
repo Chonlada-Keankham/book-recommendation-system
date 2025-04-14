@@ -1,6 +1,8 @@
+// src/comment/dto/create-reply.dto.ts
+import { IsNotEmpty, IsString } from 'class-validator';
+
 export class CreateReplyDto {
-    commentId: string;   // ID ของ Comment หลัก
-    user: string;        // ผู้ตอบกลับ
-    content: string;     // ข้อความตอบกลับ
-  }
-  
+  @IsNotEmpty()
+  @IsString()
+  content: string;
+}
