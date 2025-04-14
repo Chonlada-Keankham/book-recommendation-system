@@ -29,19 +29,23 @@ export class AuthController {
   @ApiOperation({ summary: 'Member login only' })
   async loginMember(@Body() loginMemberDto: LoginMemberDto) {
     const user = await this.authService.validateMember(loginMemberDto);
-
+  
     if (user.role !== UserRole.MEMBER) {
       throw new UnauthorizedException('Only members can login here');
     }
-
+  
     const tokens = await this.authService.login(user);
+  
     return {
       statusCode: HttpStatus.OK,
       message: 'Member login successful',
-      data: tokens,
+      data: {
+        id: user._id,   
+        ...tokens,     
+      },
     };
   }
-
+  
   @Post('/login-employee')
   @ApiOperation({ summary: 'Employee login only' })
   async loginEmployee(@Body() loginEmployeeDto: LoginEmployeeDto) {
