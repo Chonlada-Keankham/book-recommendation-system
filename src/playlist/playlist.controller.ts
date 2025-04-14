@@ -9,22 +9,22 @@ import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('playlist')
 export class PlaylistController {
-  constructor(private readonly playlistService: PlaylistService) { }
+  constructor(private readonly playlistService: PlaylistService) {}
 
-  // ---------- Create ----------
+  // 🔹 Create or Update (Popup / ตั้งค่า)
   @Post('/create-playlist')
-  @ApiOperation({ summary: 'Create a new playlist' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Playlist created successfully.' })
-  async createPlaylist(@Body() createPlaylistDto: CreatePlaylistDto) {
-    const playlist = await this.playlistService.createPlaylist(createPlaylistDto);
+  @ApiOperation({ summary: 'Create or Update playlist (Popup/Setting)' })
+  @ApiResponse({ status: HttpStatus.CREATED, description: 'Playlist created or updated successfully.' })
+  async createOrUpdatePlaylist(@Body() createPlaylistDto: CreatePlaylistDto) {
+    const playlist = await this.playlistService.createOrUpdatePlaylist(createPlaylistDto);
     return {
       statusCode: HttpStatus.CREATED,
-      message: 'Playlist created successfully',
+      message: 'Playlist created or updated successfully',
       data: playlist,
     };
   }
 
-  // ---------- Read ----------
+  // 🔹 ดึง Playlist ของ user
   @Get('/find-playlist/:userId')
   @ApiOperation({ summary: 'Get playlist by user ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Playlist fetched successfully.' })
@@ -37,9 +37,9 @@ export class PlaylistController {
     };
   }
 
-  // ---------- Update ----------
+  // 🔹 Update Playlist แบบ Manual
   @Patch('/update/:userId')
-  @ApiOperation({ summary: 'Update playlist for a user' })
+  @ApiOperation({ summary: 'Update playlist manually' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Playlist updated successfully.' })
   async updatePlaylist(
     @Param('userId') userId: string,
