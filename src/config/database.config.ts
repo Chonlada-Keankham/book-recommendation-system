@@ -22,10 +22,11 @@ export const fileConfig = {
 };
 
 export const redisConfig = {
-  useRedis: process.env.USE_REDIS === 'true',  
-  host: process.env.REDIS_HOST || 'localhost',
+  useRedis: process.env.USE_REDIS === 'true',
+  url: process.env.REDIS_URL || 'rediss://default:ATx2AAIjcDFkODkzNTliY2ZhMmQ0ZTIzOGVmY2M0ZjFmMThhNzA4Y3AxMA@wanted-moth-15478.upstash.io:6379',  // ✅ ต่อด้วย URL แทน
+  host: process.env.REDIS_HOST,
   port: parseInt(process.env.REDIS_PORT || '6379', 10),
-  password: process.env.REDIS_PASSWORD || undefined,
+  password: process.env.REDIS_PASSWORD,
 };
 
 export const baseConfig = {

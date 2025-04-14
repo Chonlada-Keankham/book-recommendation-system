@@ -19,12 +19,12 @@ export class RedisService {
         retryStrategy: (times) => Math.min(times * 2000, 10000),
       });
 
-      this.client.on('connect', () => {
-        this.logger.log('✅ Redis connected');
+      this.client.on('error', (err) => {
+        this.logger.error('Redis connection error:', err.message);
       });
 
-      this.client.on('error', (err) => {
-        this.logger.error('❌ Redis connection error', err);
+      this.client.on('connect', () => {
+        this.logger.log('✅ Redis connected successfully!');
       });
     } else {
       this.logger.warn('⚠️ Redis not enabled (USE_REDIS=false)');
@@ -32,30 +32,12 @@ export class RedisService {
   }
 
   async get(key: string): Promise<string | null> {
-    if (!this.client) {
-      this.logger.warn('⚠️ Redis client not available');
-      return null;
-    }
-    try {
-      const value = await this.client.get(key);
-      this.logger.log(`🔎 GET ${key} = ${value}`);
-      return value;
-    } catch (error) {
-      this.logger.error(`❌ Redis GET error: ${error.message}`);
-      return null;
-    }
+    if (!this.client) return null;
+    return this.client.get(key);
   }
 
   async set(key: string, value: string, expireSeconds = 300): Promise<void> {
-    if (!this.client) {
-      this.logger.warn('⚠️ Redis client not available');
-      return;
-    }
-    try {
-      await this.client.set(key, value, 'EX', expireSeconds);  // ✅ เพิ่ม 'EX'
-      this.logger.log(`✅ SET ${key} = ${value} (expire in ${expireSeconds}s)`);
-    } catch (error) {
-      this.logger.error(`❌ Redis SET error: ${error.message}`);
-    }
+    if (!this.client) return;
+    await this.client.set(key, value, 'EX', expireSeconds);
   }
 }

@@ -35,6 +35,7 @@ export class BookController {
       data: book,
     };
   }
+
   // ----------------Read----------
   @Get('/find-one/:id')
   async findBookById(
@@ -45,7 +46,7 @@ export class BookController {
     return {
       statusCode: HttpStatus.OK,
       message: 'Book found',
-      book: book,
+      books: book,
     };
   }
   
@@ -146,26 +147,16 @@ export class BookController {
     @Query('bookId') bookId: string,
     @Req() req: Request
   ) {
-    let ip: string;
-    const forwarded = req.headers['x-forwarded-for'];
-  
-    if (typeof forwarded === 'string') {
-      ip = forwarded.split(',')[0].trim(); // ✅ ปลอดภัยขึ้น
-    } else if (Array.isArray(forwarded)) {
-      ip = forwarded[0];
-    } else {
-      ip = req.ip;
-    }
-  
+    const ip = typeof req.headers['x-forwarded-for'] === 'string' ? req.headers['x-forwarded-for'] : req.ip;
     const { currentBook, recommendedBooks } = await this.bookService.recommendBooksForMember(userId, bookId, ip);
-  
+
     return {
       statusCode: 200,
       message: 'Recommended books for member',
       data: { book: currentBook, recommendedBooks },
     };
   }
-  
+
   @Get('/recommendations/daily')
   async getDailyRecommendations(
     @Query('limit') limit = '10'

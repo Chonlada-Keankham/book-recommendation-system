@@ -9,9 +9,7 @@ dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  console.log('🌎 DATABASE_URI:', process.env.DATABASE_URI);   // <<<<<<<< เพิ่มตรงนี้
-  console.log('🔗 REDIS_URL:', process.env.REDIS_URL);           // <<<<<<<< เพิ่มตรงนี้ด้วยก็ดี
-
+  
   // ตั้งค่า Global Prefix สำหรับ API
   app.setGlobalPrefix('api');
 

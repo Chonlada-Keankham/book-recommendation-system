@@ -47,7 +47,7 @@ async deleteComment(commentId: string, userId: string) {
     throw new ForbiddenException('You can only delete your own comment');
   }
 
-  return await comment.deleteOne(); // ✅ ใช้ deleteOne() แทน remove()
+  return await comment.deleteOne(); 
 }
 
 // ---------- Create Reply ----------

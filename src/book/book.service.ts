@@ -7,49 +7,41 @@ import { Status } from 'src/enum/status.enum';
 import { BookCategory } from 'src/enum/book-category.enum';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { PlaylistService } from 'src/playlist/playlist.service';
-import { shuffle } from 'lodash';
 import { RedisService } from 'src/redis/redis.service';
-import { Request } from 'express'; 
+import { Request } from 'express';
 
 @Injectable()
 export class BookService {
-
   constructor(
     @InjectModel('Book') private readonly bookModel: Model<iBook>,
     @Inject(forwardRef(() => PlaylistService))
     private readonly playlistService: PlaylistService,
     private readonly redisService: RedisService,
-  ) {
-  }
+  ) {}
 
   // -------------------------------------------------------------------
   // 🔸 UTILITIES
   // -------------------------------------------------------------------
-  async findRandomBooksByCategory(
-    category: string,
-  ): Promise<iBook[]> {
+  async findRandomBooksByCategory(category: string): Promise<iBook[]> {
     return this.bookModel.aggregate([
       {
         $match: {
           category,
           status: { $ne: Status.DELETED },
-          deleted_at: null
-        }
+          deleted_at: null,
+        },
       },
       {
-        $sort: { view: -1 }
+        $sort: { view: -1 },
       },
-
     ]);
   }
 
-  async findPopularBooksByAuthor(
-    author: string,
-  ): Promise<iBook[]> {
+  async findPopularBooksByAuthor(author: string): Promise<iBook[]> {
     return this.bookModel.find({
       author,
       status: { $ne: Status.DELETED },
-      deleted_at: null
+      deleted_at: null,
     })
       .sort({ view: -1 })
       .exec();
@@ -58,29 +50,26 @@ export class BookService {
   async updateAllShortDescriptions(shortDescription: string): Promise<any> {
     const result = await this.bookModel.updateMany(
       {
-        status: {
-          $ne: Status.DELETED
-        },
-        deleted_at: null
+        status: { $ne: Status.DELETED },
+        deleted_at: null,
       },
       {
-        $set:
-        {
-          short_description: shortDescription
-        }
+        $set: {
+          short_description: shortDescription,
+        },
       },
     );
-    if (result.modifiedCount === 0) throw new NotFoundException('No books were updated');
+    if (result.modifiedCount === 0)
+      throw new NotFoundException('No books were updated');
     return result;
   }
-
 
   // -------------------------------------------------------------------
   // 🔸 CREATE
   // -------------------------------------------------------------------
   async createBook(createBookDto: CreateBookDto, file?: Express.Multer.File): Promise<iBook> {
     const existing = await this.bookModel.findOne({
-      $or: [{ book_th: createBookDto.book_th }, { book_en: createBookDto.book_en }]
+      $or: [{ book_th: createBookDto.book_th }, { book_en: createBookDto.book_en }],
     });
     if (existing) throw new ConflictException('Book already exists.');
 
@@ -105,18 +94,21 @@ export class BookService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ID format.');
     }
-  
-    // ✅ ดึง IP สะอาด ๆ
+    
     const ip = (
-      req.headers['x-forwarded-for'] as string || 
-      req.socket.remoteAddress || 
+      req.headers['x-forwarded-for'] as string ||
+      req.socket.remoteAddress ||
       ''
-    ).split(',')[0].replace('::ffff:', '').trim();
+    )
+      .split(',')[0]
+      .replace('::ffff:', '')
+      .trim();
   
     const redisKey = `viewed:${id}:${ip}`;
     const viewed = await this.redisService.get(redisKey);
   
     let book: iBook;
+  
     if (!viewed) {
       book = await this.bookModel.findOneAndUpdate(
         {
@@ -125,9 +117,10 @@ export class BookService {
           deleted_at: null,
         },
         { $inc: { view: 1 } },
-        { new: true },
+        { new: true }
       ).exec();
-      await this.redisService.set(redisKey, 'true', 300); 
+  
+      await this.redisService.set(redisKey, 'true', 300);
     } else {
       book = await this.bookModel.findOne({
         _id: id,
@@ -143,10 +136,7 @@ export class BookService {
     return book;
   }
   
-  async findBooksByCategory(category: BookCategory): Promise<{
-    books: iBook[];
-    total: number;
-  }> {
+  async findBooksByCategory(category: BookCategory): Promise<{ books: iBook[]; total: number }> {
     const total = await this.bookModel.countDocuments({
       category,
       status: { $ne: Status.DELETED },
@@ -189,27 +179,10 @@ export class BookService {
     }).exec();
   }
 
-  async findOneById(id: string): Promise<iBook> {
-    const book = await this.bookModel.findOne({
-      _id: id,
-      status: { $ne: Status.DELETED },
-      deleted_at: null,
-    }).exec();
-
-    if (!book) {
-      throw new NotFoundException(`Book with ID ${id} not found.`);
-    }
-
-    return book;
-  }
-
   // -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------
-
-  async updateBook(
-    bookId: string,
-    updateBookDto: UpdateBookDto): Promise<iBook> {
+  async updateBook(bookId: string, updateBookDto: UpdateBookDto): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
 
@@ -217,8 +190,8 @@ export class BookService {
       _id: { $ne: bookId },
       $or: [
         { book_th: updateBookDto.book_th },
-        { book_en: updateBookDto.book_en }
-      ]
+        { book_en: updateBookDto.book_en },
+      ],
     });
     if (duplicate) {
       throw new ConflictException('A book with the same title already exists.');
@@ -244,7 +217,11 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 RECOMMENDATION
   // -------------------------------------------------------------------
-  async recommendBooksForGuest(category: BookCategory, bookId: string, ip: string): Promise<{ currentBook: iBook, recommendedBooks: iBook[] }> {
+  async recommendBooksForGuest(
+    category: BookCategory,
+    bookId: string,
+    ip: string
+  ): Promise<{ currentBook: iBook, recommendedBooks: iBook[] }> {
     if (!Types.ObjectId.isValid(bookId)) {
       throw new BadRequestException('Invalid book ID format.');
     }
@@ -265,8 +242,12 @@ export class BookService {
           status: { $ne: Status.DELETED },
           deleted_at: null,
         },
-        { $inc: { view: 1 } },
-        { new: true }
+        {
+          $inc: { view_count: 1 } 
+        },
+        {
+          new: true, 
+        }
       ).exec();
       await this.redisService.set(redisKey, 'true', 300);
     } else {
@@ -286,118 +267,112 @@ export class BookService {
       _id: { $ne: bookId },
       status: { $ne: Status.DELETED },
       deleted_at: null,
-    }).sort({ view: -1 }).exec();
+    }).sort({ view_count: -1 }).exec();
 
     return { currentBook, recommendedBooks };
   }
 
   // ---------- สำหรับ Member ----------
-  async recommendBooksForMember(userId: string, bookId: string, ip: string)
-  : Promise<{ currentBook: iBook, recommendedBooks: iBook[] }> {
-    if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(bookId)) {
-      throw new BadRequestException('Invalid ID format.');
-    }
-  
-    const playlist = await this.playlistService.getPlaylist(userId);
-  
-    const redisKey = `viewed_member:${bookId}:${ip}`;
-    const viewed = await this.redisService.get(redisKey);
-    
-    let currentBook: iBook;
-    
-    if (!viewed) {
-      currentBook = await this.bookModel.findOneAndUpdate(
-        {
-          _id: bookId,
-          status: { $ne: Status.DELETED },
-          deleted_at: null,
-        },
-        { $inc: { view: 1 } },
-        { new: true }
-      ).exec();
-    
-      await this.redisService.set(redisKey, 'true', 300);
-    } else {
-      currentBook = await this.bookModel.findOne({
+async recommendBooksForMember(
+  userId: string,
+  bookId: string,
+  ip: string
+): Promise<{ currentBook: iBook, recommendedBooks: iBook[] }> {
+  if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(bookId)) {
+    throw new BadRequestException('Invalid ID format.');
+  }
+
+  const playlist = await this.playlistService.getPlaylist(userId);
+  const redisKey = `viewed_member:${bookId}:${ip}`;
+  const viewed = await this.redisService.get(redisKey);
+
+  let currentBook: iBook;
+
+  if (!viewed) {
+    currentBook = await this.bookModel.findOneAndUpdate(
+      {
         _id: bookId,
         status: { $ne: Status.DELETED },
         deleted_at: null,
-      }).exec();
+      },
+      {
+        $inc: { view_count: 1 },
+      },
+      { new: true }
+    ).exec();
+    await this.redisService.set(redisKey, 'true', 300);
+  } else {
+    currentBook = await this.bookModel.findOne({
+      _id: bookId,
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    }).exec();
+  }
+
+  if (!currentBook) {
+    throw new NotFoundException('Current book not found.');
+  }
+
+  let recommendedBooks: iBook[] = [];
+  if (!playlist) {
+    recommendedBooks = await this.bookModel.find({
+      category: currentBook.category,
+      _id: { $ne: bookId },  
+      status: { $ne: Status.DELETED },
+      deleted_at: null,
+    }).sort({ view_count: -1 }).exec();
+  } else {
+    let booksByCategory: iBook[] = [];
+    let booksByAuthor: iBook[] = [];
+
+    if (playlist.categories && playlist.categories.length > 0) {
+      booksByCategory = await this.bookModel.find({
+        category: { $in: playlist.categories },
+        _id: { $ne: bookId },
+        status: { $ne: Status.DELETED },
+        deleted_at: null,
+      }).sort({ view_count: -1 }).exec();
     }
-      
-    if (!currentBook) {
-      throw new NotFoundException('Current book not found.');
+
+    if (playlist.authors && playlist.authors.length > 0) {
+      booksByAuthor = await this.bookModel.find({
+        author: { $in: playlist.authors },
+        _id: { $ne: bookId },
+        status: { $ne: Status.DELETED },
+        deleted_at: null,
+      }).sort({ view_count: -1 }).exec();
     }
-  
-    let recommendedBooks: iBook[] = [];
-  
-    if (!playlist) {
-      const fallbackBooks = await this.bookModel.find({
+
+    if (booksByCategory.length === 0 && booksByAuthor.length === 0) {
+      recommendedBooks = await this.bookModel.find({
         category: currentBook.category,
         _id: { $ne: bookId },
         status: { $ne: Status.DELETED },
         deleted_at: null,
-      }).sort({ view: -1 }).exec(); // 🔥 เรียง view มากไปน้อย
-  
-      recommendedBooks = fallbackBooks; // ❌ ไม่ต้อง shuffle แล้ว
+      }).sort({ view_count: -1 }).exec();
     } else {
-      let booksByCategory: iBook[] = [];
-      let booksByAuthor: iBook[] = [];
-  
-      if (playlist.categories && playlist.categories.length > 0) {
-        booksByCategory = await this.bookModel.find({
-          category: { $in: playlist.categories },
-          _id: { $ne: bookId },
-          status: { $ne: Status.DELETED },
-          deleted_at: null,
-        }).sort({ view: -1 }).exec();
-      }
-  
-      if (playlist.authors && playlist.authors.length > 0) {
-        booksByAuthor = await this.bookModel.find({
-          author: { $in: playlist.authors },
-          _id: { $ne: bookId },
-          status: { $ne: Status.DELETED },
-          deleted_at: null,
-        }).sort({ view: -1 }).exec();
-      }
-  
-      if (booksByCategory.length === 0 && booksByAuthor.length === 0) {
-        const fallbackBooks = await this.bookModel.find({
-          category: currentBook.category,
-          _id: { $ne: bookId },
-          status: { $ne: Status.DELETED },
-          deleted_at: null,
-        }).sort({ view: -1 }).exec();
-  
-        recommendedBooks = fallbackBooks;
-      } else {
-        const seen = new Set<string>();
-        const deduplicated = [...booksByCategory, ...booksByAuthor].filter((b) => {
-          const id = b._id.toString();
-          if (seen.has(id)) return false;
-          seen.add(id);
-          return true;
-        });
-  
-        // 🔥 เรียง view มากไปน้อย
-        recommendedBooks = deduplicated.sort((a, b) => b.view - a.view);
-      }
+      const seen = new Set<string>();
+      const deduplicated = [...booksByCategory, ...booksByAuthor].filter((b) => {
+        const id = b._id.toString();
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+      recommendedBooks = deduplicated;
     }
-  
-    return {
-      currentBook,
-      recommendedBooks,
-    };
   }
-    async getDailyRecommendedBooks(topN = 50): Promise<iBook[]> {
+
+  return { currentBook, recommendedBooks };
+}
+  
+  async getDailyRecommendedBooks(topN = 50): Promise<iBook[]> {
     const topBooks = await this.bookModel.find({
       status: { $ne: Status.DELETED },
       deleted_at: null,
     })
       .sort({ view: -1 })
       .limit(topN)
-      .select('book_th book_en img author category view short_description') 
+      .select('book_th book_en img author category view short_description')
       .lean();
 
     if (topBooks.length === 0) {
@@ -421,6 +396,7 @@ export class BookService {
               const url = new URL(book.img);
               book.img = url.pathname;
             } catch (err) {
+              // หากเกิด error ไม่ทำอะไร
             }
           }
         }
@@ -435,7 +411,6 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 DELETE
   // -------------------------------------------------------------------
-
   async softDelete(bookId: string): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
@@ -473,7 +448,6 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 INCREASE VIEW AFTER DELAY (NEW)
   // -------------------------------------------------------------------
-
   async increaseViewAfterDelay(bookId: string, ip: string): Promise<iBook> {
     if (!Types.ObjectId.isValid(bookId)) {
       throw new BadRequestException('Invalid Book ID');
@@ -501,9 +475,6 @@ export class BookService {
     }
 
     await this.redisService.set(redisKey, 'true', 300);
-        return book;
+    return book;
   }
-
 }
-
-
