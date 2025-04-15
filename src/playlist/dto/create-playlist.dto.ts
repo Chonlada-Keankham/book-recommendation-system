@@ -1,16 +1,15 @@
-import { Types } from 'mongoose';
 import { IsArray, IsMongoId, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreatePlaylistDto {
   @IsNotEmpty({ message: 'User is required.' })
   @IsMongoId({ message: 'User ID must be a valid ObjectId.' })
-  user: Types.ObjectId;
+  user: string;
 
-  @IsArray()
-  @IsString({ each: true })
+  @IsArray({ message: 'Categories must be an array.' })
+  @IsString({ each: true, message: 'Each category must be a string.' })
   categories: string[];
 
-  @IsArray()
-  @IsString({ each: true })
+  @IsArray({ message: 'Authors must be an array.' })
+  @IsString({ each: true, message: 'Each author must be a string.' })
   authors: string[];
 }

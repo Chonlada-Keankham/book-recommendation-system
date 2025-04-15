@@ -248,7 +248,7 @@ export class UserService {
 
     if (!playlist) {
       playlist = await this.playlistService.createPlaylist({
-        user: new Types.ObjectId(user._id),
+        user: user._id.toString(),
         categories: categories,
         authors: authors
       });

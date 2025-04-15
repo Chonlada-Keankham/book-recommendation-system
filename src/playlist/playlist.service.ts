@@ -11,31 +11,28 @@ export class PlaylistService {
   constructor(
     @InjectModel('Playlist')
     private readonly playlistModel: Model<iPlaylist>,
+
     @Inject(forwardRef(() => BookService))
     private readonly bookService: BookService,
   ) {}
 
   // -------------------------------------------------------------------
-  // 🔸 FIND PLAYLIST
+  // 🔍 FIND
   // -------------------------------------------------------------------
   async findPlaylist(userId: string): Promise<iPlaylist | null> {
     return this.playlistModel.findOne({ user: userId });
   }
 
-async findPlaylistsByCategory(category: string): Promise<iPlaylist[]> {
-  return this.playlistModel.find({
-    categories: category,
-  }).lean();
-}
+  async findPlaylistsByCategory(category: string): Promise<iPlaylist[]> {
+    return this.playlistModel.find({ categories: category }).lean();
+  }
 
   // -------------------------------------------------------------------
-  // 🔸 CREATE
+  // 🆕 CREATE
   // -------------------------------------------------------------------
   async createPlaylist(createPlaylistDto: CreatePlaylistDto): Promise<iPlaylist> {
     const existing = await this.findPlaylist(createPlaylistDto.user.toString());
-    if (existing) {
-      throw new ConflictException('Playlist already exists.');
-    }
+    if (existing) throw new ConflictException('Playlist already exists.');
 
     const newPlaylist = new this.playlistModel(createPlaylistDto);
     newPlaylist.recommendedBooks = await this.generateRecommendations(
@@ -46,11 +43,10 @@ async findPlaylistsByCategory(category: string): Promise<iPlaylist[]> {
   }
 
   // -------------------------------------------------------------------
-  // 🔸 CREATE OR UPDATE
+  // 📝 CREATE or UPDATE
   // -------------------------------------------------------------------
   async createOrUpdatePlaylist(createPlaylistDto: CreatePlaylistDto): Promise<iPlaylist> {
     const existing = await this.findPlaylist(createPlaylistDto.user.toString());
-
     if (!existing) {
       return this.createPlaylist(createPlaylistDto);
     }
@@ -62,14 +58,11 @@ async findPlaylistsByCategory(category: string): Promise<iPlaylist[]> {
   }
 
   // -------------------------------------------------------------------
-  // 🔸 UPDATE
+  // 🔁 UPDATE
   // -------------------------------------------------------------------
   async updatePlaylist(userId: string, updatePlaylistDto: UpdatePlaylistDto): Promise<iPlaylist> {
     const playlist = await this.playlistModel.findOne({ user: userId });
-
-    if (!playlist) {
-      throw new NotFoundException('Playlist not found for this user.');
-    }
+    if (!playlist) throw new NotFoundException('Playlist not found for this user.');
 
     const playlistDoc = playlist as Document & iPlaylist;
 
@@ -84,18 +77,16 @@ async findPlaylistsByCategory(category: string): Promise<iPlaylist[]> {
   }
 
   // -------------------------------------------------------------------
-  // 🔸 READ
+  // 📄 READ
   // -------------------------------------------------------------------
   async getPlaylist(userId: string): Promise<iPlaylist> {
     const playlist = await this.playlistModel.findOne({ user: userId });
-    if (!playlist) {
-      throw new NotFoundException('Playlist not found for this user.');
-    }
+    if (!playlist) throw new NotFoundException('Playlist not found for this user.');
     return playlist;
   }
 
   // -------------------------------------------------------------------
-  // 🔸 RECOMMENDATIONS
+  // 📚 RECOMMENDATIONS
   // -------------------------------------------------------------------
   public async generateRecommendations(categories: string[] = [], authors: string[] = []): Promise<any[]> {
     const recommendations = await Promise.all([
@@ -104,9 +95,11 @@ async findPlaylistsByCategory(category: string): Promise<iPlaylist[]> {
     ]);
 
     const flattenedRecommendations = recommendations.flat();
-    const uniqueBooks = Array.from(new Map(flattenedRecommendations.map(book => [book._id.toString(), book])).values());
+    const uniqueBooks = Array.from(
+      new Map(flattenedRecommendations.map(book => [book._id.toString(), book])).values()
+    );
 
-    uniqueBooks.sort((a, b) => b.view - a.view);        
+    uniqueBooks.sort((a, b) => b.view - a.view);
     return uniqueBooks;
   }
 
@@ -129,7 +122,7 @@ async findPlaylistsByCategory(category: string): Promise<iPlaylist[]> {
   }
 
   // -------------------------------------------------------------------
-  // 🔸 UPDATE ALL PLAYLISTS
+  // 🔄 REFRESH ALL PLAYLISTS
   // -------------------------------------------------------------------
   async updateAllPlaylists(): Promise<void> {
     const playlists = await this.playlistModel.find();

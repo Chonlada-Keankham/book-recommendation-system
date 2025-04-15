@@ -14,9 +14,11 @@ export class Playlist {
   @Prop({ type: [String], default: [] })
   authors: string[];
 
+
   @Prop({ type: [Object], default: [] })
   recommendedBooks: any[];
 }
 
-
 export const PlaylistSchema = SchemaFactory.createForClass(Playlist);
+
+PlaylistSchema.index({ user: 1 });

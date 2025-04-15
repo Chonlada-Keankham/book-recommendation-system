@@ -11,7 +11,9 @@ import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
 export class PlaylistController {
   constructor(private readonly playlistService: PlaylistService) {}
 
-  // 🔹 Create or Update (Popup / ตั้งค่า)
+  // -------------------------------------------------------------------
+  // 🔹 CREATE OR UPSERT PLAYLIST (ตั้งค่าความสนใจของสมาชิก)
+  // -------------------------------------------------------------------
   @Post('/create-playlist')
   @ApiOperation({ summary: 'Create or Update playlist (Popup/Setting)' })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'Playlist created or updated successfully.' })
@@ -24,7 +26,9 @@ export class PlaylistController {
     };
   }
 
-  // 🔹 ดึง Playlist ของ user
+  // -------------------------------------------------------------------
+  // 🔹 READ PLAYLIST (Get by user ID)
+  // -------------------------------------------------------------------
   @Get('/find-playlist/:userId')
   @ApiOperation({ summary: 'Get playlist by user ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Playlist fetched successfully.' })
@@ -37,7 +41,9 @@ export class PlaylistController {
     };
   }
 
-  // 🔹 Update Playlist แบบ Manual
+  // -------------------------------------------------------------------
+  // 🔹 UPDATE PLAYLIST MANUALLY
+  // -------------------------------------------------------------------
   @Patch('/update/:userId')
   @ApiOperation({ summary: 'Update playlist manually' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Playlist updated successfully.' })
