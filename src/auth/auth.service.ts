@@ -25,82 +25,84 @@ export class AuthService {
   async validateMember(loginMemberDto: LoginMemberDto): Promise<iUser> {
     const { email, password } = loginMemberDto;
     const user = await this.userService.findOneByEmail(email);
-  
-    if (!user || !user.password) {  
+
+    if (!user || !user.password) {
       throw new UnauthorizedException('Invalid credentials');
     }
-  
+
     const isPasswordMatching = await bcrypt.compare(password, user.password);
     if (!isPasswordMatching) {
       throw new UnauthorizedException('Invalid credentials');
     }
-  
+
     return user;
   }
-    
+
   async validateEmployee(loginEmployeeDto: LoginEmployeeDto): Promise<iUser> {
     const { employeeId, password } = loginEmployeeDto;
     const user = await this.userService.findByEmployeeId(employeeId);
-  
-    if (!user || user.role !== UserRole.EMPLOYEE) { 
+
+    if (!user || user.role !== UserRole.EMPLOYEE) {
       throw new UnauthorizedException('Only employees can login here');
     }
-  
+
     const isPasswordMatching = await bcrypt.compare(password, user.password);
     if (!isPasswordMatching) {
       throw new UnauthorizedException('Invalid credentials');
     }
-  
+
     return user;
   }
-  
+
   async validateAdmin(loginAdminDto: LoginAdminDto): Promise<iUser> {
     const { username, password } = loginAdminDto;
-    const user = await this.userService.findByAdminId(username);
-  
-    if (!user || user.role !== UserRole.ADMIN) { 
+    const user = await this.userService.findOneByUsername(username);
+
+    if (!user || user.role !== 'admin') {
       throw new UnauthorizedException('Only admins can login here');
     }
-  
+
     const isPasswordMatching = await bcrypt.compare(password, user.password);
     if (!isPasswordMatching) {
       throw new UnauthorizedException('Invalid credentials');
     }
-  
+
     return user;
   }
 
+  
+
   // ---------------------- LOGIN / REFRESH ----------------------
-async login(user: iUser): Promise<{
-  access_token: string;
-  refresh_token: string;
-}> {
-  const payload = { 
-    id: user._id,          
-    email: user.email,
-    role: user.role,
-    sub: user._id          
-  };
+  async login(user: iUser): Promise<{
+    access_token: string;
+    refresh_token: string;
+  }> {
+    const payload = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      sub: user._id
+    };
 
-  const secret = this.configService.get<string>('JWT_SECRET');
+    const secret = this.configService.get<string>('JWT_SECRET');
 
-  const accessToken = this.jwtService.sign(payload, {
-    expiresIn: '2h',
-    secret,
-  });
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: '2h',
+      secret,
+    });
 
-  const refreshToken = this.jwtService.sign({ sub: user._id }, {
-    expiresIn: '7d',
-    secret,
-  });
+    const refreshToken = this.jwtService.sign({ sub: user._id }, {
+      expiresIn: '7d',
+      secret,
+    });
 
-  await this.userService.updateUserRefreshToken(user._id, refreshToken);
+    await this.userService.updateUserRefreshToken(user._id, refreshToken);
 
-  return {
-    access_token: accessToken,
-    refresh_token: refreshToken,
-  };
-}
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    };
+  }
 
   async refreshAccessToken(refreshTokenDto: RefreshTokenDto): Promise<{ access_token: string }> {
     try {
@@ -176,5 +178,5 @@ async login(user: iUser): Promise<{
     await this.userService.updateUserRefreshToken(userId, null);
   }
 
-  
+
 }

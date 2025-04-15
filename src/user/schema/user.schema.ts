@@ -95,11 +95,11 @@ export class User {
   deleted_at?: Date;
 
   @Prop({
-    required: function () { return this.role === UserRole.EMPLOYEE },
+    required: function () { return this.role === UserRole.EMPLOYEE }, 
     unique: true,
   })
   employeeId?: string;
-
+  
   @Prop({ default: null })
   profileImage?: string;
 

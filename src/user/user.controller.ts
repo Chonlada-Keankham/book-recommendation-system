@@ -18,7 +18,8 @@ import { CreateAdminDto } from './dto/register-admin-user.dto';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) { }
-      
+
+
   // ---------- Register ----------
   @Post('/register-member')
   @ApiOperation({ summary: 'Register new member' })
