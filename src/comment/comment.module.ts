@@ -8,12 +8,16 @@ import { BookModule } from 'src/book/book.module';
 
 @Module({
   imports: [
-    forwardRef(() => UserModule),  
-    BookModule,  
-    MongooseModule.forFeature([{ name: 'Comment', schema: CommentSchema }]), 
+    forwardRef(() => UserModule),
+    BookModule,
+    MongooseModule.forFeature([{ name: 'Comment', schema: CommentSchema }]),
   ],
   controllers: [CommentController],
   providers: [CommentService],
-  exports: [CommentService],  
+  exports: [
+    CommentService,
+    MongooseModule
+
+  ],
 })
-export class CommentModule {}
+export class CommentModule { }

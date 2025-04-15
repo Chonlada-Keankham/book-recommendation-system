@@ -6,11 +6,13 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { CreateReplyDto } from './dto/reply-comment.dto';
 import { UpdateReplyDto } from './dto/up-reply-comment.dto';
+import { iComment } from './interface/comment.interface';
 
 @Injectable()
 export class CommentService {
   constructor(
-    @InjectModel(Comment.name) private readonly commentModel: Model<CommentDocument>,
+    @InjectModel('Comment') 
+    private readonly commentModel: Model<iComment>,
   ) { }
 
   // 🔸 Create Comment
@@ -29,7 +31,7 @@ export class CommentService {
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
 
-    if (comment.userId.toString() !== userId.toString()) {
+    if (comment.user_id.toString() !== userId.toString()) {
       throw new ForbiddenException('You can only edit your own comment');
     }
 
@@ -43,7 +45,7 @@ export class CommentService {
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
 
-    if (comment.userId.toString() !== userId.toString()) {
+    if (comment.user_id.toString() !== userId.toString()) {
       throw new ForbiddenException('You can only delete your own comment');
     }
 
@@ -56,10 +58,10 @@ export class CommentService {
     if (!comment) throw new NotFoundException('Comment not found');
 
     comment.replies.push({
-      userId: userId,
+      user_id: userId,
       content: createReplyDto.content.trim(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      created_at: new Date(),
+      updated_at: new Date(),
     });
 
     await comment.save();
@@ -74,12 +76,12 @@ export class CommentService {
     const reply = comment.replies.find(r => r._id.toString() === replyId);
     if (!reply) throw new NotFoundException('Reply not found');
 
-    if (reply.userId.toString() !== userId.toString()) {
+    if (reply.user_id.toString() !== userId.toString()) {
       throw new ForbiddenException('You can only edit your own reply');
     }
 
     reply.content = updateReplyDto.content.trim();
-    reply.updatedAt = new Date();
+    reply.updated_at = new Date();
 
     await comment.save();
     return comment;
@@ -93,7 +95,7 @@ export class CommentService {
     const replyIndex = comment.replies.findIndex(r => r._id.toString() === replyId);
     if (replyIndex === -1) throw new NotFoundException('Reply not found');
 
-    if (comment.replies[replyIndex].userId.toString() !== userId.toString()) {
+    if (comment.replies[replyIndex].user_id.toString() !== userId.toString()) {
       throw new ForbiddenException('You can only delete your own reply');
     }
 
