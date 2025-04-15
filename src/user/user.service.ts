@@ -2,8 +2,7 @@ import { PlaylistService } from 'src/playlist/playlist.service';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { iUser } from './interface/user.interface';
-import { Model, Types } from 'mongoose';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { RegisterUserDto } from './dto/register-member-user.dto';
 import { Status } from 'src/enum/status.enum';
@@ -12,6 +11,7 @@ import { CreateEmployeeDto } from './dto/register-employee-user.dto';
 import { iPlaylist } from 'src/playlist/interface/playlist.interface';
 import { UpdateProfileDto } from './dto/update-profile-user.dto';
 import { UserDocument } from './schema/user.schema';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {

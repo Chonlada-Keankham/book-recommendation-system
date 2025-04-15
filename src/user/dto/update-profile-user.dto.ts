@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsOptional, IsString, MinLength, Matches, Length } from 'class-validator';
+import { Match } from 'src/decorator/match.decorator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -28,7 +29,7 @@ export class UpdateProfileDto {
   username?: string;
 
   @ApiProperty({ type: 'string', format: 'binary', required: false })
-  profileImage?: any; 
+  profileImage?: any;
 
   @IsOptional()
   @IsString()
@@ -43,5 +44,6 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   @Transform(({ value }) => value?.trim())
+  @Match('password', { message: 'Passwords do not match.' }) 
   confirmPassword?: string;
 }
