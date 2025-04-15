@@ -135,6 +135,27 @@ export class UserController {
     };
   }
 
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @Patch('/reset-password/:employeeId')
+  @ApiOperation({ summary: 'Reset employee password by admin' })
+  async resetEmployeePassword(
+    @Param('employeeId') employeeId: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    const user = await this.userService.resetEmployeePasswordByAdmin(employeeId, newPassword);
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Password reset successfully',
+      data: {
+        employeeId: user.employeeId,
+        username: user.username,
+        email: user.email,
+      },
+    };
+  }
+
   // ---------- Delete ----------
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
@@ -150,7 +171,7 @@ export class UserController {
   }
 
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN) 
+  @Roles(UserRole.ADMIN)
   @Delete('/delete-one/:id')
   @ApiOperation({ summary: 'Delete user permanently' })
   @HttpCode(HttpStatus.NO_CONTENT)

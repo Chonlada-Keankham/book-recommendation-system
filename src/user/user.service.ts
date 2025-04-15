@@ -31,7 +31,7 @@ export class UserService {
     userId?: string
   ): Promise<void> {
     const filter: any[] = [];
-  
+
     if (updateUserDto.email) {
       filter.push({ email: updateUserDto.email });
     }
@@ -41,22 +41,22 @@ export class UserService {
     if (updateUserDto.phone) {
       filter.push({ phone: updateUserDto.phone });
     }
-  
+
     if (filter.length === 0) return;
-  
+
     const condition: any = { $or: filter };
-  
+
     if (userId) {
       condition._id = { $ne: userId };
     }
-      
+
     const existingUser = await this.userModel.findOne(condition);
-  
+
     if (existingUser) {
       throw new ConflictException('Email, username, or phone number already exists.');
     }
   }
-  
+
   async hashPassword(password: string): Promise<string> {
     const saltRounds = 10;
     return await bcrypt.hash(password, saltRounds);
@@ -110,6 +110,7 @@ export class UserService {
 
   async registerEmployee(createEmployeeDto: CreateEmployeeDto): Promise<{ user: iUser; password: string }> {
     await this.checkUserExists(createEmployeeDto);
+
     const randomPassword = await this.generateRandomPassword();
     const hashedPassword = await this.hashPassword(randomPassword);
     const username = createEmployeeDto.username || `${createEmployeeDto.first_name.toLowerCase()}${createEmployeeDto.last_name.toLowerCase()}`;
@@ -118,13 +119,14 @@ export class UserService {
     const newUser = new this.userModel({
       ...createEmployeeDto,
       password: hashedPassword,
-      username: username,
+      username,
       role: UserRole.EMPLOYEE,
-      employeeId: employeeId,
+      employeeId,
       deleted_at: null,
     });
 
     const createdUser = await newUser.save();
+
     return { user: createdUser, password: randomPassword };
   }
 
@@ -278,17 +280,36 @@ export class UserService {
 
   async deleteById(userId: string): Promise<boolean> {
     const user = await this.userModel.findById(userId);
-  
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
-  
+
     const result = await this.userModel.deleteOne({ _id: userId });
-  
+
     if (result.deletedCount === 0) {
       throw new NotFoundException('User could not be deleted or already deleted.');
     }
-  
+
     return true;
   }
+
+  // -------------------------------------------------------------------
+  // 🔸 Reset
+  // -------------------------------------------------------------------
+
+  async resetEmployeePasswordByAdmin(employeeId: string, newPassword: string): Promise<iUser> {
+    const user = await this.userModel.findOne({ employeeId, role: UserRole.EMPLOYEE });
+
+    if (!user) {
+      throw new NotFoundException(`Employee with ID ${employeeId} not found.`);
+    }
+
+    const hashedPassword = await this.hashPassword(newPassword);
+    user.password = hashedPassword;
+    await user.save();
+
+    return user;
   }
+
+}
