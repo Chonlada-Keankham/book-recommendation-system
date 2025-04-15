@@ -22,6 +22,12 @@ export class PlaylistService {
     return this.playlistModel.findOne({ user: userId });
   }
 
+async findPlaylistsByCategory(category: string): Promise<iPlaylist[]> {
+  return this.playlistModel.find({
+    categories: category,
+  }).lean();
+}
+
   // -------------------------------------------------------------------
   // 🔸 CREATE
   // -------------------------------------------------------------------
