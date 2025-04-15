@@ -4,10 +4,12 @@ import { BookService } from './book.service';
 import { BookController } from './book.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BookSchema } from './schema/book.schema';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
     forwardRef(() => PlaylistModule),
+    forwardRef(() => NotificationModule),
 
     MongooseModule.forFeature([{ name: 'Book', schema: BookSchema }]),
   ],

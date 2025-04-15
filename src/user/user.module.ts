@@ -6,11 +6,13 @@ import { UserSchema } from './schema/user.schema';
 import { AuthModule } from 'src/auth/auth.module';
 import { CommentModule } from 'src/comment/comment.module';
 import { PlaylistModule } from 'src/playlist/playlist.module';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
     forwardRef(() => AuthModule),
     forwardRef(() => PlaylistModule),
+    forwardRef(() => NotificationModule),
     CommentModule,
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
   ],

@@ -5,17 +5,24 @@ import { PlaylistService } from 'src/playlist/playlist.service';
 import { iNotification } from './interface/notification.interface';
 import { iBook } from 'src/book/interface/book.interface';
 import { UserService } from 'src/user/user.service';
+import { CommentService } from 'src/comment/comment.service';
 @Injectable()
 export class NotificationService {
   constructor(
-    @InjectModel('Notification')
-    private readonly notificationModel: Model<iNotification>,
+      @InjectModel('Notification')
+      private readonly notificationModel: Model<iNotification>,
+    
+      @Inject(forwardRef(() => PlaylistService))
+      private readonly playlistService: PlaylistService,
+    
+      @Inject(forwardRef(() => UserService)) 
+      private readonly userService: UserService,
+    
+      @Inject(forwardRef(() => CommentService)) 
+      private readonly commentService: CommentService,
+    ) {}
 
-    @Inject(forwardRef(() => PlaylistService))
-    private readonly playlistService: PlaylistService,
-    private readonly userService: UserService,
-  ) {}
-
+    
 // 🔔 แจ้งเตือนเมื่อมีหนังสือใหม่ (เฉพาะสมาชิกที่สนใจหมวดนี้)
 async notifyNewBookToMembers(book: iBook): Promise<void> {
   const playlists = await this.playlistService.findPlaylistsByCategory(book.category);
