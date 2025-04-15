@@ -29,11 +29,17 @@ export class User {
   })
   last_name: string;
 
-@Prop({
-  required: function() { return this.role !== UserRole.EMPLOYEE }, 
-  validate: /^\d{10}$/,
-})
-phone?: string;
+  @Prop({
+    required: false,
+    validate: {
+      validator: function (v: string) {
+        if (!v) return true; 
+        return /^0\d{9}$/.test(v); 
+      },
+      message: (props) => `${props.value} is not a valid 10-digit Thai phone number.`,
+    },
+  })
+  phone?: string;
 
   @Prop({
     required: true,
@@ -79,28 +85,28 @@ phone?: string;
   username: string;
 
 
-@Prop({ enum: UserRole, required: true, default: UserRole.MEMBER })
-role: UserRole;
+  @Prop({ enum: UserRole, required: true, default: UserRole.MEMBER })
+  role: UserRole;
 
-@Prop({ enum: Status, default: Status.ACTIVE })
-status: Status;
+  @Prop({ enum: Status, default: Status.ACTIVE })
+  status: Status;
 
-@Prop({ type: Date, default: null })
-deleted_at ?: Date; 
+  @Prop({ type: Date, default: null })
+  deleted_at?: Date;
 
-@Prop({
-  required: function() { return this.role === UserRole.EMPLOYEE },
-  unique: true,
-})
-employeeId?: string;
+  @Prop({
+    required: function () { return this.role === UserRole.EMPLOYEE },
+    unique: true,
+  })
+  employeeId?: string;
 
-@Prop({ default: null })
-profileImage?: string;
+  @Prop({ default: null })
+  profileImage?: string;
 
-@Prop()
-refreshToken?: string;
+  @Prop()
+  refreshToken?: string;
+
 }
-
 export type UserDocument = User & Document;
 
 export const UserSchema = SchemaFactory.createForClass(User);

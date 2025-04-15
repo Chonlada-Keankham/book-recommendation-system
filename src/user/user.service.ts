@@ -12,6 +12,7 @@ import { iPlaylist } from 'src/playlist/interface/playlist.interface';
 import { UpdateProfileDto } from './dto/update-profile-user.dto';
 import { UserDocument } from './schema/user.schema';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateAdminDto } from './dto/register-admin-user.dto';
 
 @Injectable()
 export class UserService {
@@ -21,7 +22,7 @@ export class UserService {
     private readonly userModel: Model<iUser>,
     private readonly playlistService: PlaylistService,
   ) { }
-
+    
   // -------------------------------------------------------------------
   // 🔸 UTILITIES
   // -------------------------------------------------------------------
@@ -110,12 +111,23 @@ export class UserService {
 
   async registerEmployee(createEmployeeDto: CreateEmployeeDto): Promise<{ user: iUser; password: string }> {
     await this.checkUserExists(createEmployeeDto);
-
+  
     const randomPassword = await this.generateRandomPassword();
     const hashedPassword = await this.hashPassword(randomPassword);
-    const username = createEmployeeDto.username || `${createEmployeeDto.first_name.toLowerCase()}${createEmployeeDto.last_name.toLowerCase()}`;
+  
+    let empNumber = await this.userModel.countDocuments({ role: UserRole.EMPLOYEE });
+    let username = '';
+    let isUnique = false;
+  
+    while (!isUnique) {
+      empNumber++;
+      username = `emp${empNumber}`;
+      const exists = await this.userModel.findOne({ username });
+      if (!exists) isUnique = true;
+    }
+  
     const employeeId = await this.generateEmployeeId();
-
+  
     const newUser = new this.userModel({
       ...createEmployeeDto,
       password: hashedPassword,
@@ -124,15 +136,31 @@ export class UserService {
       employeeId,
       deleted_at: null,
     });
-
+  
     const createdUser = await newUser.save();
-
+  
     return { user: createdUser, password: randomPassword };
   }
-
+    
   // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
+// ใน user.service.ts
+
+async findByAdminId(adminId: string): Promise<iUser> {
+  const user = await this.userModel.findOne({
+    _id: adminId,
+    role: UserRole.ADMIN,
+    status: { $ne: Status.DELETED },
+    deleted_at: null,
+  }).exec();
+
+  if (!user) {
+    throw new NotFoundException(`Admin with ID ${adminId} not found or has been deleted.`);
+  }
+
+  return user;
+}
 
   async findByEmployeeId(employeeId: string): Promise<iUser> {
     return this.userModel.findOne({

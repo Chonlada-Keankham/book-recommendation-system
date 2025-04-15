@@ -13,6 +13,7 @@ import { LoginMemberDto } from './dto/login-member-auth.dto';
 import { LoginEmployeeDto } from './dto/login-employee-auth.dto';
 import { RolesGuard } from './guard/role.guard';
 import { Roles } from 'src/decorator/roles.decorator';
+import { LoginAdminDto } from './dto/login-admin-auth.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -54,6 +55,18 @@ export class AuthController {
     return {
       statusCode: HttpStatus.OK,
       message: 'Employee login successful',
+      data: tokens,
+    };
+  }
+
+  @Post('/login-admin')
+  @ApiOperation({ summary: 'Admin login only' })
+  async loginAdmin(@Body() loginAdminDto: LoginAdminDto) {
+    const user = await this.authService.validateAdmin(loginAdminDto);
+    const tokens = await this.authService.login(user);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Admin login successful',
       data: tokens,
     };
   }

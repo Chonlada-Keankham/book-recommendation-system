@@ -11,6 +11,7 @@ import { ResetPasswordDto } from './dto/reset-pass-auth.dto';
 import { Status } from 'src/enum/status.enum';
 import { UserRole } from 'src/enum/user-role.enum';
 import * as bcrypt from 'bcryptjs';
+import { LoginAdminDto } from './dto/login-admin-auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -53,6 +54,22 @@ export class AuthService {
     return user;
   }
   
+  async validateAdmin(loginAdminDto: LoginAdminDto): Promise<iUser> {
+    const { username, password } = loginAdminDto;
+    const user = await this.userService.findByAdminId(username);
+  
+    if (!user || user.role !== UserRole.ADMIN) { 
+      throw new UnauthorizedException('Only admins can login here');
+    }
+  
+    const isPasswordMatching = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatching) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+  
+    return user;
+  }
+
   // ---------------------- LOGIN / REFRESH ----------------------
 async login(user: iUser): Promise<{
   access_token: string;
@@ -157,6 +174,7 @@ async login(user: iUser): Promise<{
 
   async logout(userId: string): Promise<void> {
     await this.userService.updateUserRefreshToken(userId, null);
-
   }
+
+  
 }

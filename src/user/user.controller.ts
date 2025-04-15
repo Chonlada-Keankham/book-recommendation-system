@@ -12,13 +12,13 @@ import { UserInterestDto } from './dto/interest-user.dto';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guard/role.guard';
 import { UserRole } from 'src/enum/user-role.enum';
+import { CreateAdminDto } from './dto/register-admin-user.dto';
 
 @ApiTags('User')
-@UseGuards(JwtAuthGuard)
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) { }
-
+      
   // ---------- Register ----------
   @Post('/register-member')
   @ApiOperation({ summary: 'Register new member' })
@@ -31,6 +31,8 @@ export class UserController {
     };
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Post('/register-employee')
   @ApiOperation({ summary: 'Register new employee' })
   async registerEmployee(@Body() createEmployeeDto: CreateEmployeeDto) {
@@ -56,6 +58,7 @@ export class UserController {
     };
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('/find-email/:email')
   @ApiOperation({ summary: 'Get user by email' })
   async findOneByEmail(@Param('email') email: string) {
@@ -88,6 +91,7 @@ export class UserController {
   }
 
   // ---------- Update ----------
+  @UseGuards(JwtAuthGuard)
   @Put('/update-interests/:id')
   @ApiOperation({ summary: 'Update user interests' })
   async updateInterests(
@@ -107,6 +111,7 @@ export class UserController {
   }
 
   // ---------- Upload ----------
+  @UseGuards(JwtAuthGuard)
   @Put('/update-profile/:id')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Update user profile and upload profile image' })
