@@ -1,3 +1,4 @@
+import { NotificationModule } from 'src/notification/notification.module';
 import { CommentService } from './comment.service';
 import { CommentController } from './comment.controller';
 import { CommentSchema } from './schema/comment.schema';
@@ -10,6 +11,7 @@ import { BookModule } from 'src/book/book.module';
   imports: [
     forwardRef(() => UserModule),
     BookModule,
+    forwardRef(() => NotificationModule),
     MongooseModule.forFeature([{ name: 'Comment', schema: CommentSchema }]),
   ],
   controllers: [CommentController],

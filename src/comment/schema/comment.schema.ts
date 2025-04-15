@@ -19,8 +19,8 @@ export class Comment {
       {
         userId: { type: Types.ObjectId, ref: 'User', required: true },
         content: { type: String, required: true },
-        createdAt: { type: Date, default: Date.now },
-        updatedAt: { type: Date },
+        created_at: { type: Date, default: Date.now },
+        updated_at: { type: Date },
       },
     ],
     default: [],

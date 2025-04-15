@@ -1,11 +1,13 @@
-import { IsMongoId, IsNotEmpty, IsString } from 'class-validator';
+import { Transform } from "class-transformer";
+import { IsMongoId, IsNotEmpty, IsString } from "class-validator";
 
 export class CreateCommentDto {
   @IsMongoId({ message: 'Book ID must be a valid MongoDB ObjectId.' })
   @IsNotEmpty()
-  bookId: string;     
+  bookId: string;
 
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => value?.trim())
   content: string;
 }
