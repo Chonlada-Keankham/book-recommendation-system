@@ -75,20 +75,21 @@ export class BookService {
       $or: [{ book_th: createBookDto.book_th }, { book_en: createBookDto.book_en }],
     });
     if (existing) throw new ConflictException('Book already exists.');
-
+  
     const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
     const imgPath = file ? `${BACKEND_URL}/uploads/book/${file.filename}` : '';
-
+  
     const newBook = new this.bookModel({
       ...createBookDto,
       img: imgPath,
       short_description: createBookDto.short_description || '',
       deleted_at: null,
     });
-
+  
     const savedBook = await newBook.save();
+  
     await this.notificationService.notifyNewBookToMembers(savedBook);
-
+  
     return savedBook;
   }
 
@@ -362,7 +363,6 @@ export class BookService {
       deleted_at: null,
     })
       .sort({ view: -1 })
-      .limit(topN)
       .select('book_th book_en img author category view short_description')
       .lean();
 

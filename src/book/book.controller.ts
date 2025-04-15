@@ -52,7 +52,7 @@ export class BookController {
     return {
       statusCode: HttpStatus.OK,
       message: 'Book found',
-      books: book,
+      book: book,
     };
   }
 
@@ -161,7 +161,6 @@ export class BookController {
 
   @Get('/recommendations/daily')
   async getDailyRecommendations(
-    @Query('limit') limit = '10'
   ) {
     const books = await this.bookService.getDailyRecommendedBooks();
 

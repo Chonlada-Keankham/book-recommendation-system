@@ -5,12 +5,13 @@ import { BookController } from './book.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BookSchema } from './schema/book.schema';
 import { NotificationModule } from 'src/notification/notification.module';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
     forwardRef(() => PlaylistModule),
     forwardRef(() => NotificationModule),
-
+    RedisModule,
     MongooseModule.forFeature([{ name: 'Book', schema: BookSchema }]),
   ],
 
