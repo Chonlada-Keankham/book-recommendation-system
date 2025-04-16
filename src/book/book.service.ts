@@ -1,5 +1,5 @@
 import { InjectModel } from '@nestjs/mongoose';
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, Put, UploadedFile, UseInterceptors, forwardRef } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { Model, Types } from 'mongoose';
 import { iBook } from './interface/book.interface';
 import { CreateBookDto } from './dto/create-book.dto';

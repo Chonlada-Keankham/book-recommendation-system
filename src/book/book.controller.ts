@@ -1,8 +1,8 @@
 import { extname } from 'path';
 import { BookCategory } from 'src/enum/book-category.enum';
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query, Req, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query, Req, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { BookService } from './book.service';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateBookDto } from './dto/create-book.dto';
 import { diskStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -11,6 +11,7 @@ import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guard/role.guard';
 import { Roles } from 'src/decorator/roles.decorator';
 import { UserRole } from 'src/enum/user-role.enum';
+import { UpdateBookDto } from './dto/update-book.dto';
 
 @ApiTags('Book')
 @Controller('book')
@@ -229,6 +230,20 @@ export class BookController {
     };
   }
 
+  // ---------- Update Book ----------
+  @Patch('update-book/:id')
+  async updateBook(
+    @Param('id') bookId: string,
+    @Body() updateBookDto: UpdateBookDto,
+  ) {
+    const updatedBook = await this.bookService.updateBook(bookId, updateBookDto);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Book updated successfully',
+      data: updatedBook,
+    };
+  }
+  
   // ---------- Upload ----------
   @Put('/upload-cover/:id')
   @UseInterceptors(FileInterceptor('file', {
