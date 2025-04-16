@@ -1,5 +1,4 @@
 import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
@@ -7,6 +6,7 @@ import { CreateReplyDto } from './dto/reply-comment.dto';
 import { UpdateReplyDto } from './dto/up-reply-comment.dto';
 import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { CommentService } from './comment.service';
 
 @ApiTags('Comment')
 @Controller('comment')
@@ -17,16 +17,16 @@ export class CommentController {
   @UseGuards(JwtAuthGuard)
   @Post('/create-comment')
   async createComment(@Body() createCommentDto: CreateCommentDto, @Req() req: Request) {
-    const userId = req.user['_id'];
-    const comment = await this.commentService.createComment(createCommentDto, userId);
+    const user = req.user['_id'];
+    const comment = await this.commentService.createComment(createCommentDto, user);
     return {
       statusCode: HttpStatus.CREATED,
       message: 'Comment created successfully',
       data: {
         ...comment,
         _id: comment._id.toString(),
-        bookId: comment.bookId.toString(),
-        userId: comment.userId.toString(),
+        book: comment.bookId.toString(),
+        user: comment.userId.toString(),
       },
     };
   }
@@ -37,16 +37,16 @@ export class CommentController {
   @ApiOperation({ summary: 'Update a comment' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Comment updated successfully.' })
   async updateComment(@Param('commentId') commentId: string, @Body() updateCommentDto: UpdateCommentDto, @Req() req: Request) {
-    const userId = req.user['_id'];
-    const comment = await this.commentService.updateComment(commentId, updateCommentDto, userId);
+    const user = req.user['_id'];
+    const comment = await this.commentService.updateComment(commentId, updateCommentDto, user);
     return {
       statusCode: HttpStatus.CREATED,
       message: 'Comment created successfully',
       data: {
         ...comment.toObject(),
         _id: comment._id.toString(),
-        bookId: comment.bookId.toString(),
-        userId: comment.userId.toString(),
+        book: comment.book.toString(),
+        user: comment.user.toString(),
       },
     };
   }
@@ -57,8 +57,8 @@ export class CommentController {
   @ApiOperation({ summary: 'Delete a comment' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Comment deleted successfully.' })
   async deleteComment(@Param('commentId') commentId: string, @Req() req: Request) {
-    const userId = req.user['_id'];
-    await this.commentService.deleteComment(commentId, userId);
+    const user = req.user['_id'];
+    await this.commentService.deleteComment(commentId, user);
     return {
       statusCode: HttpStatus.OK,
       message: 'Comment deleted successfully',
@@ -72,15 +72,15 @@ export class CommentController {
   @ApiOperation({ summary: 'Reply to a comment' })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'Reply created successfully.' })
   async createReply(@Param('commentId') commentId: string, @Body() createReplyDto: CreateReplyDto, @Req() req: Request) {
-    const userId = req.user['_id'];
-    const { data: replyData } = await this.commentService.createReply(commentId, createReplyDto, userId);
+    const user = req.user['_id'];
+    const { data: replyData } = await this.commentService.createReply(commentId, createReplyDto, user);
 
     return {
       statusCode: HttpStatus.CREATED,
       message: 'Reply created successfully',
       data: {
         _id: replyData._id?.toString(),
-        userId: replyData.userId.toString(),
+        user: replyData.user.toString(),
         content: replyData.content,
         createdAt: replyData.created_at,
         updatedAt: replyData.updated_at,
@@ -100,8 +100,8 @@ export class CommentController {
     @Body() updateReplyDto: UpdateReplyDto,
     @Req() req: Request
   ) {
-    const userId = req.user['_id'];
-    const { data: replyData } = await this.commentService.updateReply(commentId, replyId, updateReplyDto, userId);
+    const user = req.user['_id'];
+    const { data: replyData } = await this.commentService.updateReply(commentId, replyId, updateReplyDto, user);
 
     return {
       statusCode: HttpStatus.OK,
@@ -109,7 +109,7 @@ export class CommentController {
       data: {
         ...replyData,
         _id: replyData._id?.toString(),
-        userId: replyData.userId.toString(),
+        user: replyData.user.toString(),
       },
     };
   }
@@ -120,8 +120,8 @@ export class CommentController {
   @ApiOperation({ summary: 'Delete a reply' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Reply deleted successfully.' })
   async deleteReply(@Param('commentId') commentId: string, @Param('replyId') replyId: string, @Req() req: Request) {
-    const userId = req.user['_id'];
-    await this.commentService.deleteReply(commentId, replyId, userId);
+    const user = req.user['_id'];
+    await this.commentService.deleteReply(commentId, replyId, user);
     return {
       statusCode: HttpStatus.OK,
       message: 'Reply deleted successfully',

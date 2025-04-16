@@ -1,7 +1,10 @@
+// reply.interface.ts
+import { Types } from 'mongoose';
+
 export interface iReply {
-  _id?: string;             
-  userId: string;
+  _id?: Types.ObjectId;
+  user: Types.ObjectId | { _id: Types.ObjectId; username: string };
   content: string;
-  created_at?: Date;
+  created_at: Date;
   updated_at?: Date;
 }
