@@ -12,7 +12,7 @@ export class PlaylistController {
   constructor(private readonly playlistService: PlaylistService) {}
 
   // -------------------------------------------------------------------
-  // 🔹 CREATE OR UPSERT PLAYLIST (ตั้งค่าความสนใจของสมาชิก)
+  // 🔹 CREATE OR UPSERT PLAYLIST 
   // -------------------------------------------------------------------
   @Post('/create-playlist')
   async createOrUpdatePlaylist(@Body() createPlaylistDto: CreatePlaylistDto) {
