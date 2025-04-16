@@ -54,50 +54,69 @@ export class CommentService {
     return await comment.deleteOne();
   }
 
-  // ---------- Create Reply ----------
-  async createReply(commentId: string, createReplyDto: CreateReplyDto, userId: string) {
-    const reply = await this.createReply(commentId, createReplyDto, userId);
+// ---------- Create Reply ----------
+async createReply(
+  commentId: string,
+  createReplyDto: CreateReplyDto,
+  userId: string,
+) {
+  const comment = await this.commentModel.findById(commentId);
+  if (!comment) throw new NotFoundException('Comment not found');
 
-    // ดึง comment เพื่อตรวจสอบว่า original user เป็นใคร
-    const comment = await this.findCommentById(commentId);
-    if (comment.userId.toString() !== userId) {
-      await this.notificationService.notifyReply(comment.userId.toString(), comment.bookId.toString(), 'ชื่อหนังสือใส่ตรงนี้ถ้าจำเป็น');
-      comment.replies.push({
-        user_id: userId, // ✅ ใช้ userId
-        content: createReplyDto.content.trim(),
-        created_at: new Date(),
-        updated_at: new Date(),
-      });
-      
-      await this.notificationService.notifyReply(comment.userId.toString(), comment.bookId.toString(), 'ใส่ชื่อหนังสือถ้ามี');
+  const newReply = {
+    _id: new Types.ObjectId().toString(), 
+    userId: new Types.ObjectId(userId),
+    content: createReplyDto.content.trim(),
+    created_at: new Date(),
+    updated_at: new Date(),
+  };
+  
+  comment.replies.push(newReply);
+  await comment.save();
 
-    }
-    
-    return {
-      statusCode: HttpStatus.CREATED,
-      message: 'Reply created successfully',
-      data: reply,
-    };
+  if (comment.userId.toString() !== userId.toString()) {
+    await this.notificationService.notifyReply(
+      comment.userId.toString(),
+      comment.bookId.toString(),
+      'ชื่อหนังสือใส่ตรงนี้ถ้าจำเป็น'
+    );
   }
-      
-  // ---------- Update Reply ----------
-  async updateReply(commentId: string, replyId: string, updateReplyDto: UpdateReplyDto, userId: string) {
-    const comment = await this.commentModel.findById(commentId);
-    if (!comment) throw new NotFoundException('Comment not found');
 
-    const reply = comment.replies.find(r => r._id.toString() === replyId);
-    if (!reply) throw new NotFoundException('Reply not found');
+  return {
+    statusCode: HttpStatus.CREATED,
+    message: 'Reply created successfully',
+    data: newReply,
+  };
+}
 
-    if (reply.user_id.toString() !== userId.toString()) {
-      throw new ForbiddenException('You can only edit your own reply');
-    }
-    
-    reply.content = updateReplyDto.content.trim();
-    reply.updated_at = new Date();
-    
-    await comment.save();
-    return comment;
+// ---------- Update Reply ----------
+async updateReply(
+  commentId: string,
+  replyId: string,
+  updateReplyDto: UpdateReplyDto,
+  userId: string
+) {
+  const comment = await this.commentModel.findById(commentId);
+  if (!comment) throw new NotFoundException('Comment not found');
+
+  const reply = comment.replies.find(r => r._id?.toString() === replyId);
+  if (!reply) throw new NotFoundException('Reply not found');
+
+  if (reply.userId.toString() !== userId.toString()) {
+    throw new ForbiddenException('You can only edit your own reply');
   }
+
+  reply.content = updateReplyDto.content.trim();
+  reply.updated_at = new Date();
+
+  await comment.save();
+
+  return {
+    statusCode: HttpStatus.OK,
+    message: 'Reply updated successfully',
+    data: reply,
+  };
+}
 
   // ---------- Delete Reply ----------
   async deleteReply(commentId: string, replyId: string, userId: string) {
@@ -107,7 +126,7 @@ export class CommentService {
     const replyIndex = comment.replies.findIndex(r => r._id.toString() === replyId);
     if (replyIndex === -1) throw new NotFoundException('Reply not found');
 
-    if (comment.replies[replyIndex].user_id.toString() !== userId.toString()) {
+    if (comment.replies[replyIndex].userId.toString() !== userId.toString()) {
       throw new ForbiddenException('You can only delete your own reply');
     }
     

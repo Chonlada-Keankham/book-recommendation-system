@@ -1,7 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-export type CommentDocument = Comment & Document;
 
 @Schema({ timestamps: true })
 export class Comment {
@@ -25,7 +24,13 @@ export class Comment {
     ],
     default: [],
   })
-  replies: Types.Array<any>;
+  replies: {
+    userId: Types.ObjectId;
+    content: string;
+    created_at: Date;
+    updated_at?: Date;
+  }[];
 }
 
+export type CommentDocument = Comment & Document;
 export const CommentSchema = SchemaFactory.createForClass(Comment);
