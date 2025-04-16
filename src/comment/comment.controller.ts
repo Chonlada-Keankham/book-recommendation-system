@@ -23,7 +23,7 @@ export class CommentController {
       statusCode: HttpStatus.CREATED,
       message: 'Comment created successfully',
       data: {
-        ...comment.toObject(),
+        ...comment,
         _id: comment._id.toString(),
         bookId: comment.bookId.toString(),
         userId: comment.userId.toString(),

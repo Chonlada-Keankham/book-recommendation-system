@@ -26,15 +26,25 @@ export class CommentService {
   ) {}
 
   // 🔸 Create Comment
-  async createComment(createCommentDto: CreateCommentDto, userId: string) {
-    const comment = new this.commentModel({
-      bookId: new Types.ObjectId(createCommentDto.bookId),
-      userId: new Types.ObjectId(userId),
-      content: createCommentDto.content.trim(),
-      replies: [],
-    });
-    return await comment.save();
-  }
+// comment.service.ts
+async createComment(createCommentDto: CreateCommentDto, userId: string) {
+  const comment = new this.commentModel({
+    bookId: createCommentDto.bookId,
+    userId,
+    content: createCommentDto.content.trim(),
+    replies: [],
+  });
+  const saved = await comment.save();
+  return {
+    _id: saved._id.toString(),
+    bookId: saved.bookId.toString(),
+    userId: saved.userId.toString(),
+    content: saved.content,
+    replies: [],
+    createdAt: saved.created_at,
+    updatedAt: saved.updated_at,
+  };
+}
 
   // 🔸 Create Reply
   async createReply(
