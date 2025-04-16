@@ -50,22 +50,6 @@ export class BookService {
       .exec();
   }
 
-  async updateAllShortDescriptions(shortDescription: string): Promise<any> {
-    const result = await this.bookModel.updateMany(
-      {
-        status: { $ne: Status.DELETED },
-        deleted_at: null,
-      },
-      {
-        $set: {
-          short_description: shortDescription,
-        },
-      },
-    );
-    if (result.modifiedCount === 0)
-      throw new NotFoundException('No books were updated');
-    return result;
-  }
 
   // -------------------------------------------------------------------
   // 🔸 CREATE
@@ -76,8 +60,7 @@ export class BookService {
     });
     if (existing) throw new ConflictException('Book already exists.');
   
-    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-    const imgPath = file ? `${BACKEND_URL}/uploads/book/${file.filename}` : '';
+    const imgPath = file ? `/uploads/book/${file.filename}` : '';
   
     const newBook = new this.bookModel({
       ...createBookDto,
@@ -176,38 +159,42 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------
-  async updateBook(bookId: string, updateBookDto: UpdateBookDto): Promise<iBook> {
+  async updateBook(
+    bookId: string,
+    updateBookDto: UpdateBookDto,
+    file?: Express.Multer.File
+  ): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
-
-    const duplicate = await this.bookModel.findOne({
-      _id: { $ne: bookId },
-      $or: [
-        { book_th: updateBookDto.book_th },
-        { book_en: updateBookDto.book_en },
-      ],
-    });
-    if (duplicate) {
-      throw new ConflictException('A book with the same title already exists.');
+  
+    if (updateBookDto.book_th !== undefined) book.book_th = updateBookDto.book_th;
+    if (updateBookDto.book_en !== undefined) book.book_en = updateBookDto.book_en;
+    if (updateBookDto.author !== undefined) book.author = updateBookDto.author;
+    if (updateBookDto.category !== undefined) book.category = updateBookDto.category;
+    if (updateBookDto.short_description !== undefined) book.short_description = updateBookDto.short_description;
+  
+    if (file) {
+      const imgPath = `/uploads/book/${file.filename}`;
+      book.img = imgPath;
     }
-
-    const updatedData = {
-      ...updateBookDto,
-      updated_at: new Date(),
-    };
-
-    return await this.bookModel.findByIdAndUpdate(bookId, updatedData, { new: true });
+  
+    const updatedBook = await book.save();
+    return updatedBook;
   }
-
-  async uploadBookCover(bookId: string, filename: string): Promise<iBook> {
+  
+  async uploadBookCover(bookId: string, filename: string, shortDescription?: string): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
-
+  
     book.img = `/uploads/book/${filename}`;
-
+    
+    if (shortDescription) {
+      book.short_description = shortDescription;
+    }
+  
     return await book.save();
   }
-
+  
   // -------------------------------------------------------------------
   // 🔸 RECOMMENDATION
   // -------------------------------------------------------------------

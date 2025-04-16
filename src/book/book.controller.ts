@@ -21,7 +21,7 @@ export class BookController {
   // ----------------Create----------
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
-  @Post('/create')
+  @Post('/create-book')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
       destination: './uploads/book',
@@ -219,55 +219,33 @@ export class BookController {
     };
   }
 
-  // ----------------Update----------
-  @Put('/update-all-short-description')
-  async updateAllShortDescriptions(@Body('short_description') shortDescription: string) {
-    const result = await this.bookService.updateAllShortDescriptions(shortDescription);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Descriptions updated successfully',
-      data: result
-    };
-  }
 
   // ---------- Update Book ----------
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @Patch('update-book/:id')
-  async updateBook(
-    @Param('id') bookId: string,
-    @Body() updateBookDto: UpdateBookDto,
-  ) {
-    const updatedBook = await this.bookService.updateBook(bookId, updateBookDto);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Book updated successfully',
-      data: updatedBook,
-    };
-  }
-  
-  // ---------- Upload ----------
-  @Put('/upload-cover/:id')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
       destination: './uploads/book',
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, uniqueSuffix + extname(file.originalname));
+        cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
       }
     })
   }))
-  @ApiOperation({ summary: 'Upload book cover image' })
-  async uploadBookCover(
-    @Param('id') bookId: string,
-    @UploadedFile() file: Express.Multer.File
+  async updateBook(
+    @Param('id') id: string,
+    @Body() updateBookDto: UpdateBookDto,
+    @UploadedFile() file?: Express.Multer.File
   ) {
-    const book = await this.bookService.uploadBookCover(bookId, file.filename);
+    const updated = await this.bookService.updateBook(id, updateBookDto, file);
     return {
       statusCode: 200,
-      message: 'Book cover uploaded successfully',
-      data: book,
+      message: 'Book updated successfully',
+      data: updated,
     };
   }
-
+      
   // ---------- Delete ----------
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
