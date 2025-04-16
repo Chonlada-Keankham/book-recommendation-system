@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-@Schema({ _id: false })
+@Schema() 
 export class Reply {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   userId: Types.ObjectId;
@@ -15,10 +15,9 @@ export class Reply {
   @Prop()
   updated_at?: Date;
 }
+export const ReplySchema = SchemaFactory.createForClass(Reply);
 
-const ReplySchema = SchemaFactory.createForClass(Reply);
-
-@Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
+@Schema({ timestamps: true }) 
 export class Comment {
   @Prop({ type: Types.ObjectId, ref: 'Book', required: true })
   bookId: Types.ObjectId;

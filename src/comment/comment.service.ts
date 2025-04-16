@@ -14,6 +14,7 @@ import { CreateReplyDto } from './dto/reply-comment.dto';
 import { UpdateReplyDto } from './dto/up-reply-comment.dto';
 import { iComment } from './interface/comment.interface';
 import { NotificationService } from 'src/notification/notification.service';
+import { iReply } from './interface/reply.interface';
 
 @Injectable()
 export class CommentService {
@@ -24,10 +25,7 @@ export class CommentService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  // -------------------------------------------------------------------
-  // 🔸 CREATE
-  // -------------------------------------------------------------------
-
+  // 🔸 Create Comment
   async createComment(createCommentDto: CreateCommentDto, userId: string) {
     const comment = new this.commentModel({
       bookId: new Types.ObjectId(createCommentDto.bookId),
@@ -38,6 +36,7 @@ export class CommentService {
     return await comment.save();
   }
 
+  // 🔸 Create Reply
   async createReply(
     commentId: string,
     createReplyDto: CreateReplyDto,
@@ -46,9 +45,9 @@ export class CommentService {
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
 
-    const newReply = {
-      _id: new Types.ObjectId(),
-      userId: new Types.ObjectId(userId),
+    const newReply: iReply = {
+      _id: new Types.ObjectId().toString(),
+      userId: userId,
       content: createReplyDto.content.trim(),
       created_at: new Date(),
       updated_at: new Date(),
@@ -57,11 +56,12 @@ export class CommentService {
     comment.replies.push(newReply);
     await comment.save();
 
-    if (comment.userId.toString() !== userId.toString()) {
+    // ส่ง notification หากคนตอบไม่ใช่เจ้าของ comment
+    if (comment.userId.toString() !== userId) {
       await this.notificationService.notifyReply(
         comment.userId.toString(),
         comment.bookId.toString(),
-        'ชื่อหนังสือใส่ตรงนี้ถ้าจำเป็น',
+        'ใส่ชื่อหนังสือถ้ามี',
       );
     }
 
@@ -72,10 +72,7 @@ export class CommentService {
     };
   }
 
-  // -------------------------------------------------------------------
-  // 🔹 UPDATE
-  // -------------------------------------------------------------------
-
+  // 🔹 Update Comment
   async updateComment(
     commentId: string,
     updateCommentDto: UpdateCommentDto,
@@ -93,6 +90,7 @@ export class CommentService {
     return comment;
   }
 
+  // 🔹 Update Reply
   async updateReply(
     commentId: string,
     replyId: string,
@@ -115,7 +113,6 @@ export class CommentService {
     reply.updated_at = new Date();
 
     await comment.save();
-
     return {
       statusCode: HttpStatus.OK,
       message: 'Reply updated successfully',
@@ -123,10 +120,7 @@ export class CommentService {
     };
   }
 
-  // -------------------------------------------------------------------
-  // 🔻 DELETE
-  // -------------------------------------------------------------------
-
+  // 🔻 Delete Comment
   async deleteComment(commentId: string, userId: string) {
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
@@ -138,46 +132,62 @@ export class CommentService {
     return await comment.deleteOne();
   }
 
-  async deleteReply(
-    commentId: string,
-    replyId: string,
-    userId: string,
-  ) {
+  // 🔻 Delete Reply
+  async deleteReply(commentId: string, replyId: string, userId: string) {
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
 
-    const replyIndex = comment.replies.findIndex(
+    const index = comment.replies.findIndex(
       (r) => r._id?.toString() === replyId,
     );
-    if (replyIndex === -1)
-      throw new NotFoundException('Reply not found');
+    if (index === -1) throw new NotFoundException('Reply not found');
 
     if (
-      comment.replies[replyIndex].userId.toString() !== userId.toString()
+      comment.replies[index].userId.toString() !== userId.toString()
     ) {
       throw new ForbiddenException('You can only delete your own reply');
     }
 
-    comment.replies.splice(replyIndex, 1);
+    comment.replies.splice(index, 1);
     await comment.save();
+
     return {
       statusCode: HttpStatus.OK,
       message: 'Reply deleted successfully',
     };
   }
 
-  // -------------------------------------------------------------------
-  // 🔍 READ
-  // -------------------------------------------------------------------
-
   async findCommentsByBook(bookId: string) {
-    return this.commentModel
-      .find({ bookId: new Types.ObjectId(bookId) })
+    const comments = await this.commentModel.find({
+      $or: [
+        { bookId: new Types.ObjectId(bookId) },
+        { bookId: bookId }, 
+      ],
+    })
       .populate('userId', 'username')
       .populate('replies.userId', 'username')
-      .sort({ created_at: -1 }); // ใช้ timestamps field ที่ถูกสร้างอัตโนมัติ
+      .sort({ createdAt: -1 });
+  
+    console.log('📦 Found:', comments.length);
+  
+    return comments.map((c) => ({
+      _id: c._id.toString(),
+      bookId: c.bookId.toString(),
+      userId: c.userId.toString(),
+      content: c.content,
+      replies: c.replies.map((r) => ({
+        _id: r._id?.toString(),
+        userId: r.userId.toString(),
+        content: r.content,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      })),
+      createdAt: c.created_at,
+      updatedAt: c.updated_at,
+      deletedAt: c.deleted_at,
+    }));
   }
-
+  
   async findCommentById(commentId: string): Promise<iComment> {
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');

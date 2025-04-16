@@ -1,9 +1,7 @@
-import { Types } from "mongoose";
-
 export interface iReply {
-  _id?: Types.ObjectId;
-  userId: Types.ObjectId;
+  _id?: string;             
+  userId: string;
   content: string;
-  created_at: Date;
+  created_at?: Date;
   updated_at?: Date;
 }
