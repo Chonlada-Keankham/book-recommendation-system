@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { iReply } from "./reply.interface";
 
 export interface iComment {
-  _id?: Types.ObjectId;
+  _id?: string;
   bookId: Types.ObjectId;
   userId: Types.ObjectId;
   content: string;

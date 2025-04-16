@@ -1,8 +1,24 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
+@Schema({ _id: false })
+export class Reply {
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  userId: Types.ObjectId;
 
-@Schema({ timestamps: true })
+  @Prop({ required: true })
+  content: string;
+
+  @Prop({ default: Date.now })
+  created_at: Date;
+
+  @Prop()
+  updated_at?: Date;
+}
+
+const ReplySchema = SchemaFactory.createForClass(Reply);
+
+@Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 export class Comment {
   @Prop({ type: Types.ObjectId, ref: 'Book', required: true })
   bookId: Types.ObjectId;
@@ -13,23 +29,11 @@ export class Comment {
   @Prop({ required: true })
   content: string;
 
-  @Prop({
-    type: [
-      {
-        userId: { type: Types.ObjectId, ref: 'User', required: true },
-        content: { type: String, required: true },
-        created_at: { type: Date, default: Date.now },
-        updated_at: { type: Date },
-      },
-    ],
-    default: [],
-  })
-  replies: {
-    userId: Types.ObjectId;
-    content: string;
-    created_at: Date;
-    updated_at?: Date;
-  }[];
+  @Prop({ type: [ReplySchema], default: [] })
+  replies: Reply[];
+
+  @Prop()
+  deleted_at?: Date;
 }
 
 export type CommentDocument = Comment & Document;
