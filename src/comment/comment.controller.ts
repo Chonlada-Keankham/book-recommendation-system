@@ -28,7 +28,7 @@ export class CommentController {
 
   // ---------- Update Comment ----------
   @UseGuards(JwtAuthGuard)
-  @Patch('update/:commentId')
+  @Patch('/update/:commentId')
   @ApiOperation({ summary: 'Update a comment' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Comment updated successfully.' })
   async updateComment(@Param('commentId') commentId: string, @Body() updateCommentDto: UpdateCommentDto, @Req() req: Request) {
