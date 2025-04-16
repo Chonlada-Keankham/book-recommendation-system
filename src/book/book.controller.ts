@@ -12,6 +12,7 @@ import { RolesGuard } from 'src/auth/guard/role.guard';
 import { Roles } from 'src/decorator/roles.decorator';
 import { UserRole } from 'src/enum/user-role.enum';
 import { UpdateBookDto } from './dto/update-book.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Book')
 @Controller('book')
@@ -143,7 +144,7 @@ export class BookController {
     };
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard('jwt'))
   @Get('/recommend/member')
   async recommendForMember(
     @Query('userId') userId: string,
@@ -245,7 +246,7 @@ export class BookController {
       data: updated,
     };
   }
-      
+
   // ---------- Delete ----------
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)

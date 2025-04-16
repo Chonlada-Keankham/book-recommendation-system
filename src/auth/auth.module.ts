@@ -12,17 +12,19 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   imports: [
     ConfigModule,  
     forwardRef(() => UserModule),
-    PassportModule,
-    JwtModule.registerAsync({   
+  
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+  
+    JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),  
+        secret: configService.get<string>('JWT_SECRET'),
         signOptions: { expiresIn: '60m' },
       }),
     }),
   ],
-  controllers: [AuthController],
+    controllers: [AuthController],
   providers: [
     AuthService,
     LocalStrategy,
