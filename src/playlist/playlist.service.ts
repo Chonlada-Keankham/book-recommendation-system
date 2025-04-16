@@ -47,16 +47,22 @@ export class PlaylistService {
   // -------------------------------------------------------------------
   async createOrUpdatePlaylist(createPlaylistDto: CreatePlaylistDto): Promise<iPlaylist> {
     const existing = await this.findPlaylist(createPlaylistDto.user.toString());
+    let playlist: iPlaylist;
+  
     if (!existing) {
-      return this.createPlaylist(createPlaylistDto);
+      playlist = await this.createPlaylist(createPlaylistDto);
+    } else {
+      playlist = await this.updatePlaylist(createPlaylistDto.user.toString(), {
+        categories: createPlaylistDto.categories,
+        authors: createPlaylistDto.authors,
+      });
     }
-
-    return this.updatePlaylist(createPlaylistDto.user.toString(), {
-      categories: createPlaylistDto.categories,
-      authors: createPlaylistDto.authors,
-    });
+  
+    return await this.playlistModel.findById(playlist._id)
+      .populate('recommendedBooks', 'book_th book_en img short_description author category view')
+      .lean(); 
   }
-
+  
   // -------------------------------------------------------------------
   // 🔁 UPDATE
   // -------------------------------------------------------------------

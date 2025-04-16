@@ -12,7 +12,6 @@ import { RolesGuard } from 'src/auth/guard/role.guard';
 import { Roles } from 'src/decorator/roles.decorator';
 import { UserRole } from 'src/enum/user-role.enum';
 import { UpdateBookDto } from './dto/update-book.dto';
-import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Book')
 @Controller('book')

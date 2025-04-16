@@ -15,16 +15,15 @@ export class PlaylistController {
   // 🔹 CREATE OR UPSERT PLAYLIST (ตั้งค่าความสนใจของสมาชิก)
   // -------------------------------------------------------------------
   @Post('/create-playlist')
-  @ApiOperation({ summary: 'Create or Update playlist (Popup/Setting)' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Playlist created or updated successfully.' })
   async createOrUpdatePlaylist(@Body() createPlaylistDto: CreatePlaylistDto) {
     const playlist = await this.playlistService.createOrUpdatePlaylist(createPlaylistDto);
     return {
       statusCode: HttpStatus.CREATED,
       message: 'Playlist created or updated successfully',
-      data: playlist,
+      data: playlist, 
     };
   }
+  
 
   // -------------------------------------------------------------------
   // 🔹 READ PLAYLIST (Get by user ID)
