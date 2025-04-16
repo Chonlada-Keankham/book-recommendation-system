@@ -144,7 +144,7 @@ export class BookController {
     };
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get('/recommend/member')
   async recommendForMember(
     @Query('userId') userId: string,
