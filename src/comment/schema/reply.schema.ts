@@ -9,6 +9,8 @@ export class Reply {
   @Prop({ required: true })
   content: string;
   
+  @Prop({ type: [Types.ObjectId], ref: 'User', default: [] })
+  likedBy: Types.ObjectId[];
 }
 
 export type ReplyDocument = Reply & Document;

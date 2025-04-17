@@ -16,7 +16,9 @@ export class Comment {
   @Prop({ type: [ReplySchema], default: [] })
   replies: Types.DocumentArray<Reply>;
 
-  
+  @Prop({ type: [Types.ObjectId], ref: 'User', default: [] })
+  likedBy: Types.ObjectId[];
+
 }
 
 export type CommentDocument = Comment & Document;

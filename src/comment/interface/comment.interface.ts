@@ -8,5 +8,6 @@ export interface iComment {
   bookId: Types.ObjectId;
   content: string;
   replies: iReply[];
+  likedBy?: Types.ObjectId[];
   createdAt?: Date;
   updatedAt?: Date;}
