@@ -5,6 +5,5 @@ export interface iReply {
   _id?: Types.ObjectId;
   userId: Types.ObjectId | { _id: Types.ObjectId; username: string };
   content: string;
-  created_at: Date;
-  updated_at?: Date;
-}
+  createdAt?: Date;
+  updatedAt?: Date;}

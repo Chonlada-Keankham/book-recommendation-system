@@ -8,6 +8,5 @@ export interface iComment {
   bookId: Types.ObjectId;
   content: string;
   replies: iReply[];
-  created_at?: Date;
-  updated_at?: Date;
-}
+  createdAt?: Date;
+  updatedAt?: Date;}

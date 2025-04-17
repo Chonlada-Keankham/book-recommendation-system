@@ -38,6 +38,7 @@ export class CommentService {
   }
 
 // src/comment/comment.service.ts
+// src/comment/comment.service.ts
 async findCommentsByBook(bookId: string) {
   if (!Types.ObjectId.isValid(bookId)) {
     throw new BadRequestException('Invalid bookId');
@@ -56,18 +57,18 @@ async findCommentsByBook(bookId: string) {
     userId: (c.userId as any)._id.toString(),
     username: (c.userId as any).username,
     content: c.content,
-    // ← ใช้ createdAt/updatedAt แทน created_at/updated_at
-    createdAt: c.created_at.toISOString(),
-    updatedAt: c.updated_at.toISOString(),
+    // ใช้ createdAt / updatedAt ที่ mongoose timestamps สร้างให้
+    createdAt: c.createdAt.toISOString(),
+    updatedAt: c.updatedAt.toISOString(),
     replies: c.replies.map(r => ({
       _id: r._id.toString(),
       userId: (r.userId as any)._id.toString(),
       username: (r.userId as any).username,
       content: r.content,
-      createdAt: r.created_at.toISOString(),
-      updatedAt: r.updated_at?.toISOString(),
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt?.toISOString(),
     })),
-    // ถ้ามี likeCount/likedByMe ก็ใส่ได้ที่นี่
+    // ถ้าใช้ like/Unlike ก็ใส่ likeCount, likedByMe ไว้ด้วย
   }));
 }
 
