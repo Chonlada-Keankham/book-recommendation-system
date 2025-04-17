@@ -8,7 +8,6 @@ export interface iComment {
   bookId: Types.ObjectId;
   content: string;
   replies: iReply[];
-  likedBy?: Types.ObjectId[]; // array of userIds who liked this comment
   created_at?: Date;
   updated_at?: Date;
 }

@@ -27,51 +27,6 @@ export class CommentService {
     private readonly notificationService: NotificationService,
   ) { }
 
-  async likeComment(commentId: string, userId: string) {
-    const comment = await this.commentModel.findById(commentId);
-    if (!comment) throw new NotFoundException();
-    const uid = new Types.ObjectId(userId);
-    if (!comment.likedBy.includes(uid)) {
-      comment.likedBy.push(uid);
-      await comment.save();
-    }
-    return { likeCount: comment.likedBy.length, likedByMe: true };
-  }
-
-  async unlikeComment(commentId: string, userId: string) {
-    const comment = await this.commentModel.findById(commentId);
-    if (!comment) throw new NotFoundException();
-    comment.likedBy = comment.likedBy.filter(id => id.toString() !== userId);
-    await comment.save();
-    return { likeCount: comment.likedBy.length, likedByMe: false };
-  }
-
-  async likeReply(commentId: string, replyId: string, userId: string) {
-    const comment = await this.commentModel.findById(commentId);
-    if (!comment) throw new NotFoundException();
-    // ใน service
-    const reply = (comment.replies as any).id(replyId);
-    if (!reply) throw new NotFoundException();
-    const uid = new Types.ObjectId(userId);
-    if (!reply.likedBy.includes(uid)) {
-      reply.likedBy.push(uid);
-      await comment.save();
-    }
-    return { replyId, likeCount: reply.likedBy.length, likedByMe: true };
-  }
-
-  async unlikeReply(commentId: string, replyId: string, userId: string) {
-    const comment = await this.commentModel.findById(commentId);
-    if (!comment) throw new NotFoundException();
-    // ใน service
-    const reply = (comment.replies as any).id(replyId);
-    if (!reply) throw new NotFoundException();
-    reply.likedBy = reply.likedBy.filter(id => id.toString() !== userId);
-    await comment.save();
-    return { replyId, likeCount: reply.likedBy.length, likedByMe: false };
-  }
-
-
 
   // 🔸 Create Comment
   async createComment(dto: CreateCommentDto, userId: string) {
