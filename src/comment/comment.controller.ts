@@ -23,7 +23,7 @@ export class CommentController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post(':commentId/like')
+  @Post('/:commentId/like')
   async likeComment(@Param('commentId') commentId: string, @Req() req: Request) {
     const userId = req.user['_id'];
     const result = await this.commentService.likeComment(commentId, userId);
@@ -32,7 +32,7 @@ export class CommentController {
 
   // อันไลค์ comment
   @UseGuards(JwtAuthGuard)
-  @Delete(':commentId/like')
+  @Delete('/:commentId/like')
   async unlikeComment(@Param('commentId') commentId: string, @Req() req: Request) {
     const userId = req.user['_id'];
     const result = await this.commentService.unlikeComment(commentId, userId);
@@ -41,7 +41,7 @@ export class CommentController {
 
   // กดไลค์ reply
   @UseGuards(JwtAuthGuard)
-  @Post(':commentId/reply/:replyId/like')
+  @Post('/:commentId/reply/:replyId/like')
   async likeReply(
     @Param('commentId') commentId: string,
     @Param('replyId') replyId: string,
@@ -54,7 +54,7 @@ export class CommentController {
 
   // อันไลค์ reply
   @UseGuards(JwtAuthGuard)
-  @Delete(':commentId/reply/:replyId/like')
+  @Delete('/:commentId/reply/:replyId/like')
   async unlikeReply(
     @Param('commentId') commentId: string,
     @Param('replyId') replyId: string,
