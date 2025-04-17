@@ -16,129 +16,93 @@ export class CommentController {
   // ---------- Create Comment ----------
   @UseGuards(JwtAuthGuard)
   @Post('/create-comment')
-  async createComment(@Body() createCommentDto: CreateCommentDto, @Req() req: Request) {
-    const user = req.user['_id'];
-    const comment = await this.commentService.createComment(createCommentDto, user);
-    return {
-      statusCode: HttpStatus.CREATED,
-      message: 'Comment created successfully',
-      data: {
-        ...comment,
-        _id: comment._id.toString(),
-        book: comment.bookId.toString(),
-        user: comment.userId.toString(),
-      },
-    };
+  @ApiOperation({ summary: 'Create a comment' })
+  @ApiResponse({ status: HttpStatus.CREATED, description: 'Comment created' })
+  async create(
+    @Body() dto: CreateCommentDto,
+    @Req() req: Request,
+  ) {
+    const userId = req.user['_id'];
+    const comment = await this.commentService.createComment(dto, userId);
+    return { statusCode: HttpStatus.CREATED, data: comment };
   }
 
-  // ---------- Update Comment ----------
+  @Get('book/:bookId')
+  @ApiOperation({ summary: 'List comments by book' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Comments fetched' })
+  async findByBook(@Param('bookId') bookId: string) {
+    const comments = await this.commentService.findCommentsByBook(bookId);
+    return { statusCode: HttpStatus.OK, data: comments };
+  }
+
   @UseGuards(JwtAuthGuard)
-  @Patch('update/:commentId')
+  @Patch(':commentId')
   @ApiOperation({ summary: 'Update a comment' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Comment updated successfully.' })
-  async updateComment(@Param('commentId') commentId: string, @Body() updateCommentDto: UpdateCommentDto, @Req() req: Request) {
-    const user = req.user['_id'];
-    const comment = await this.commentService.updateComment(commentId, updateCommentDto, user);
-    return {
-      statusCode: HttpStatus.CREATED,
-      message: 'Comment created successfully',
-      data: {
-        ...comment.toObject(),
-        _id: comment._id.toString(),
-        book: comment.bookId.toString(),
-        user: comment.userId.toString(),
-      },
-    };
+  @ApiResponse({ status: HttpStatus.OK, description: 'Comment updated' })
+  async update(
+    @Param('commentId') commentId: string,
+    @Body() dto: UpdateCommentDto,
+    @Req() req: Request,
+  ) {
+    const userId = req.user['_id'];
+    const updated = await this.commentService.updateComment(commentId, dto, userId);
+    return { statusCode: HttpStatus.OK, data: updated };
   }
-
-  // ---------- Delete Comment ----------
+  
   @UseGuards(JwtAuthGuard)
-  @Delete('/delete/:commentId')
+  @Delete(':commentId')
   @ApiOperation({ summary: 'Delete a comment' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Comment deleted successfully.' })
-  async deleteComment(@Param('commentId') commentId: string, @Req() req: Request) {
-    const user = req.user['_id'];
-    await this.commentService.deleteComment(commentId, user);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Comment deleted successfully',
-      data: null,
-    };
+  @ApiResponse({ status: HttpStatus.OK, description: 'Comment deleted' })
+  async remove(
+    @Param('commentId') commentId: string,
+    @Req() req: Request,
+  ) {
+    const userId = req.user['_id'];
+    await this.commentService.deleteComment(commentId, userId);
+    return { statusCode: HttpStatus.OK };
   }
 
-  // ---------- Create Reply ----------
   @UseGuards(JwtAuthGuard)
-  @Post('/:commentId/reply')
+  @Post(':commentId/reply')
   @ApiOperation({ summary: 'Reply to a comment' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Reply created successfully.' })
-  async createReply(@Param('commentId') commentId: string, @Body() createReplyDto: CreateReplyDto, @Req() req: Request) {
-    const user = req.user['_id'];
-    const { data: replyData } = await this.commentService.createReply(commentId, createReplyDto, user);
-
-    return {
-      statusCode: HttpStatus.CREATED,
-      message: 'Reply created successfully',
-      data: {
-        _id: replyData._id?.toString(),
-        user: replyData.userId.toString(),
-        content: replyData.content,
-        createdAt: replyData.created_at,
-        updatedAt: replyData.updated_at,
-      },
-    };
+  @ApiResponse({ status: HttpStatus.CREATED, description: 'Reply created' })
+  async reply(
+    @Param('commentId') commentId: string,
+    @Body() dto: CreateReplyDto,
+    @Req() req: Request,
+  ) {
+    const userId = req.user['_id'];
+    const comment = await this.commentService.createReply(commentId, dto, userId);
+    return { statusCode: HttpStatus.CREATED, data: comment };
   }
 
-  // ---------- Update Reply ----------
-
   @UseGuards(JwtAuthGuard)
-  @Patch('/:commentId/reply/:replyId')
+  @Patch(':commentId/reply/:replyId')
   @ApiOperation({ summary: 'Update a reply' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Reply updated successfully.' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Reply updated' })
   async updateReply(
     @Param('commentId') commentId: string,
     @Param('replyId') replyId: string,
-    @Body() updateReplyDto: UpdateReplyDto,
-    @Req() req: Request
+    @Body() dto: UpdateReplyDto,
+    @Req() req: Request,
   ) {
-    const user = req.user['_id'];
-    const { data: replyData } = await this.commentService.updateReply(commentId, replyId, updateReplyDto, user);
-
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Reply updated successfully',
-      data: {
-        ...replyData,
-        _id: replyData._id?.toString(),
-        user: replyData.userId.toString(),
-      },
-    };
+    const userId = req.user['_id'];
+    const comment = await this.commentService.updateReply(commentId, replyId, dto, userId);
+    return { statusCode: HttpStatus.OK, data: comment };
   }
 
-  // ---------- Delete Reply ----------
   @UseGuards(JwtAuthGuard)
-  @Delete('/:commentId/del/:replyId')
+  @Delete(':commentId/reply/:replyId')
   @ApiOperation({ summary: 'Delete a reply' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Reply deleted successfully.' })
-  async deleteReply(@Param('commentId') commentId: string, @Param('replyId') replyId: string, @Req() req: Request) {
-    const user = req.user['_id'];
-    await this.commentService.deleteReply(commentId, replyId, user);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Reply deleted successfully',
-      data: null,
-    };
+  @ApiResponse({ status: HttpStatus.OK, description: 'Reply deleted' })
+  async removeReply(
+    @Param('commentId') commentId: string,
+    @Param('replyId') replyId: string,
+    @Req() req: Request,
+  ) {
+    const userId = req.user['_id'];
+    await this.commentService.deleteReply(commentId, replyId, userId);
+    return { statusCode: HttpStatus.OK };
   }
 
-  // ---------- Find Comments of a Book ----------
-  @Get('/book/:bookId')
-  @ApiOperation({ summary: 'Find all comments by book ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Comments fetched successfully.' })
-  async findCommentsByBook(@Param('bookId') bookId: string) {
-    const comments = await this.commentService.findCommentsByBook(bookId);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Comments fetched successfully',
-      data: comments,
-    };
-  }
 }

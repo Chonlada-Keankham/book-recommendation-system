@@ -1,3 +1,4 @@
+import { Reply, ReplySchema } from './schema/reply.schema';
 import { NotificationModule } from 'src/notification/notification.module';
 import { CommentService } from './comment.service';
 import { CommentController } from './comment.controller';
@@ -12,7 +13,10 @@ import { BookModule } from 'src/book/book.module';
     forwardRef(() => UserModule),
     BookModule,
     forwardRef(() => NotificationModule),
-    MongooseModule.forFeature([{ name: 'Comment', schema: CommentSchema }]),
+    MongooseModule.forFeature([
+      { name: 'Comment', schema: CommentSchema },
+      { name: 'Reply', schema: ReplySchema }
+    ]),
   ],
   controllers: [CommentController],
   providers: [CommentService],
