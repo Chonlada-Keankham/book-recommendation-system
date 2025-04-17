@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
-  HttpStatus,
   forwardRef,
   Inject,
   BadRequestException,
@@ -39,36 +38,40 @@ export class CommentService {
   }
 
   // src/comment/comment.service.ts
-  async findCommentsByBook(bookId: string) {
-    if (!Types.ObjectId.isValid(bookId)) {
-      throw new BadRequestException('Invalid bookId');
-    }
-
-    const comments = await this.commentModel
-      .find({ bookId: new Types.ObjectId(bookId) })
-      .populate('userId', 'username')
-      .populate('replies.userId', 'username')
-      .sort({ createdAt: -1 })
-      .exec();
-
-    return comments.map(c => ({
-      _id: c._id.toString(),
-      bookId: c.bookId.toString(),
-      userId: (c.userId as any)._id.toString(),
-      username: (c.userId as any).username,
-      content: c.content,
-      replies: c.replies.map(r => ({
-        _id: r._id.toString(),
-        userId: (r.userId as any)._1.toString(),      // r.userId เป็น populated Object
-        username: (r.userId as any).username,
-        content: r.content,
-        createdAt: r.created_at,                       // ใช้ r.createdAt จาก timestamps
-        updatedAt: r.updated_at,                       // ใช้ r.updatedAt จาก timestamps
-      })),
-      createdAt: c.created_at,                         // ใช้ c.createdAt จาก timestamps
-      updatedAt: c.updated_at,                         // ใช้ c.updatedAt จาก timestamps
-    }));
+// src/comment/comment.service.ts
+async findCommentsByBook(bookId: string) {
+  if (!Types.ObjectId.isValid(bookId)) {
+    throw new BadRequestException('Invalid bookId');
   }
+
+  const comments = await this.commentModel
+    .find({ bookId: new Types.ObjectId(bookId) })
+    .populate('userId', 'username')
+    .populate('replies.userId', 'username')
+    .sort({ createdAt: -1 })
+    .exec();
+
+  return comments.map(c => ({
+    _id: c._id.toString(),
+    bookId: c.bookId.toString(),
+    userId: (c.userId as any)._id.toString(),
+    username: (c.userId as any).username,   // ← ส่งชื่อผู้ใช้มา
+    content: c.content,
+    createdAt: c.created_at.toISOString(),   // ← ส่งเวลาเป็น ISO string
+    updatedAt: c.updated_at.toISOString(),
+    replies: c.replies.map(r => ({
+      _id: r._id.toString(),
+      userId: (r.userId as any)._id.toString(),
+      username: (r.userId as any).username,
+      content: r.content,
+      createdAt: r.created_at.toISOString(),
+      updatedAt: r.updated_at?.toISOString(),
+    })),
+    // ถ้าทำ Like/Unlike ด้วยแล้วก็เพิ่ม:
+   /// likeCount: c.likedBy?.length ?? 0,
+   /// likedByMe: /* ดึงจาก currentUserId ถ้ามี */,
+  }));
+}
 
   async updateComment(
     commentId: string,
