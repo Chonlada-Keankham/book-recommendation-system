@@ -1,11 +1,11 @@
-import { NotificationSchema } from "../schema/notification.schema";
+import { NotificationType } from "src/enum/notification-type.enum";
 
 export interface iNotification {
   _id?: string;
   userId: string;
   message: string;
   bookId?: string;
-  type: 'new-book' | 'comment-reply';
+  type: NotificationType;
   isRead: boolean;
   created_at: Date;
 }

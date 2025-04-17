@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Patch, HttpStatus, UseGuards, Req, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Patch,
+  HttpStatus,
+  UseGuards,
+  Req,
+  Delete,
+} from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
@@ -8,41 +17,30 @@ import { Request } from 'express';
 @UseGuards(JwtAuthGuard)
 @Controller('notification')
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(
+    private readonly notificationService: NotificationService,
+  ) {}
 
   // -------------------------------------------------------------------
-  // 🔸 FETCH
+  // 🔹 GET: All notifications for current user
   // -------------------------------------------------------------------
-
-  @Get('/user/:userId')
-  @ApiOperation({ summary: 'Get notifications for a user' })
-  @ApiResponse({ status: 200, description: 'Notifications fetched successfully' })
-  async getNotifications(@Param('userId') userId: string) {
-    const notifications = await this.notificationService.getNotificationsByUser(userId);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Notifications fetched successfully',
-      data: notifications,
-    };
-  }
-  
   @Get('/me')
   @ApiOperation({ summary: 'Get notifications for current user' })
   @ApiResponse({ status: 200, description: 'Notifications fetched successfully' })
   async getMyNotifications(@Req() req: Request) {
     const userId = req.user['_id'];
-    const notifications = await this.notificationService.getNotificationsByUser(userId);
+    const result = await this.notificationService.getNotificationsByUser(userId);
     return {
       statusCode: HttpStatus.OK,
       message: 'Notifications fetched successfully',
-      data: notifications,
+      data: result.notifications,
+      unreadCount: result.unreadCount,
     };
   }
 
   // -------------------------------------------------------------------
-  // 🔸 UPDATE
+  // 🔹 PATCH: Read one notification
   // -------------------------------------------------------------------
-
   @Patch('/read/:notificationId')
   @ApiOperation({ summary: 'Mark a notification as read' })
   @ApiResponse({ status: 200, description: 'Notification marked as read' })
@@ -55,10 +53,14 @@ export class NotificationController {
     };
   }
 
-  @Patch('/read-all/:userId')
-  @ApiOperation({ summary: 'Mark all notifications as read' })
+  // -------------------------------------------------------------------
+  // 🔹 PATCH: Read all for current user
+  // -------------------------------------------------------------------
+  @Patch('/read-all')
+  @ApiOperation({ summary: 'Mark all notifications as read for current user' })
   @ApiResponse({ status: 200, description: 'All notifications marked as read' })
-  async markAllAsRead(@Param('userId') userId: string) {
+  async markAllAsRead(@Req() req: Request) {
+    const userId = req.user['_id'];
     const result = await this.notificationService.markAllAsRead(userId);
     return {
       statusCode: HttpStatus.OK,
@@ -68,18 +70,34 @@ export class NotificationController {
   }
 
   // -------------------------------------------------------------------
-  // 🔸 DELETE
+  // 🔹 DELETE: Clear read notifications for current user
   // -------------------------------------------------------------------
-
-  @Delete('/clear-read/:userId')
-  @ApiOperation({ summary: 'Clear read notifications for a user' })
+  @Delete('/clear-read')
+  @ApiOperation({ summary: 'Clear read notifications for current user' })
   @ApiResponse({ status: 200, description: 'Read notifications cleared' })
-  async clearRead(@Param('userId') userId: string) {
+  async clearRead(@Req() req: Request) {
+    const userId = req.user['_id'];
     const result = await this.notificationService.clearReadNotifications(userId);
     return {
       statusCode: HttpStatus.OK,
       message: 'Read notifications cleared',
       data: result,
+    };
+  }
+
+  // -------------------------------------------------------------------
+  // 🔹 (Optional) ADMIN or DEBUG only - get by userId
+  // -------------------------------------------------------------------
+  @Get('/user/:userId')
+  @ApiOperation({ summary: '[ADMIN] Get notifications for a user (by ID)' })
+  @ApiResponse({ status: 200, description: 'Notifications fetched successfully' })
+  async getNotificationsByUser(@Param('userId') userId: string) {
+    const result = await this.notificationService.getNotificationsByUser(userId);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Notifications fetched successfully',
+      data: result.notifications,
+      unreadCount: result.unreadCount,
     };
   }
 }

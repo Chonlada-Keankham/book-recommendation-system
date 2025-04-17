@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { NotificationType } from 'src/enum/notification-type.enum';
 
 export type NotificationDocument = Notification & Document;
 
@@ -19,6 +20,13 @@ export class Notification {
   
   @Prop({ default: Date.now })
   created_at: Date;
+  
+  @Prop({
+    type: String,
+    enum: Object.values(NotificationType),
+    required: true,
+  })
+  type: NotificationType;
 }
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);

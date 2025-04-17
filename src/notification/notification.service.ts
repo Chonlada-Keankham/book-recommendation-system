@@ -6,6 +6,7 @@ import { iNotification } from './interface/notification.interface';
 import { iBook } from 'src/book/interface/book.interface';
 import { UserService } from 'src/user/user.service';
 import { CommentService } from 'src/comment/comment.service';
+import { NotificationType } from 'src/enum/notification-type.enum';
 
 @Injectable()
 export class NotificationService {
@@ -36,7 +37,7 @@ export class NotificationService {
 
     const notifications = memberIds.map(userId => ({
       userId,
-      type: 'new-book',
+      type: NotificationType.NEW_BOOK,
       message: `หนังสือใหม่ "${book.book_th}" สำหรับสมาชิก "${book.category}"`,
       bookId: book._id,
       isRead: false,
@@ -46,12 +47,36 @@ export class NotificationService {
     await this.notificationModel.insertMany(notifications);
   }
 
+// แจ้งเตือนเมื่อมีคนกดไลค์คอมเมนต์
+async notifyLikeComment(userId: string, bookId: string, bookTitle: string): Promise<void> {
+  await this.notificationModel.create({
+    userId,
+    bookId,
+    type: NotificationType.LIKE_COMMENT,
+    message: `มีคนกดถูกใจคอมเมนต์ของคุณในหนังสือ "${bookTitle}"`,
+    isRead: false,
+    created_at: new Date(),
+  });
+}
+
+// แจ้งเตือนเมื่อมีคนกดไลค์คำตอบ
+async notifyLikeReply(userId: string, bookId: string, bookTitle: string): Promise<void> {
+  await this.notificationModel.create({
+    userId,
+    bookId,
+    type: NotificationType.LIKE_REPLY,
+    message: `มีคนกดถูกใจคำตอบของคุณในหนังสือ "${bookTitle}"`,
+    isRead: false,
+    created_at: new Date(),
+  });
+}
+
   // แจ้งเตือนเจ้าของคอมเมนต์เมื่อมีคนตอบกลับ
   async notifyReply(originalUserId: string, bookId: string, bookTitle: string): Promise<void> {
     await this.notificationModel.create({
       userId: originalUserId,
       bookId,
-      type: 'comment-reply',
+      type: NotificationType.COMMENT_REPLY,
       message: `มีคนตอบกลับคอมเมนต์ในหนังสือ "${bookTitle}"`,
       isRead: false,
       created_at: new Date(),
@@ -61,6 +86,7 @@ export class NotificationService {
   // -------------------------------------------------------------------
   // 🔸 FETCH NOTIFICATIONS
   // -------------------------------------------------------------------
+
 
   async getNotificationsByUser(userId: string): Promise<{
     notifications: iNotification[],
@@ -86,7 +112,6 @@ export class NotificationService {
       { new: true }
     );
   }
-
   async markAllAsRead(userId: string): Promise<{ modifiedCount: number }> {
     const result = await this.notificationModel.updateMany(
       { userId, isRead: false },
