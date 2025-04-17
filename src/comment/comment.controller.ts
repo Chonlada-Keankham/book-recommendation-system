@@ -45,8 +45,8 @@ export class CommentController {
       data: {
         ...comment.toObject(),
         _id: comment._id.toString(),
-        book: comment.book.toString(),
-        user: comment.user.toString(),
+        book: comment.bookId.toString(),
+        user: comment.userId.toString(),
       },
     };
   }
@@ -80,7 +80,7 @@ export class CommentController {
       message: 'Reply created successfully',
       data: {
         _id: replyData._id?.toString(),
-        user: replyData.user.toString(),
+        user: replyData.userId.toString(),
         content: replyData.content,
         createdAt: replyData.created_at,
         updatedAt: replyData.updated_at,
@@ -109,7 +109,7 @@ export class CommentController {
       data: {
         ...replyData,
         _id: replyData._id?.toString(),
-        user: replyData.user.toString(),
+        user: replyData.userId.toString(),
       },
     };
   }

@@ -39,8 +39,8 @@ export class CommentService {
 
     return {
       _id: saved._id.toString(),
-      bookId: saved.book.toString(),  // ✅ ใช้ชื่อที่ตรงกับ schema
-      userId: saved.user.toString(),  // ✅ ใช้ชื่อที่ตรงกับ schema
+      bookId: saved.bookId.toString(),  // ✅ ใช้ชื่อที่ตรงกับ schema
+      userId: saved.userId.toString(),  // ✅ ใช้ชื่อที่ตรงกับ schema
       content: saved.content,
       replies: [],
       createdAt: saved.created_at,       // ✅ หรือ saved.created_at แล้วแต่ schema
@@ -59,7 +59,7 @@ export class CommentService {
 
     const newReply: iReply = {
       _id: new Types.ObjectId(),            // ✅ แก้ ไม่ใช้ .toString()
-      user: new Types.ObjectId(userId),     // ✅ ใช้ชื่อ `user` ไม่ใช่ `userId`
+      userId: new Types.ObjectId(userId),     // ✅ ใช้ชื่อ `user` ไม่ใช่ `userId`
       content: createReplyDto.content.trim(),
       created_at: new Date(),
       updated_at: new Date(),
@@ -69,10 +69,10 @@ export class CommentService {
     await comment.save();
 
     // ส่ง notification หากคนตอบไม่ใช่เจ้าของ comment
-    if (comment.user.toString() !== userId) {
+    if (comment.userId.toString() !== userId) {
       await this.notificationService.notifyReply(
-        comment.user.toString(),
-        comment.book.toString(),
+        comment.userId.toString(),
+        comment.bookId.toString(),
         'ใส่ชื่อหนังสือถ้ามี',
       );
     }
@@ -93,7 +93,7 @@ export class CommentService {
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
 
-    if (comment.user.toString() !== userId.toString()) {
+    if (comment.userId.toString() !== userId.toString()) {
       throw new ForbiddenException('You can only edit your own comment');
     }
 
@@ -117,7 +117,7 @@ export class CommentService {
     );
     if (!reply) throw new NotFoundException('Reply not found');
 
-    if (reply.user.toString() !== userId.toString()) {
+    if (reply.userId.toString() !== userId.toString()) {
       throw new ForbiddenException('You can only edit your own reply');
     }
 
@@ -137,7 +137,7 @@ export class CommentService {
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
 
-    if (comment.user.toString() !== userId.toString()) {
+    if (comment.userId.toString() !== userId.toString()) {
       throw new ForbiddenException('You can only delete your own comment');
     }
 
@@ -155,7 +155,7 @@ export class CommentService {
     if (index === -1) throw new NotFoundException('Reply not found');
 
     if (
-      comment.replies[index].user.toString() !== userId.toString()
+      comment.replies[index].userId.toString() !== userId.toString()
     ) {
       throw new ForbiddenException('You can only delete your own reply');
     }
@@ -171,34 +171,34 @@ export class CommentService {
 
   async findCommentsByBook(bookId: string) {
     const isValidObjectId = Types.ObjectId.isValid(bookId);
-    const filter = isValidObjectId ? { book: new Types.ObjectId(bookId) } : { book: bookId };
+    const filter = isValidObjectId ? { book: new Types.ObjectId(bookId) } : { bookId };
 
     const comments = await this.commentModel.find(filter)
-      .populate('user', 'username') // << ดึงชื่อผู้เมนต์
-      .populate('replies.user', 'username') // << ดึงชื่อผู้ตอบกลับ
+      .populate('userId', 'username') // << ดึงชื่อผู้เมนต์
+      .populate('replies.userId', 'username') // << ดึงชื่อผู้ตอบกลับ
       .sort({ createdAt: -1 });
-
+      console.log('✅ Total found comments:', comments.length); // << เพิ่มจุดเช็ก
     return comments.map((c) => ({
       _id: c._id.toString(),
-      bookId: c.book.toString(),
+      bookId: c.bookId.toString(),
       userId:
-        typeof c.user === 'object' && '_id' in c.user
-          ? (c.user as { _id: Types.ObjectId })._id.toString()
-          : (c.user as Types.ObjectId).toString(),
+        typeof c.userId === 'object' && '_id' in c.userId
+          ? (c.userId as { _id: Types.ObjectId })._id.toString()
+          : (c.userId as Types.ObjectId).toString(),
       username:
-        typeof c.user === 'object' && 'username' in c.user
-          ? (c.user as { username: string }).username
+        typeof c.userId === 'object' && 'username' in c.userId
+          ? (c.userId as { username: string }).username
           : null,
       content: c.content,
       replies: c.replies.map((r) => ({
         _id: r._id?.toString(),
         userId:
-          typeof r.user === 'object' && '_id' in r.user
-            ? (r.user as { _id: Types.ObjectId })._id.toString()
-            : (r.user as Types.ObjectId).toString(),
+          typeof r.userId === 'object' && '_id' in r.userId
+            ? (r.userId as { _id: Types.ObjectId })._id.toString()
+            : (r.userId as Types.ObjectId).toString(),
         username:
-          typeof r.user === 'object' && 'username' in r.user
-            ? (r.user as { username: string }).username
+          typeof r.userId === 'object' && 'username' in r.userId
+            ? (r.userId as { username: string }).username
             : null,
         content: r.content,
         createdAt: r.created_at,
