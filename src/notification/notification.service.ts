@@ -32,9 +32,9 @@ export class NotificationService {
   async notifyNewBookToMembers(book: iBook): Promise<void> {
     const playlists = await this.playlistService.findPlaylistsByCategory(book.category);
     const memberIds = playlists.map(p => p.user.toString());
-
+  
     if (!memberIds.length) return;
-
+  
     const notifications = memberIds.map(userId => ({
       userId,
       type: NotificationType.NEW_BOOK,
@@ -43,15 +43,21 @@ export class NotificationService {
       isRead: false,
       created_at: new Date(),
     }));
-
+  
     await this.notificationModel.insertMany(notifications);
   }
 
 // แจ้งเตือนเมื่อมีคนกดไลค์คอมเมนต์
-async notifyLikeComment(userId: string, bookId: string, bookTitle: string): Promise<void> {
+async notifyLikeComment(
+  userId: string,
+  bookId: string,
+  bookTitle: string,
+  commentId: string,
+): Promise<void> {
   await this.notificationModel.create({
     userId,
     bookId,
+    commentId,
     type: NotificationType.LIKE_COMMENT,
     message: `มีคนกดถูกใจคอมเมนต์ของคุณในหนังสือ "${bookTitle}"`,
     isRead: false,
@@ -60,10 +66,16 @@ async notifyLikeComment(userId: string, bookId: string, bookTitle: string): Prom
 }
 
 // แจ้งเตือนเมื่อมีคนกดไลค์คำตอบ
-async notifyLikeReply(userId: string, bookId: string, bookTitle: string): Promise<void> {
+async notifyLikeReply(
+  userId: string,
+  bookId: string,
+  bookTitle: string,
+  commentId: string,
+): Promise<void> {
   await this.notificationModel.create({
     userId,
     bookId,
+    commentId,
     type: NotificationType.LIKE_REPLY,
     message: `มีคนกดถูกใจคำตอบของคุณในหนังสือ "${bookTitle}"`,
     isRead: false,
@@ -72,17 +84,22 @@ async notifyLikeReply(userId: string, bookId: string, bookTitle: string): Promis
 }
 
   // แจ้งเตือนเจ้าของคอมเมนต์เมื่อมีคนตอบกลับ
-  async notifyReply(originalUserId: string, bookId: string, bookTitle: string): Promise<void> {
+  async notifyReply(
+    originalUserId: string,
+    bookId: string,
+    bookTitle: string,
+    commentId: string,
+  ): Promise<void> {
     await this.notificationModel.create({
       userId: originalUserId,
       bookId,
+      commentId,
       type: NotificationType.COMMENT_REPLY,
-      message: `มีคนตอบกลับคอมเมนต์ในหนังสือ "${bookTitle}"`,
+      message: `มีคนตอบกลับคอมเมนต์ของคุณในหนังสือ "${bookTitle}"`,
       isRead: false,
       created_at: new Date(),
     });
   }
-
   // -------------------------------------------------------------------
   // 🔸 FETCH NOTIFICATIONS
   // -------------------------------------------------------------------

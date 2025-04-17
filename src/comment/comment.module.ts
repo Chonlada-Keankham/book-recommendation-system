@@ -11,7 +11,7 @@ import { BookModule } from 'src/book/book.module';
 @Module({
   imports: [
     forwardRef(() => UserModule),
-    BookModule,
+    forwardRef(() => BookModule),
     forwardRef(() => NotificationModule),
     MongooseModule.forFeature([
       { name: 'Comment', schema: CommentSchema },

@@ -1,3 +1,4 @@
+import { BookService } from 'src/book/book.service';
 import {
   Injectable,
   NotFoundException,
@@ -24,6 +25,9 @@ export class CommentService {
     private readonly commentModel: Model<iComment>,
     @Inject(forwardRef(() => NotificationService))
     private readonly notificationService: NotificationService,
+    @Inject(forwardRef(() => BookService))
+    private readonly bookService: BookService,
+
   ) { }
 
 
@@ -150,26 +154,35 @@ async findCommentsByBook(bookId: string) {
     if (!Types.ObjectId.isValid(commentId)) {
       throw new BadRequestException('Invalid commentId');
     }
+  
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
-
+  
     const reply: Partial<Reply> = {
       userId: new Types.ObjectId(userId),
       content: dto.content.trim(),
     };
+  
     comment.replies.push(reply as iReply);
     await comment.save();
-
-    if (comment.userId.toString() !== userId) {
-      await this.notificationService.notifyReply(
-        comment.userId.toString(),
-        comment.bookId.toString(),
-        'New reply to your comment',
-      );
-    }
+  
+    // ✅ เตรียมค่าที่ต้องใช้สำหรับ notification
+    const originalUserId = comment.userId.toString(); // เจ้าของคอมเมนต์ต้นฉบับ
+    const bookId = comment.bookId.toString();         // ID หนังสือจากคอมเมนต์
+    const book = await this.bookService.findById(bookId); // ดึงข้อมูลหนังสือ (ถ้ายังไม่มี)
+    const bookTitle = book?.book_th || 'หนังสือ';
+  
+    // ✅ ส่ง Notification แจ้งเตือนเจ้าของคอมเมนต์
+    await this.notificationService.notifyReply(
+      originalUserId,
+      bookId,
+      bookTitle,
+      comment._id.toString()
+    );
+  
     return comment;
   }
-
+  
 
   async updateReply(
     commentId: string,

@@ -17,9 +17,9 @@ export class BookService {
     @InjectModel('Book') private readonly bookModel: Model<iBook>,
     @Inject(forwardRef(() => PlaylistService))
     private readonly playlistService: PlaylistService,
-    @Inject(forwardRef(() => NotificationService)) 
+    @Inject(forwardRef(() => NotificationService))
     private readonly notificationService: NotificationService,
-      private readonly redisService: RedisService,
+    private readonly redisService: RedisService,
   ) { }
 
   // -------------------------------------------------------------------
@@ -50,6 +50,18 @@ export class BookService {
       .exec();
   }
 
+  async findById(bookId: string): Promise<iBook> {
+    if (!Types.ObjectId.isValid(bookId)) {
+      throw new BadRequestException('Invalid book ID');
+    }
+
+    const book = await this.bookModel.findById(bookId);
+    if (!book) {
+      throw new NotFoundException('Book not found');
+    }
+
+    return book;
+  }
 
   // -------------------------------------------------------------------
   // 🔸 CREATE
@@ -59,20 +71,20 @@ export class BookService {
       $or: [{ book_th: createBookDto.book_th }, { book_en: createBookDto.book_en }],
     });
     if (existing) throw new ConflictException('Book already exists.');
-  
+
     const imgPath = file ? `/uploads/book/${file.filename}` : '';
-  
+
     const newBook = new this.bookModel({
       ...createBookDto,
       img: imgPath,
       short_description: createBookDto.short_description || '',
       deleted_at: null,
     });
-  
+
     const savedBook = await newBook.save();
-  
+
     await this.notificationService.notifyNewBookToMembers(savedBook);
-  
+
     return savedBook;
   }
 
@@ -166,35 +178,35 @@ export class BookService {
   ): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
-  
+
     if (updateBookDto.book_th !== undefined) book.book_th = updateBookDto.book_th;
     if (updateBookDto.book_en !== undefined) book.book_en = updateBookDto.book_en;
     if (updateBookDto.author !== undefined) book.author = updateBookDto.author;
     if (updateBookDto.category !== undefined) book.category = updateBookDto.category;
     if (updateBookDto.short_description !== undefined) book.short_description = updateBookDto.short_description;
-  
+
     if (file) {
       const imgPath = `/uploads/book/${file.filename}`;
       book.img = imgPath;
     }
-  
+
     const updatedBook = await book.save();
     return updatedBook;
   }
-  
+
   async uploadBookCover(bookId: string, filename: string, shortDescription?: string): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
-  
+
     book.img = `/uploads/book/${filename}`;
-    
+
     if (shortDescription) {
       book.short_description = shortDescription;
     }
-  
+
     return await book.save();
   }
-  
+
   // -------------------------------------------------------------------
   // 🔸 RECOMMENDATION
   // -------------------------------------------------------------------
