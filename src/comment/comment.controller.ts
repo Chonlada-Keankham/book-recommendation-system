@@ -27,7 +27,7 @@ export class CommentController {
     return { statusCode: HttpStatus.CREATED, data: comment };
   }
 
-  @Get('book/:bookId')
+  @Get('/book/:bookId')
   @ApiOperation({ summary: 'List comments by book' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Comments fetched' })
   async findByBook(@Param('bookId') bookId: string) {
@@ -36,7 +36,7 @@ export class CommentController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Patch(':commentId')
+  @Patch('/update/:commentId')
   @ApiOperation({ summary: 'Update a comment' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Comment updated' })
   async update(
@@ -50,7 +50,7 @@ export class CommentController {
   }
   
   @UseGuards(JwtAuthGuard)
-  @Delete(':commentId')
+  @Delete('/delete/:commentId')
   @ApiOperation({ summary: 'Delete a comment' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Comment deleted' })
   async remove(
@@ -92,7 +92,7 @@ export class CommentController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Delete(':commentId/reply/:replyId')
+  @Delete(':commentId/del/:replyId')
   @ApiOperation({ summary: 'Delete a reply' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Reply deleted' })
   async removeReply(
