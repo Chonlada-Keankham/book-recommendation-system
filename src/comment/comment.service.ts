@@ -37,6 +37,7 @@ export class CommentService {
     return newComment.save();
   }
 
+// src/comment/comment.service.ts
 async findCommentsByBook(bookId: string) {
   if (!Types.ObjectId.isValid(bookId)) {
     throw new BadRequestException('Invalid bookId');
@@ -53,9 +54,10 @@ async findCommentsByBook(bookId: string) {
     _id: c._id.toString(),
     bookId: c.bookId.toString(),
     userId: (c.userId as any)._id.toString(),
-    username: (c.userId as any).username,   // ← ส่งชื่อผู้ใช้มา
+    username: (c.userId as any).username,
     content: c.content,
-    createdAt: c.created_at.toISOString(),   // ← ส่งเวลาเป็น ISO string
+    // ← ใช้ createdAt/updatedAt แทน created_at/updated_at
+    createdAt: c.created_at.toISOString(),
     updatedAt: c.updated_at.toISOString(),
     replies: c.replies.map(r => ({
       _id: r._id.toString(),
@@ -65,9 +67,7 @@ async findCommentsByBook(bookId: string) {
       createdAt: r.created_at.toISOString(),
       updatedAt: r.updated_at?.toISOString(),
     })),
-    // ถ้าทำ Like/Unlike ด้วยแล้วก็เพิ่ม:
-   /// likeCount: c.likedBy?.length ?? 0,
-   /// likedByMe: /* ดึงจาก currentUserId ถ้ามี */,
+    // ถ้ามี likeCount/likedByMe ก็ใส่ได้ที่นี่
   }));
 }
 
