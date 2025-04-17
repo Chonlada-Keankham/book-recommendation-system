@@ -37,8 +37,6 @@ export class CommentService {
     return newComment.save();
   }
 
-  // src/comment/comment.service.ts
-// src/comment/comment.service.ts
 async findCommentsByBook(bookId: string) {
   if (!Types.ObjectId.isValid(bookId)) {
     throw new BadRequestException('Invalid bookId');

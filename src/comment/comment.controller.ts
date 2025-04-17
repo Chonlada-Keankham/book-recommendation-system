@@ -14,6 +14,14 @@ export class CommentController {
   constructor(private readonly commentService: CommentService) { }
 
 
+  @Get('/book/:bookId')
+  @ApiOperation({ summary: 'List comments by book' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Comments fetched' })
+  async findByBook(@Param('bookId') bookId: string) {
+    const comments = await this.commentService.findCommentsByBook(bookId);
+    return { statusCode: HttpStatus.OK, data: comments };
+  }
+
   // ---------- Create Comment ----------
   @UseGuards(JwtAuthGuard)
   @Post('/create-comment')
@@ -28,13 +36,6 @@ export class CommentController {
     return { statusCode: HttpStatus.CREATED, data: comment };
   }
 
-  @Get('/book/:bookId')
-  @ApiOperation({ summary: 'List comments by book' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Comments fetched' })
-  async findByBook(@Param('bookId') bookId: string) {
-    const comments = await this.commentService.findCommentsByBook(bookId);
-    return { statusCode: HttpStatus.OK, data: comments };
-  }
 
   @UseGuards(JwtAuthGuard)
   @Patch('/update/:commentId')
