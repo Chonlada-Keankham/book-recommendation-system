@@ -9,14 +9,14 @@ dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  
+
   app.setGlobalPrefix('api');
 
   app.enableCors({
-      origin: true, 
-      credentials: true,
+    origin: 'http://localhost:3000',
+    credentials: true,
   });
-  
+
   const config = new DocumentBuilder()
     .setTitle('API Documentation')
     .setDescription('API description')
@@ -28,7 +28,7 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
 
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/',  
+    prefix: '/uploads/',
   });
 
   await app.listen(process.env.PORT || 5000, '0.0.0.0');
