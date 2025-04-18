@@ -18,7 +18,7 @@ export class CommentController {
   @ApiOperation({ summary: 'List comments by book' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Comments fetched' })
   async findByBook(@Param('bookId') bookId: string, @Req() req: Request) {
-    const userId = req.user['_id'];
+    const userId = req.user ? (req.user as any)._id : null;
     const comments = await this.commentService.findCommentsByBook(bookId, userId);
     return { statusCode: HttpStatus.OK, data: comments };
   }
