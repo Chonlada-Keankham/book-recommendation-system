@@ -31,6 +31,8 @@ export class Notification {
     required: true,
   })
   type: NotificationType;
+  
+
 }
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);

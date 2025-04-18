@@ -1,15 +1,14 @@
-// src/notification/interface/notification.interface.ts
-import { NotificationType } from 'src/enum/notification-type.enum';
+import { NotificationType } from "src/enum/notification-type.enum";
 
 export interface iNotification {
   _id: string;
   userId: string;
   bookId?: string;
-  commentId?: string;    // ← เพิ่ม
-  type: NotificationType;
+  commentId?: string;    // ← must match schema
+  link: string;
   message: string;
-  link: string;          // ← เพิ่ม
+  type: NotificationType;
   isRead: boolean;
-  createdAt: Date;       // ← mongoose timestamps สร้างให้
+  createdAt: Date;
   updatedAt: Date;
 }

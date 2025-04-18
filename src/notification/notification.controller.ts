@@ -9,29 +9,27 @@ import { Request } from 'express';
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
-  @Get('me')
+  @Get('/me')
   async getMyNotifications(@Req() req: Request) {
     const userId = req.user['_id'];
-    // ดึงข้อมูลเป็น Plain JS object
-    const result = await this.notificationService.getNotificationsByUser(userId);
+    const { notifications, unreadCount } = await this.notificationService.getNotificationsByUser(userId);
     return {
       statusCode: HttpStatus.OK,
       message: 'Notifications fetched successfully',
-      data: result.notifications,    // แต่ละตัวมี .link, .commentId, .createdAt
-      unreadCount: result.unreadCount,
+      data: notifications,
+      unreadCount,
     };
   }
-
   @Patch('read/:notificationId')
   async markAsRead(@Param('notificationId') id: string) {
-    const notification = await this.notificationService.markAsRead(id);
+    const updated = await this.notificationService.markAsRead(id);
     return {
       statusCode: HttpStatus.OK,
       message: 'Notification marked as read',
-      data: notification,
+      data: updated,  // lean() not needed here since .findByIdAndUpdate returns the doc
     };
   }
-
+  
   @Patch('read-all')
   async markAllAsRead(@Req() req: Request) {
     const userId = req.user['_id'];
