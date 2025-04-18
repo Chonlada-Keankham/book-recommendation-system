@@ -7,20 +7,30 @@ import { Request } from 'express';
 @UseGuards(JwtAuthGuard)
 @Controller('notification')
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(private readonly notificationService: NotificationService) { }
 
   @Get('/me')
   async getMyNotifications(@Req() req: Request) {
     const userId = req.user['_id'];
-    const { notifications, unreadCount } = await this.notificationService.getNotificationsByUser(userId);
+    const { notifications, unreadCount } =
+      await this.notificationService.getNotificationsByUser(userId);
+  
+    // คืน notification พร้อมลิงก์
     return {
       statusCode: HttpStatus.OK,
       message: 'Notifications fetched successfully',
-      data: notifications,
+      data: notifications.map(n => ({
+        _id: n._id,
+        message: n.message,
+        link: n.link,             // ← สำคัญ
+        isRead: n.isRead,
+        createdAt: n.createdAt,
+        // … อื่น ๆ ตามต้องการ
+      })),
       unreadCount,
     };
   }
-  @Patch('read/:notificationId')
+    @Patch('read/:notificationId')
   async markAsRead(@Param('notificationId') id: string) {
     const updated = await this.notificationService.markAsRead(id);
     return {
@@ -29,7 +39,7 @@ export class NotificationController {
       data: updated,  // lean() not needed here since .findByIdAndUpdate returns the doc
     };
   }
-  
+
   @Patch('read-all')
   async markAllAsRead(@Req() req: Request) {
     const userId = req.user['_id'];
