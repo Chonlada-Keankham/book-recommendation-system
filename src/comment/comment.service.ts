@@ -30,19 +30,24 @@ export class CommentService {
   ) {}
 
   async likeComment(commentId: string, userId: string) {
-    const comment = await this.commentModel.findById(commentId).populate('userId', 'username');
+    const comment = await this.commentModel
+      .findById(commentId)
+      .populate('userId', 'username');
+  
     if (!comment) throw new NotFoundException('Comment not found');
   
     const uid = new Types.ObjectId(userId);
-    const alreadyLiked = comment.likedBy.some(id => id.equals(uid));
-    if (!alreadyLiked) {
+    const isAlreadyLiked = comment.likedBy.some(id => id.equals(uid));
+  
+    if (!isAlreadyLiked) {
       comment.likedBy.push(uid);
   
-      // 🔔 ส่งแจ้งเตือน
-      if ((comment.userId as any)._id.toString() !== userId) {
+      // 🔔 ส่งแจ้งเตือนถ้าไม่ใช่เจ้าของคอมเมนต์
+      const ownerId = (comment.userId as any)._id?.toString?.() || comment.userId.toString();
+      if (ownerId !== userId) {
         const book = await this.bookService.findById(comment.bookId.toString());
         await this.notificationService.notifyLikeComment(
-          comment.userId._id.toString(),
+          ownerId,
           comment.bookId.toString(),
           book?.book_th || 'หนังสือ',
           comment._id.toString()
@@ -62,9 +67,10 @@ export class CommentService {
     if (!comment) throw new NotFoundException('Comment not found');
   
     const uid = new Types.ObjectId(userId);
-    const alreadyLiked = comment.likedBy.some(id => id.equals(uid));
-    if (alreadyLiked) {
-      comment.likedBy = comment.likedBy.filter(id => !id.equals(uid));
+    const index = comment.likedBy.findIndex(id => id.equals(uid));
+  
+    if (index !== -1) {
+      comment.likedBy.splice(index, 1);
       await comment.save();
     }
   
@@ -73,7 +79,7 @@ export class CommentService {
       likedByMe: false,
     };
   }
-       
+         
   async likeReply(commentId: string, replyId: string, userId: string) {
     const comment = await this.commentModel
       .findById(commentId)
