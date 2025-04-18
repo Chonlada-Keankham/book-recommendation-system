@@ -21,9 +21,6 @@ export class NotificationController {
     private readonly notificationService: NotificationService,
   ) {}
 
-  // -------------------------------------------------------------------
-  // 🔹 GET: All notifications for current user
-  // -------------------------------------------------------------------
   @Get('/me')
   @ApiOperation({ summary: 'Get notifications for current user' })
   @ApiResponse({ status: 200, description: 'Notifications fetched successfully' })
@@ -38,9 +35,6 @@ export class NotificationController {
     };
   }
 
-  // -------------------------------------------------------------------
-  // 🔹 PATCH: Read one notification
-  // -------------------------------------------------------------------
   @Patch('/read/:notificationId')
   @ApiOperation({ summary: 'Mark a notification as read' })
   @ApiResponse({ status: 200, description: 'Notification marked as read' })
@@ -53,9 +47,6 @@ export class NotificationController {
     };
   }
 
-  // -------------------------------------------------------------------
-  // 🔹 PATCH: Read all for current user
-  // -------------------------------------------------------------------
   @Patch('/read-all')
   @ApiOperation({ summary: 'Mark all notifications as read for current user' })
   @ApiResponse({ status: 200, description: 'All notifications marked as read' })
@@ -69,9 +60,6 @@ export class NotificationController {
     };
   }
 
-  // -------------------------------------------------------------------
-  // 🔹 DELETE: Clear read notifications for current user
-  // -------------------------------------------------------------------
   @Delete('/clear-read')
   @ApiOperation({ summary: 'Clear read notifications for current user' })
   @ApiResponse({ status: 200, description: 'Read notifications cleared' })
@@ -85,9 +73,6 @@ export class NotificationController {
     };
   }
 
-  // -------------------------------------------------------------------
-  // 🔹 (Optional) ADMIN or DEBUG only - get by userId
-  // -------------------------------------------------------------------
   @Get('/user/:userId')
   @ApiOperation({ summary: '[ADMIN] Get notifications for a user (by ID)' })
   @ApiResponse({ status: 200, description: 'Notifications fetched successfully' })

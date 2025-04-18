@@ -47,41 +47,41 @@ export class NotificationService {
     await this.notificationModel.insertMany(notifications);
   }
 
-// แจ้งเตือนเมื่อมีคนกดไลค์คอมเมนต์
-async notifyLikeComment(
-  userId: string,
-  bookId: string,
-  bookTitle: string,
-  commentId: string,
-): Promise<void> {
-  await this.notificationModel.create({
-    userId,
-    bookId,
-    commentId,
-    type: NotificationType.LIKE_COMMENT,
-    message: `มีคนกดถูกใจคอมเมนต์ของคุณในหนังสือ "${bookTitle}"`,
-    isRead: false,
-    created_at: new Date(),
-  });
-}
+  // แจ้งเตือนเมื่อมีคนกดไลค์คอมเมนต์
+  async notifyLikeComment(
+    userId: string,
+    bookId: string,
+    bookTitle: string,
+    commentId: string,
+  ): Promise<void> {
+    await this.notificationModel.create({
+      userId,
+      bookId,
+      commentId,
+      type: NotificationType.LIKE_COMMENT,
+      message: `มีคนกดถูกใจคอมเมนต์ของคุณในหนังสือ "${bookTitle}"`,
+      isRead: false,
+      created_at: new Date(),
+    });
+  }
 
-// แจ้งเตือนเมื่อมีคนกดไลค์คำตอบ
-async notifyLikeReply(
-  userId: string,
-  bookId: string,
-  bookTitle: string,
-  commentId: string,
-): Promise<void> {
-  await this.notificationModel.create({
-    userId,
-    bookId,
-    commentId,
-    type: NotificationType.LIKE_REPLY,
-    message: `มีคนกดถูกใจคำตอบของคุณในหนังสือ "${bookTitle}"`,
-    isRead: false,
-    created_at: new Date(),
-  });
-}
+  // แจ้งเตือนเมื่อมีคนกดไลค์คำตอบ
+  async notifyLikeReply(
+    userId: string,
+    bookId: string,
+    bookTitle: string,
+    commentId: string,
+  ): Promise<void> {
+    await this.notificationModel.create({
+      userId,
+      bookId,
+      commentId,
+      type: NotificationType.LIKE_REPLY,
+      message: `มีคนกดถูกใจคำตอบของคุณในหนังสือ "${bookTitle}"`,
+      isRead: false,
+      created_at: new Date(),
+    });
+  }
 
   // แจ้งเตือนเจ้าของคอมเมนต์เมื่อมีคนตอบกลับ
   async notifyReply(
@@ -100,10 +100,10 @@ async notifyLikeReply(
       created_at: new Date(),
     });
   }
+
   // -------------------------------------------------------------------
   // 🔸 FETCH NOTIFICATIONS
   // -------------------------------------------------------------------
-
 
   async getNotificationsByUser(userId: string): Promise<{
     notifications: iNotification[],
@@ -129,6 +129,7 @@ async notifyLikeReply(
       { new: true }
     );
   }
+
   async markAllAsRead(userId: string): Promise<{ modifiedCount: number }> {
     const result = await this.notificationModel.updateMany(
       { userId, isRead: false },

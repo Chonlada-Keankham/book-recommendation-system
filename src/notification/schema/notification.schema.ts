@@ -27,7 +27,9 @@ export class Notification {
     required: true,
   })
   type: NotificationType;
-}
 
+  @Prop({ type: String })
+  commentId?: string; // เพื่อ link ไปที่ comment/reply
+}
 export const NotificationSchema = SchemaFactory.createForClass(Notification);
 NotificationSchema.index({ userId: 1, isRead: 1 });
