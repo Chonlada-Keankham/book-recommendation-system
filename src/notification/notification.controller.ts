@@ -19,7 +19,7 @@ import { Request } from 'express';
 export class NotificationController {
   constructor(
     private readonly notificationService: NotificationService,
-  ) {}
+  ) { }
 
   // -------------------------------------------------------------------
   // 🔹 GET: All notifications for current user
@@ -29,12 +29,20 @@ export class NotificationController {
   @ApiResponse({ status: 200, description: 'Notifications fetched successfully' })
   async getMyNotifications(@Req() req: Request) {
     const userId = req.user['_id'];
-    const result = await this.notificationService.getNotificationsByUser(userId);
+    const { notifications, unreadCount } =
+      await this.notificationService.getNotificationsByUser(userId);
+
+    // สร้างลิงก์ให้ client ใช้งานทันที
+    const dataWithLinks = notifications.map(n => ({
+      ...n,
+      link: `/desCard?id=${n.bookId}&commentId=${(n as any).commentId || ''}`,
+    }));
+
     return {
       statusCode: HttpStatus.OK,
       message: 'Notifications fetched successfully',
-      data: result.notifications,
-      unreadCount: result.unreadCount,
+      data: dataWithLinks,
+      unreadCount,
     };
   }
 
@@ -92,12 +100,19 @@ export class NotificationController {
   @ApiOperation({ summary: '[ADMIN] Get notifications for a user (by ID)' })
   @ApiResponse({ status: 200, description: 'Notifications fetched successfully' })
   async getNotificationsByUser(@Param('userId') userId: string) {
-    const result = await this.notificationService.getNotificationsByUser(userId);
+    const { notifications, unreadCount } =
+      await this.notificationService.getNotificationsByUser(userId);
+
+    const dataWithLinks = notifications.map(n => ({
+      ...n,
+      link: `/desCard?id=${n.bookId}&commentId=${(n as any).commentId || ''}`,
+    }));
+
     return {
       statusCode: HttpStatus.OK,
       message: 'Notifications fetched successfully',
-      data: result.notifications,
-      unreadCount: result.unreadCount,
+      data: dataWithLinks,
+      unreadCount,
     };
   }
 }

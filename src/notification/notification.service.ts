@@ -40,6 +40,7 @@ export class NotificationService {
       type: NotificationType.NEW_BOOK,
       message: `หนังสือใหม่ "${book.book_th}" สำหรับสมาชิก "${book.category}"`,
       bookId: book._id,
+      link: `/desCard?id=${book._id}`,
       isRead: false,
       created_at: new Date(),
     }));
@@ -54,12 +55,14 @@ async notifyLikeComment(
   bookTitle: string,
   commentId: string,
 ): Promise<void> {
+  const link = `/desCard?id=${bookId}&commentId=${commentId}`;
   await this.notificationModel.create({
     userId,
     bookId,
     commentId,
     type: NotificationType.LIKE_COMMENT,
     message: `มีคนกดถูกใจคอมเมนต์ของคุณในหนังสือ "${bookTitle}"`,
+    link,
     isRead: false,
     created_at: new Date(),
   });
@@ -72,12 +75,14 @@ async notifyLikeReply(
   bookTitle: string,
   commentId: string,
 ): Promise<void> {
+  const link = `/desCard?id=${bookId}&commentId=${commentId}`;
   await this.notificationModel.create({
     userId,
     bookId,
     commentId,
     type: NotificationType.LIKE_REPLY,
     message: `มีคนกดถูกใจคำตอบของคุณในหนังสือ "${bookTitle}"`,
+    link,
     isRead: false,
     created_at: new Date(),
   });
@@ -90,12 +95,14 @@ async notifyLikeReply(
     bookTitle: string,
     commentId: string,
   ): Promise<void> {
+    const link = `/desCard?id=${bookId}&commentId=${commentId}`;
     await this.notificationModel.create({
       userId: originalUserId,
       bookId,
       commentId,
       type: NotificationType.COMMENT_REPLY,
       message: `มีคนตอบกลับคอมเมนต์ของคุณในหนังสือ "${bookTitle}"`,
+      link,
       isRead: false,
       created_at: new Date(),
     });
