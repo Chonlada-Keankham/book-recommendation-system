@@ -17,27 +17,24 @@ export class CommentController {
   @Get('/book/:bookId')
   @ApiOperation({ summary: 'List comments by book' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Comments fetched' })
-  async findByBook(@Param('bookId') bookId: string) {
-    const comments = await this.commentService.findCommentsByBook(bookId);
+  async findByBook(@Param('bookId') bookId: string, @Req() req: Request) {
+    const userId = (req.user as any)?._id?.toString() ?? null; // เช็คว่า login หรือยัง
+    const comments = await this.commentService.findCommentsByBook(bookId, userId);
     return { statusCode: HttpStatus.OK, data: comments };
   }
+  
+// comment.controller.ts (แก้เฉพาะส่วนนี้)
+@UseGuards(JwtAuthGuard)
+@Post('/:commentId/like')
+async toggleLikeComment(
+  @Param('commentId') commentId: string,
+  @Req() req: Request
+) {
+  const userId = req.user['_id'];
+  const result = await this.commentService.toggleLikeComment(commentId, userId);
+  return { statusCode: HttpStatus.OK, data: result };
+}
 
-  @UseGuards(JwtAuthGuard)
-  @Post('/:commentId/like')
-  async likeComment(@Param('commentId') commentId: string, @Req() req: Request) {
-    const userId = req.user['_id'];
-    const result = await this.commentService.likeComment(commentId, userId);
-    return { statusCode: HttpStatus.OK, data: result };
-  }
-
-  // อันไลค์ comment
-  @UseGuards(JwtAuthGuard)
-  @Delete('/:commentId/like')
-  async unlikeComment(@Param('commentId') commentId: string, @Req() req: Request) {
-    const userId = req.user['_id'];
-    const result = await this.commentService.unlikeComment(commentId, userId);
-    return { statusCode: HttpStatus.OK, data: result };
-  }
 
   // กดไลค์ reply
   @UseGuards(JwtAuthGuard)

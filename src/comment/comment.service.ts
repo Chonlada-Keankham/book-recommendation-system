@@ -27,29 +27,30 @@ export class CommentService {
     private readonly notificationService: NotificationService,
     @Inject(forwardRef(() => BookService))
     private readonly bookService: BookService,
+  ) {}
 
-  ) { }
-
-
-  async likeComment(commentId: string, userId: string) {
+  // ✅ Toggle Like (กดอีกครั้งเป็น Unlike)
+  async toggleLikeComment(commentId: string, userId: string) {
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
+  
     const uid = new Types.ObjectId(userId);
-    if (!comment.likedBy.includes(uid)) {
+    const index = comment.likedBy.findIndex(id => id.toString() === uid.toString());
+  
+    if (index === -1) {
       comment.likedBy.push(uid);
-      await comment.save();
+    } else {
+      comment.likedBy.splice(index, 1); // เอาออก
     }
-    return { likeCount: comment.likedBy.length, likedByMe: true };
-  }
-
-  async unlikeComment(commentId: string, userId: string) {
-    const comment = await this.commentModel.findById(commentId);
-    if (!comment) throw new NotFoundException('Comment not found');
-    comment.likedBy = comment.likedBy.filter(id => id.toString() !== userId);
+  
     await comment.save();
-    return { likeCount: comment.likedBy.length, likedByMe: false };
+  
+    return {
+      likeCount: comment.likedBy.length,
+      likedByMe: index === -1, // ถ้าเพิ่มไลค์ แปลว่าเราชอบ
+    };
   }
-
+  
   async likeReply(commentId: string, replyId: string, userId: string) {
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
@@ -72,7 +73,7 @@ export class CommentService {
     await comment.save();
     return { replyId, likeCount: reply.likedBy.length, likedByMe: false };
   }
-  // 🔸 Create Comment
+
   async createComment(dto: CreateCommentDto, userId: string) {
     const newComment = new this.commentModel({
       userId: new Types.ObjectId(userId),
@@ -82,46 +83,42 @@ export class CommentService {
     return newComment.save();
   }
 
-// src/comment/comment.service.ts
-// src/comment/comment.service.ts
-async findCommentsByBook(bookId: string) {
-  if (!Types.ObjectId.isValid(bookId)) {
-    throw new BadRequestException('Invalid bookId');
+  async findCommentsByBook(bookId: string, currentUserId: string | null) {
+    if (!Types.ObjectId.isValid(bookId)) {
+      throw new BadRequestException('Invalid bookId');
+    }
+
+    const comments = await this.commentModel
+      .find({ bookId: new Types.ObjectId(bookId) })
+      .populate('userId', 'username')
+      .populate('replies.userId', 'username')
+      .sort({ createdAt: -1 })
+      .exec();
+
+    return comments.map(c => ({
+      _id: c._id.toString(),
+      bookId: c.bookId.toString(),
+      userId: (c.userId as any)._id.toString(),
+      username: (c.userId as any).username,
+      content: c.content,
+      createdAt: c.createdAt.toISOString(),
+      updatedAt: c.updatedAt.toISOString(),
+      likeCount: c.likedBy.length,
+      likedByMe: currentUserId ? c.likedBy.some(u => u.toString() === currentUserId) : false,
+      replies: c.replies.map(r => ({
+        _id: r._id.toString(),
+        userId: (r.userId as any)._id.toString(),
+        username: (r.userId as any).username,
+        content: r.content,
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt?.toISOString(),
+        likeCount: r.likedBy.length,
+        likedByMe: currentUserId ? r.likedBy.some(u => u.toString() === currentUserId) : false,
+      })),
+    }));
   }
 
-  const comments = await this.commentModel
-    .find({ bookId: new Types.ObjectId(bookId) })
-    .populate('userId', 'username')
-    .populate('replies.userId', 'username')
-    .sort({ createdAt: -1 })
-    .exec();
-
-  return comments.map(c => ({
-    _id: c._id.toString(),
-    bookId: c.bookId.toString(),
-    userId: (c.userId as any)._id.toString(),
-    username: (c.userId as any).username,
-    content: c.content,
-    // ใช้ createdAt / updatedAt ที่ mongoose timestamps สร้างให้
-    createdAt: c.createdAt.toISOString(),
-    updatedAt: c.updatedAt.toISOString(),
-    replies: c.replies.map(r => ({
-      _id: r._id.toString(),
-      userId: (r.userId as any)._id.toString(),
-      username: (r.userId as any).username,
-      content: r.content,
-      createdAt: r.createdAt.toISOString(),
-      updatedAt: r.updatedAt?.toISOString(),
-    })),
-    // ถ้าใช้ like/Unlike ก็ใส่ likeCount, likedByMe ไว้ด้วย
-  }));
-}
-
-  async updateComment(
-    commentId: string,
-    dto: UpdateCommentDto,
-    userId: string,
-  ) {
+  async updateComment(commentId: string, dto: UpdateCommentDto, userId: string) {
     if (!Types.ObjectId.isValid(commentId)) {
       throw new BadRequestException('Invalid commentId');
     }
@@ -146,50 +143,38 @@ async findCommentsByBook(bookId: string) {
     return comment.deleteOne();
   }
 
-  async createReply(
-    commentId: string,
-    dto: CreateReplyDto,
-    userId: string,
-  ) {
+  async createReply(commentId: string, dto: CreateReplyDto, userId: string) {
     if (!Types.ObjectId.isValid(commentId)) {
       throw new BadRequestException('Invalid commentId');
     }
-  
+
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
-  
+
     const reply: Partial<Reply> = {
       userId: new Types.ObjectId(userId),
       content: dto.content.trim(),
     };
-  
+
     comment.replies.push(reply as iReply);
     await comment.save();
-  
-    // ✅ เตรียมค่าที่ต้องใช้สำหรับ notification
-    const originalUserId = comment.userId.toString(); // เจ้าของคอมเมนต์ต้นฉบับ
-    const bookId = comment.bookId.toString();         // ID หนังสือจากคอมเมนต์
-    const book = await this.bookService.findById(bookId); // ดึงข้อมูลหนังสือ (ถ้ายังไม่มี)
+
+    const originalUserId = comment.userId.toString();
+    const bookId = comment.bookId.toString();
+    const book = await this.bookService.findById(bookId);
     const bookTitle = book?.book_th || 'หนังสือ';
-  
-    // ✅ ส่ง Notification แจ้งเตือนเจ้าของคอมเมนต์
+
     await this.notificationService.notifyReply(
       originalUserId,
       bookId,
       bookTitle,
       comment._id.toString()
     );
-  
+
     return comment;
   }
-  
 
-  async updateReply(
-    commentId: string,
-    replyId: string,
-    dto: UpdateReplyDto,
-    userId: string,
-  ) {
+  async updateReply(commentId: string, replyId: string, dto: UpdateReplyDto, userId: string) {
     if (!Types.ObjectId.isValid(commentId) || !Types.ObjectId.isValid(replyId)) {
       throw new BadRequestException('Invalid ID');
     }
@@ -203,25 +188,17 @@ async findCommentsByBook(bookId: string) {
     await comment.save();
   }
 
-  async deleteReply(
-    commentId: string,
-    replyId: string,
-    userId: string,
-  ) {
+  async deleteReply(commentId: string, replyId: string, userId: string) {
     if (!Types.ObjectId.isValid(commentId) || !Types.ObjectId.isValid(replyId)) {
       throw new BadRequestException('Invalid ID');
     }
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
 
-    // deleteReply
     const idx = comment.replies.findIndex(r => r._id.toString() === replyId);
     if (idx === -1) throw new NotFoundException('Reply not found');
     if (comment.replies[idx].userId.toString() !== userId) throw new ForbiddenException();
     comment.replies.splice(idx, 1);
     await comment.save();
-
   }
 }
-
-
