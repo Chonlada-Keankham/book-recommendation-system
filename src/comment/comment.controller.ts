@@ -23,7 +23,7 @@ export class CommentController {
       
 @UseGuards(JwtAuthGuard)
 @Post('/:commentId/like')
-async toggleLikeComment(
+async likeComment(
   @Param('commentId') commentId: string,
   @Req() req: Request
 ) {
@@ -34,7 +34,7 @@ async toggleLikeComment(
 
 @UseGuards(JwtAuthGuard)
 @Delete('/:commentId/like')
-async unlikeComment(@Param('id') commentId: string, @Req() req: Request) {
+async unlikeComment(@Param('commentId') commentId: string, @Req() req: Request) {
   const userId = req.user['_id'];
   const result = await this.commentService.unlikeComment(commentId, userId);
   return { statusCode: 200, data: result };
