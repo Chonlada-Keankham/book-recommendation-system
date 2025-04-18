@@ -27,7 +27,14 @@ export class Notification {
     required: true,
   })
   type: NotificationType;
+  @Prop({ type: Types.ObjectId, ref: 'Comment', required: false })
+  commentId?: Types.ObjectId;  // corrected field name
+
+  @Prop({ type: String, required: true })
+  link: string;               // link to navigate
+
 }
+
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);
 NotificationSchema.index({ userId: 1, isRead: 1 });

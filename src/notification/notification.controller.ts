@@ -24,27 +24,23 @@ export class NotificationController {
   // -------------------------------------------------------------------
   // 🔹 GET: All notifications for current user
   // -------------------------------------------------------------------
-  @Get('/me')
-  @ApiOperation({ summary: 'Get notifications for current user' })
-  @ApiResponse({ status: 200, description: 'Notifications fetched successfully' })
-  async getMyNotifications(@Req() req: Request) {
-    const userId = req.user['_id'];
-    const { notifications, unreadCount } =
-      await this.notificationService.getNotificationsByUser(userId);
+// src/notification/notification.controller.ts
 
-    // สร้างลิงก์ให้ client ใช้งานทันที
-    const dataWithLinks = notifications.map(n => ({
-      ...n,
-      link: `/desCard?id=${n.bookId}&commentId=${(n as any).commentId || ''}`,
-    }));
+@Get('/me')
+@ApiOperation({ summary: 'Get notifications for current user' })
+@ApiResponse({ status: 200, description: 'Notifications fetched successfully' })
+async getMyNotifications(@Req() req: Request) {
+  const userId = req.user['_id'];
+  const { notifications, unreadCount } =
+    await this.notificationService.getNotificationsByUser(userId);
 
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Notifications fetched successfully',
-      data: dataWithLinks,
-      unreadCount,
-    };
-  }
+  return {
+    statusCode: HttpStatus.OK,
+    message: 'Notifications fetched successfully',
+    data: notifications,    // <-- notifications แต่ละตัวมี .link มาแล้ว
+    unreadCount,
+  };
+}
 
   // -------------------------------------------------------------------
   // 🔹 PATCH: Read one notification
