@@ -29,46 +29,51 @@ export class CommentService {
     private readonly bookService: BookService,
   ) {}
 
-  // ✅ Toggle Like (กดอีกครั้งเป็น Unlike)
-  async toggleLikeComment(commentId: string, userId: string) {
+  async likeComment(commentId: string, userId: string) {
     const comment = await this.commentModel.findById(commentId).populate('userId', 'username');
     if (!comment) throw new NotFoundException('Comment not found');
   
     const uid = new Types.ObjectId(userId);
-  
-    // ✅ เช็กว่าเคยกดไลค์หรือยัง
     const alreadyLiked = comment.likedBy.some(id => id.equals(uid));
-  
-    if (alreadyLiked) {
-      // ✅ เคยกด → อันไลค์
-      comment.likedBy = comment.likedBy.filter(id => !id.equals(uid));
-    } else {
-      // ✅ ยังไม่เคยกด → ไลค์
+    if (!alreadyLiked) {
       comment.likedBy.push(uid);
   
-      // แจ้งเตือนถ้าไม่ใช่เจ้าของคอมเมนต์
+      // 🔔 ส่งแจ้งเตือน
       if ((comment.userId as any)._id.toString() !== userId) {
-        const bookId = comment.bookId.toString();
-        const book = await this.bookService.findById(bookId);
-        const bookTitle = book?.book_th || 'หนังสือ';
-  
+        const book = await this.bookService.findById(comment.bookId.toString());
         await this.notificationService.notifyLikeComment(
           comment.userId._id.toString(),
-          bookId,
-          bookTitle,
+          comment.bookId.toString(),
+          book?.book_th || 'หนังสือ',
           comment._id.toString()
         );
       }
-    }
   
-    await comment.save();
+      await comment.save();
+    }
   
     return {
       likeCount: comment.likedBy.length,
-      likedByMe: !alreadyLiked,
+      likedByMe: true,
     };
   }
-      
+  async unlikeComment(commentId: string, userId: string) {
+    const comment = await this.commentModel.findById(commentId);
+    if (!comment) throw new NotFoundException('Comment not found');
+  
+    const uid = new Types.ObjectId(userId);
+    const alreadyLiked = comment.likedBy.some(id => id.equals(uid));
+    if (alreadyLiked) {
+      comment.likedBy = comment.likedBy.filter(id => !id.equals(uid));
+      await comment.save();
+    }
+  
+    return {
+      likeCount: comment.likedBy.length,
+      likedByMe: false,
+    };
+  }
+       
   async likeReply(commentId: string, replyId: string, userId: string) {
     const comment = await this.commentModel
       .findById(commentId)

@@ -21,20 +21,24 @@ export class CommentController {
     return { statusCode: HttpStatus.OK, data: comments };
   }
       
-// comment.controller.ts (แก้เฉพาะส่วนนี้)
 @UseGuards(JwtAuthGuard)
-@Patch('/:commentId/like')
-@ApiOperation({ summary: 'Toggle like comment' })
-@ApiResponse({ status: HttpStatus.OK, description: 'Toggle success' })
+@Post('/:commentId/like')
 async toggleLikeComment(
   @Param('commentId') commentId: string,
   @Req() req: Request
 ) {
   const userId = req.user['_id'];
-  const result = await this.commentService.toggleLikeComment(commentId, userId);
+  const result = await this.commentService.likeComment(commentId, userId);
   return { statusCode: HttpStatus.OK, data: result };
 }
 
+@UseGuards(JwtAuthGuard)
+@Delete('/:commentId/like')
+async unlikeComment(@Param('id') commentId: string, @Req() req: Request) {
+  const userId = req.user['_id'];
+  const result = await this.commentService.unlikeComment(commentId, userId);
+  return { statusCode: 200, data: result };
+}
 
   // กดไลค์ reply
   @UseGuards(JwtAuthGuard)
@@ -61,7 +65,6 @@ async toggleLikeComment(
     const result = await this.commentService.unlikeReply(commentId, replyId, userId);
     return { statusCode: HttpStatus.OK, data: result };
   }
-  
   // ---------- Create Comment ----------
   @UseGuards(JwtAuthGuard)
   @Post('/create-comment')
