@@ -14,14 +14,14 @@ export class CommentController {
   constructor(private readonly commentService: CommentService) { }
 
 
+  @UseGuards(JwtAuthGuard)
   @Get('/book/:bookId')
-  @ApiOperation({ summary: 'List comments by book' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Comments fetched' })
-  async findByBook(@Param('bookId') bookId: string) {
-    const comments = await this.commentService.findCommentsByBook(bookId);
+  async findByBook(@Param('bookId') bookId: string, @Req() req: Request) {
+    const userId = req.user['_id'];
+    const comments = await this.commentService.findCommentsByBook(bookId, userId);
     return { statusCode: HttpStatus.OK, data: comments };
   }
-
+  
   @UseGuards(JwtAuthGuard)
   @Post('/:commentId/like')
   async likeComment(@Param('commentId') commentId: string, @Req() req: Request) {
