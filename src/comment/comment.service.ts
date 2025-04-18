@@ -87,37 +87,51 @@ export class CommentService {
     if (!Types.ObjectId.isValid(bookId)) {
       throw new BadRequestException('Invalid bookId');
     }
-
+  
     const comments = await this.commentModel
       .find({ bookId: new Types.ObjectId(bookId) })
       .populate('userId', 'username')
       .populate('replies.userId', 'username')
       .sort({ createdAt: -1 })
       .exec();
-
-    return comments.map(c => ({
-      _id: c._id.toString(),
-      bookId: c.bookId.toString(),
-      userId: (c.userId as any)._id.toString(),
-      username: (c.userId as any).username,
-      content: c.content,
-      createdAt: c.createdAt.toISOString(),
-      updatedAt: c.updatedAt.toISOString(),
-      likeCount: c.likedBy.length,
-      likedByMe: currentUserId ? c.likedBy.some(u => u.toString() === currentUserId) : false,
-      replies: c.replies.map(r => ({
-        _id: r._id.toString(),
-        userId: (r.userId as any)._id.toString(),
-        username: (r.userId as any).username,
-        content: r.content,
-        createdAt: r.createdAt.toISOString(),
-        updatedAt: r.updatedAt?.toISOString(),
-        likeCount: r.likedBy.length,
-        likedByMe: currentUserId ? r.likedBy.some(u => u.toString() === currentUserId) : false,
-      })),
-    }));
+  
+    return comments.map(c => {
+      const likeCount = c.likedBy?.length ?? 0;
+      const likedByMe = currentUserId
+        ? c.likedBy?.some((id) => id.toString() === currentUserId)
+        : false;
+  
+      return {
+        _id: c._id.toString(),
+        bookId: c.bookId.toString(),
+        userId: (c.userId as any)._id.toString(),
+        username: (c.userId as any).username,
+        content: c.content,
+        createdAt: c.createdAt.toISOString(),
+        updatedAt: c.updatedAt.toISOString(),
+        likeCount,
+        likedByMe,
+        replies: c.replies.map(r => {
+          const rLikeCount = r.likedBy?.length ?? 0;
+          const rLikedByMe = currentUserId
+            ? r.likedBy?.some((id) => id.toString() === currentUserId)
+            : false;
+  
+          return {
+            _id: r._id.toString(),
+            userId: (r.userId as any)._id.toString(),
+            username: (r.userId as any).username,
+            content: r.content,
+            createdAt: r.createdAt.toISOString(),
+            updatedAt: r.updatedAt?.toISOString(),
+            likeCount: rLikeCount,
+            likedByMe: rLikedByMe,
+          };
+        }),
+      };
+    });
   }
-
+  
   async updateComment(commentId: string, dto: UpdateCommentDto, userId: string) {
     if (!Types.ObjectId.isValid(commentId)) {
       throw new BadRequestException('Invalid commentId');
