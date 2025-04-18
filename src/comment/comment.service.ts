@@ -35,38 +35,40 @@ export class CommentService {
     if (!comment) throw new NotFoundException('Comment not found');
   
     const uid = new Types.ObjectId(userId);
-    const index = comment.likedBy.findIndex(id => id.toString() === uid.toString());
   
-    const isLiked = index === -1;
+    // ✅ เช็กว่าเคยกดไลค์หรือยัง
+    const alreadyLiked = comment.likedBy.some(id => id.equals(uid));
   
-    if (isLiked) {
+    if (alreadyLiked) {
+      // ✅ เคยกด → อันไลค์
+      comment.likedBy = comment.likedBy.filter(id => !id.equals(uid));
+    } else {
+      // ✅ ยังไม่เคยกด → ไลค์
       comment.likedBy.push(uid);
   
-      // แจ้งเตือนเจ้าของคอมเมนต์ ถ้าไม่ใช่คนกดเอง
-      if (comment.userId._id.toString() !== userId) {
+      // แจ้งเตือนถ้าไม่ใช่เจ้าของคอมเมนต์
+      if ((comment.userId as any)._id.toString() !== userId) {
         const bookId = comment.bookId.toString();
         const book = await this.bookService.findById(bookId);
         const bookTitle = book?.book_th || 'หนังสือ';
   
         await this.notificationService.notifyLikeComment(
-          comment.userId._id.toString(), // ผู้ถูกไลค์
+          comment.userId._id.toString(),
           bookId,
           bookTitle,
           comment._id.toString()
         );
       }
-    } else {
-      comment.likedBy.splice(index, 1);
     }
   
     await comment.save();
   
     return {
       likeCount: comment.likedBy.length,
-      likedByMe: isLiked,
+      likedByMe: !alreadyLiked,
     };
   }
-    
+      
   async likeReply(commentId: string, replyId: string, userId: string) {
     const comment = await this.commentModel
       .findById(commentId)
