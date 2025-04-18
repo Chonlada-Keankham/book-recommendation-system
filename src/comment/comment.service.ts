@@ -68,8 +68,12 @@ export class CommentService {
   }
     
   async likeReply(commentId: string, replyId: string, userId: string) {
-    const comment = await this.commentModel.findById(commentId).populate('replies.userId', 'username');
+    const comment = await this.commentModel
+      .findById(commentId)
+      .populate('replies.userId', 'username'); // ✅ ensure userId is populated
+  
     if (!comment) throw new NotFoundException('Comment not found');
+  
     const reply = (comment.replies as any).id(replyId);
     if (!reply) throw new NotFoundException('Reply not found');
   
@@ -80,17 +84,22 @@ export class CommentService {
       reply.likedBy.push(uid);
       await comment.save();
   
-      // แจ้งเตือนเจ้าของ reply ถ้าไม่ใช่คนกดเอง
-      if (reply.userId.toString() !== userId) {
+      // ✅ ปรับตรงนี้ให้รองรับทั้งกรณี populate และไม่ populate
+      const replyOwnerId =
+        (reply.userId as any)?._id?.toString?.() || reply.userId.toString();
+  
+      if (replyOwnerId !== userId) {
         const bookId = comment.bookId.toString();
         const book = await this.bookService.findById(bookId);
         const bookTitle = book?.book_th || 'หนังสือ';
   
+        console.log('🔔 แจ้งเตือน LIKE_REPLY ไปที่:', replyOwnerId);
+  
         await this.notificationService.notifyLikeReply(
-          reply.userId.toString(),
+          replyOwnerId,
           bookId,
           bookTitle,
-          comment._id.toString() // ใช้ commentId สำหรับ scroll ถึง reply ในหน้าเดียวกัน
+          comment._id.toString()
         );
       }
     }
@@ -101,7 +110,7 @@ export class CommentService {
       likedByMe: true,
     };
   }
-  
+    
   async unlikeReply(commentId: string, replyId: string, userId: string) {
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
