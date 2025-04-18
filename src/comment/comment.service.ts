@@ -31,39 +31,77 @@ export class CommentService {
 
   // ✅ Toggle Like (กดอีกครั้งเป็น Unlike)
   async toggleLikeComment(commentId: string, userId: string) {
-    const comment = await this.commentModel.findById(commentId);
+    const comment = await this.commentModel.findById(commentId).populate('userId', 'username');
     if (!comment) throw new NotFoundException('Comment not found');
   
     const uid = new Types.ObjectId(userId);
     const index = comment.likedBy.findIndex(id => id.toString() === uid.toString());
   
-    if (index === -1) {
+    const isLiked = index === -1;
+  
+    if (isLiked) {
       comment.likedBy.push(uid);
+  
+      // แจ้งเตือนเจ้าของคอมเมนต์ ถ้าไม่ใช่คนกดเอง
+      if (comment.userId._id.toString() !== userId) {
+        const bookId = comment.bookId.toString();
+        const book = await this.bookService.findById(bookId);
+        const bookTitle = book?.book_th || 'หนังสือ';
+  
+        await this.notificationService.notifyLikeComment(
+          comment.userId._id.toString(), // ผู้ถูกไลค์
+          bookId,
+          bookTitle,
+          comment._id.toString()
+        );
+      }
     } else {
-      comment.likedBy.splice(index, 1); // เอาออก
+      comment.likedBy.splice(index, 1);
     }
   
     await comment.save();
   
     return {
       likeCount: comment.likedBy.length,
-      likedByMe: index === -1, // ถ้าเพิ่มไลค์ แปลว่าเราชอบ
+      likedByMe: isLiked,
     };
   }
-  
+    
   async likeReply(commentId: string, replyId: string, userId: string) {
-    const comment = await this.commentModel.findById(commentId);
+    const comment = await this.commentModel.findById(commentId).populate('replies.userId', 'username');
     if (!comment) throw new NotFoundException('Comment not found');
     const reply = (comment.replies as any).id(replyId);
     if (!reply) throw new NotFoundException('Reply not found');
+  
     const uid = new Types.ObjectId(userId);
-    if (!reply.likedBy.includes(uid)) {
+    const alreadyLiked = reply.likedBy?.some(id => id.toString() === uid.toString());
+  
+    if (!alreadyLiked) {
       reply.likedBy.push(uid);
       await comment.save();
+  
+      // แจ้งเตือนเจ้าของ reply ถ้าไม่ใช่คนกดเอง
+      if (reply.userId.toString() !== userId) {
+        const bookId = comment.bookId.toString();
+        const book = await this.bookService.findById(bookId);
+        const bookTitle = book?.book_th || 'หนังสือ';
+  
+        await this.notificationService.notifyLikeReply(
+          reply.userId.toString(),
+          bookId,
+          bookTitle,
+          comment._id.toString() // ใช้ commentId สำหรับ scroll ถึง reply ในหน้าเดียวกัน
+        );
+      }
     }
-    return { replyId, likeCount: reply.likedBy.length, likedByMe: true };
+  
+    return {
+      replyId,
+      likeCount: reply.likedBy.length,
+      likedByMe: true,
+    };
   }
-
+  
   async unlikeReply(commentId: string, replyId: string, userId: string) {
     const comment = await this.commentModel.findById(commentId);
     if (!comment) throw new NotFoundException('Comment not found');
@@ -103,10 +141,13 @@ export class CommentService {
       content: c.content,
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
+  
+      // ✅ ตรงนี้คือการเช็คว่า current user กดไลค์ comment นี้หรือยัง
       likeCount: c.likedBy.length,
       likedByMe: currentUserId
         ? c.likedBy.some(id => id.toString() === currentUserId)
         : false,
+  
       replies: c.replies.map(r => ({
         _id: r._id.toString(),
         userId: (r.userId as any)._id.toString(),
@@ -114,6 +155,8 @@ export class CommentService {
         content: r.content,
         createdAt: r.createdAt.toISOString(),
         updatedAt: r.updatedAt?.toISOString(),
+  
+        // ✅ ตรงนี้เช็คว่า current user กดไลค์ reply นี้หรือยัง
         likeCount: r.likedBy?.length || 0,
         likedByMe: currentUserId
           ? r.likedBy?.some(id => id.toString() === currentUserId)
@@ -121,7 +164,7 @@ export class CommentService {
       })),
     }));
   }
-    
+      
   async updateComment(commentId: string, dto: UpdateCommentDto, userId: string) {
     if (!Types.ObjectId.isValid(commentId)) {
       throw new BadRequestException('Invalid commentId');

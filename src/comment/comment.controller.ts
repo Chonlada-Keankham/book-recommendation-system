@@ -15,14 +15,12 @@ export class CommentController {
 
 
   @Get('/book/:bookId')
-  @ApiOperation({ summary: 'List comments by book' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Comments fetched' })
   async findByBook(@Param('bookId') bookId: string, @Req() req: Request) {
-    const userId = req.user ? (req.user as any)._id : null;
+    const userId = (req.user as any)?._id || null;
     const comments = await this.commentService.findCommentsByBook(bookId, userId);
     return { statusCode: HttpStatus.OK, data: comments };
   }
-    
+      
 // comment.controller.ts (แก้เฉพาะส่วนนี้)
 @UseGuards(JwtAuthGuard)
 @Post('/:commentId/like')
