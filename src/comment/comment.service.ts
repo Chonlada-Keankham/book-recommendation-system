@@ -84,9 +84,13 @@ export class CommentService {
 
 // src/comment/comment.service.ts
 // src/comment/comment.service.ts
-async findCommentsByBook(bookId: string, currentUserId: string) {
+async findCommentsByBook(bookId: string) {
+  if (!Types.ObjectId.isValid(bookId)) {
+    throw new BadRequestException('Invalid bookId');
+  }
+
   const comments = await this.commentModel
-    .find({ bookId })
+    .find({ bookId: new Types.ObjectId(bookId) })
     .populate('userId', 'username')
     .populate('replies.userId', 'username')
     .sort({ createdAt: -1 })
@@ -98,10 +102,9 @@ async findCommentsByBook(bookId: string, currentUserId: string) {
     userId: (c.userId as any)._id.toString(),
     username: (c.userId as any).username,
     content: c.content,
+    // ใช้ createdAt / updatedAt ที่ mongoose timestamps สร้างให้
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
-    likeCount: c.likedBy?.length ?? 0,
-    likedByMe: c.likedBy?.some(u => u.toString() === currentUserId) ?? false,
     replies: c.replies.map(r => ({
       _id: r._id.toString(),
       userId: (r.userId as any)._id.toString(),
@@ -109,13 +112,12 @@ async findCommentsByBook(bookId: string, currentUserId: string) {
       content: r.content,
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt?.toISOString(),
-      likeCount: r.likes?.length ?? 0,
-      likedByMe: r.likes?.some(u => u.toString() === currentUserId) ?? false,
-    }))
+    })),
+    // ถ้าใช้ like/Unlike ก็ใส่ likeCount, likedByMe ไว้ด้วย
   }));
 }
 
-async updateComment(
+  async updateComment(
     commentId: string,
     dto: UpdateCommentDto,
     userId: string,

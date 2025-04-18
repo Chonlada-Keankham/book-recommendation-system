@@ -11,7 +11,7 @@ export class Reply {
   
   @Prop({ type: [Types.ObjectId], ref: 'User', default: [] })
   likedBy: Types.ObjectId[];
-  }
+}
 
 export type ReplyDocument = Reply & Document;
 export const ReplySchema = SchemaFactory.createForClass(Reply);

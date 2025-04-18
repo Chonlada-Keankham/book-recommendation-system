@@ -18,7 +18,7 @@ export class Comment {
 
   @Prop({ type: [Types.ObjectId], ref: 'User', default: [] })
   likedBy: Types.ObjectId[];
-  
+
 }
 
 export type CommentDocument = Comment & Document;
