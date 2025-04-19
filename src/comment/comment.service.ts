@@ -164,7 +164,6 @@ export class CommentService {
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
   
-      // ✅ ตรงนี้คือการเช็คว่า current user กดไลค์ comment นี้หรือยัง
       likeCount: c.likedBy.length,
       likedByMe: currentUserId
         ? c.likedBy.some(id => id.toString() === currentUserId)
@@ -178,7 +177,6 @@ export class CommentService {
         createdAt: r.createdAt.toISOString(),
         updatedAt: r.updatedAt?.toISOString(),
   
-        // ✅ ตรงนี้เช็คว่า current user กดไลค์ reply นี้หรือยัง
         likeCount: r.likedBy?.length || 0,
         likedByMe: currentUserId
           ? r.likedBy?.some(id => id.toString() === currentUserId)
@@ -186,7 +184,7 @@ export class CommentService {
       })),
     }));
   }
-      
+        
   async updateComment(commentId: string, dto: UpdateCommentDto, userId: string) {
     if (!Types.ObjectId.isValid(commentId)) {
       throw new BadRequestException('Invalid commentId');
