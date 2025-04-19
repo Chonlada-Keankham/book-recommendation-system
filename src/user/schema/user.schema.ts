@@ -50,7 +50,7 @@ export class User {
       },
       message: 'Invalid email format or contains forbidden characters (*).',
     },
-    set: (value: string) => value.toLowerCase(), // 🔠 แปลงเป็น lowercase
+    set: (value: string) => value.toLowerCase(), 
   })
   email: string;
   
