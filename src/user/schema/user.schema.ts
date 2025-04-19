@@ -40,7 +40,6 @@ export class User {
     },
   })
   phone?: string;
-
   @Prop({
     required: true,
     unique: true,
