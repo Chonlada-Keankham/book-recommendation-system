@@ -33,8 +33,8 @@ export class User {
     required: false,
     validate: {
       validator: function (v: string) {
-        if (!v) return true; 
-        return /^0\d{9}$/.test(v); 
+        if (!v) return true;
+        return /^0\d{9}$/.test(v);
       },
       message: (props) => `${props.value} is not a valid 10-digit Thai phone number.`,
     },
@@ -46,16 +46,14 @@ export class User {
     unique: true,
     validate: {
       validator: function (v: string) {
-        return /\S+@\S+\.\S+/.test(v);
+        return /^[^*]+$/.test(v) && /\S+@\S+\.\S+/.test(v);
       },
-      message: 'Invalid email format.',
+      message: 'Invalid email format or contains forbidden characters (*).',
     },
-    set: (value: string) => value.toLowerCase(),
+    set: (value: string) => value.toLowerCase(), // 🔠 แปลงเป็น lowercase
   })
-  @IsNotEmpty({ message: 'Email is required.' })
-  @IsEmail({}, { message: 'Invalid email format.' })
   email: string;
-
+  
   @Prop({ required: true })
   @IsNotEmpty({ message: 'Password is required.' })
   @IsString()
@@ -95,11 +93,11 @@ export class User {
   deleted_at?: Date;
 
   @Prop({
-    required: function () { return this.role === UserRole.EMPLOYEE }, 
+    required: function () { return this.role === UserRole.EMPLOYEE },
     unique: true,
   })
   employeeId?: string;
-  
+
   @Prop({ default: null })
   profileImage?: string;
 
