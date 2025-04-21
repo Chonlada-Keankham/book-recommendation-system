@@ -103,11 +103,11 @@ export class PlaylistService {
         select: 'book_th book_en img short_description author category view',
       })
       .lean();
-
+  
     if (!playlist) throw new NotFoundException('Playlist not found for this user.');
     return playlist;
   }
-
+  
   // -------------------------------------------------------------------
   // 📚 RECOMMENDATIONS
   // -------------------------------------------------------------------
@@ -116,16 +116,19 @@ export class PlaylistService {
       ...categories.map(category => this.safeFindRandomBooksByCategory(category)),
       ...authors.map(author => this.safeFindPopularBooksByAuthor(author)),
     ]);
-
-    const flattenedRecommendations = recommendations.flat();
+  
+    const flattenedRecommendations = recommendations.flat().filter(book =>
+      book.status !== 'deleted' && book.deleted_at === null
+    );
+  
     const uniqueBooks = Array.from(
       new Map(flattenedRecommendations.map(book => [book._id.toString(), book])).values()
     );
-
+  
     uniqueBooks.sort((a, b) => b.view - a.view);
     return uniqueBooks;
   }
-
+  
   private async safeFindRandomBooksByCategory(category: string) {
     try {
       return await this.bookService.findRandomBooksByCategory(category);
