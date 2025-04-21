@@ -4,7 +4,7 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post
 import { BookService } from './book.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateBookDto } from './dto/create-book.dto';
-import { diskStorage } from 'multer';
+import { diskStorage, memoryStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
@@ -23,13 +23,7 @@ export class BookController {
   @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @Post('/create-book')
   @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads/book',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
-      }
-    })
+    storage: memoryStorage(), // 👈 แก้ตรงนี้
   }))
   async createBook(
     @Body() createBookDto: CreateBookDto,
@@ -225,13 +219,7 @@ export class BookController {
   @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @Patch('update-book/:id')
   @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads/book',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
-      }
-    })
+    storage: memoryStorage(), // 👈 แก้ตรงนี้
   }))
   async updateBook(
     @Param('id') id: string,
@@ -275,24 +263,17 @@ export class BookController {
   //-----------------------------------
   @Put('/update-cover-by-category')
   @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads/book',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, uniqueSuffix + extname(file.originalname));
-      }
-    })
+    storage: memoryStorage(), 
   }))
   async updateBookCoverByCategory(
     @Query('category') category: string,
     @UploadedFile() file: Express.Multer.File
   ) {
-    const updatedBooks = await this.bookService.updateBookCoverByCategory(category, file.filename);
-
+    const updatedBooks = await this.bookService.updateBookCoverByCategory(category, file);
     return {
       statusCode: 200,
       message: 'Book covers updated successfully',
       data: updatedBooks,
     };
   }
-}
+}  

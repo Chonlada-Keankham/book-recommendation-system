@@ -7,6 +7,7 @@ import { AuthModule } from 'src/auth/auth.module';
 import { CommentModule } from 'src/comment/comment.module';
 import { PlaylistModule } from 'src/playlist/playlist.module';
 import { NotificationModule } from 'src/notification/notification.module';
+import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { NotificationModule } from 'src/notification/notification.module';
     forwardRef(() => PlaylistModule),
     forwardRef(() => NotificationModule),
     CommentModule,
+    CloudinaryModule,
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
   ],
   controllers: [UserController],

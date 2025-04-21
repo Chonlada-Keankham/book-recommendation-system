@@ -12,6 +12,7 @@ import { iPlaylist } from 'src/playlist/interface/playlist.interface';
 import { UpdateProfileDto } from './dto/update-profile-user.dto';
 import { UserDocument } from './schema/user.schema';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class UserService {
@@ -20,6 +21,7 @@ export class UserService {
     @InjectModel('User')
     private readonly userModel: Model<iUser>,
     private readonly playlistService: PlaylistService,
+    private readonly cloudinaryService: CloudinaryService,
   ) { }
 
   // -------------------------------------------------------------------
@@ -227,34 +229,40 @@ export class UserService {
   async updateUserProfile(
     userId: string,
     updateProfileDto: UpdateProfileDto,
-    profileFilename?: string
+    profileFile?: Express.Multer.File
   ): Promise<UserDocument> {
     const user = await this.userModel.findById(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
+    if (!user) throw new NotFoundException('User not found');
+  
     user.first_name = updateProfileDto.first_name || user.first_name;
     user.last_name = updateProfileDto.last_name || user.last_name;
     user.phone = updateProfileDto.phone || user.phone;
     user.username = updateProfileDto.username || user.username;
     user.updated_at = new Date();
-
-    if (profileFilename) {
-      user.profileImage = `/uploads/profile/${profileFilename}`;
+  
+    // ✅ ตรวจสอบและอัปโหลดไฟล์ภาพไปยัง Cloudinary
+    if (profileFile) {
+      const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      if (!allowedMimeTypes.includes(profileFile.mimetype)) {
+        throw new BadRequestException('Only JPG, PNG, or WEBP images are allowed.');
+      }
+  
+      const result = await this.cloudinaryService.uploadImage(profileFile, 'profile');
+      user.profileImage = result.secure_url;
     }
-
+  
+    // ✅ เปลี่ยนรหัสผ่าน (ถ้ามี)
     if (updateProfileDto.password) {
       if (updateProfileDto.password !== updateProfileDto.confirmPassword) {
         throw new BadRequestException('Password and Confirm Password do not match.');
       }
-
+  
       user.password = await this.hashPassword(updateProfileDto.password);
     }
-
+  
     return await user.save();
   }
-
+  
   async updateInterests(
     userId: string,
     categories: string[],

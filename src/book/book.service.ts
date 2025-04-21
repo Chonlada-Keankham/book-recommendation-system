@@ -10,6 +10,7 @@ import { PlaylistService } from 'src/playlist/playlist.service';
 import { RedisService } from 'src/redis/redis.service';
 import { Request } from 'express';
 import { NotificationService } from 'src/notification/notification.service';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class BookService {
@@ -20,6 +21,7 @@ export class BookService {
     @Inject(forwardRef(() => NotificationService))
     private readonly notificationService: NotificationService,
     private readonly redisService: RedisService,
+    private readonly cloudinaryService : CloudinaryService,
   ) { }
 
   // -------------------------------------------------------------------
@@ -72,7 +74,11 @@ export class BookService {
     });
     if (existing) throw new ConflictException('Book already exists.');
 
-    const imgPath = file ? `/uploads/book/${file.filename}` : '';
+    let imgPath = '';
+    if (file) {
+      const result = await this.cloudinaryService.uploadImage(file, 'book');
+      imgPath = result.secure_url;
+    }
 
     const newBook = new this.bookModel({
       ...createBookDto,
@@ -171,7 +177,7 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------
-  async updateBook(
+async updateBook(
     bookId: string,
     updateBookDto: UpdateBookDto,
     file?: Express.Multer.File
@@ -186,19 +192,19 @@ export class BookService {
     if (updateBookDto.short_description !== undefined) book.short_description = updateBookDto.short_description;
 
     if (file) {
-      const imgPath = `/uploads/book/${file.filename}`;
-      book.img = imgPath;
+      const result = await this.cloudinaryService.uploadImage(file, 'book');
+      book.img = result.secure_url;
     }
 
     const updatedBook = await book.save();
     return updatedBook;
   }
 
-  async uploadBookCover(bookId: string, filename: string, shortDescription?: string): Promise<iBook> {
+ async uploadBookCover(bookId: string, filename: string, shortDescription?: string): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
 
-    book.img = `/uploads/book/${filename}`;
+    book.img = filename; // ควรจะส่ง Cloudinary URL มาตรง ๆ
 
     if (shortDescription) {
       book.short_description = shortDescription;
@@ -206,7 +212,6 @@ export class BookService {
 
     return await book.save();
   }
-
   // -------------------------------------------------------------------
   // 🔸 RECOMMENDATION
   // -------------------------------------------------------------------
@@ -419,21 +424,26 @@ export class BookService {
   }
 
   //------------------------------------
-  async updateBookCoverByCategory(category: string, filename: string): Promise<iBook[]> {
+  async updateBookCoverByCategory(category: string, file: Express.Multer.File): Promise<iBook[]> {
+    // อัปโหลดภาพขึ้น Cloudinary
+    const result = await this.cloudinaryService.uploadImage(file, 'book');
+  
+    // ค้นหาหนังสือทั้งหมดในหมวดหมู่ที่กำหนด
     const books = await this.bookModel.find({ category });
-
+  
     if (!books || books.length === 0) {
       throw new NotFoundException('No books found in this category.');
     }
-
+  
+    // อัปเดตรูปภาพทุกเล่มในหมวดหมู่นี้
     for (let book of books) {
-      book.img = `/uploads/book/${filename}`;
+      book.img = result.secure_url; // ใช้ URL จาก Cloudinary
       await book.save();
     }
-
+  
     return books;
   }
-
+  
   // -------------------------------------------------------------------
   // 🔸 INCREASE VIEW AFTER DELAY (NEW)
   // -------------------------------------------------------------------

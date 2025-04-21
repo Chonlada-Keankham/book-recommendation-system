@@ -12,6 +12,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from '@nestjs/cache-manager';
 import { NotificationModule } from './notification/notification.module';
 import { RedisModule } from './redis/redis.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   
@@ -45,6 +46,7 @@ import { RedisModule } from './redis/redis.module';
     PlaylistModule,
     NotificationModule,
     RedisModule,
+    CloudinaryModule,
   ],
   controllers: [AppController],
   providers: [

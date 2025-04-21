@@ -36,3 +36,10 @@ export const redisConfig = {
 export const baseConfig = {
   baseUrl: process.env.BASE_URL,
 };
+
+export const cloudinaryConfig = {
+  name: process.env.CLOUDINARY_NAME,
+  apiKey: process.env.CLOUDINARY_API_KEY,
+  apiSecret: process.env.CLOUDINARY_API_SECRET,
+};
+

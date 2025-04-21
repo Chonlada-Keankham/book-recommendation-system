@@ -1,18 +1,16 @@
 import { Roles } from 'src/decorator/roles.decorator';
-import { extname } from 'path';
 import { UserService } from './user.service';
 import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RegisterUserDto } from './dto/register-member-user.dto';
 import { CreateEmployeeDto } from './dto/register-employee-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateProfileDto } from './dto/update-profile-user.dto';
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query, UploadedFile, UseInterceptors, UseGuards, ForbiddenException, Req } from '@nestjs/common';
-import { diskStorage } from 'multer';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query, UploadedFile, UseInterceptors, UseGuards, ForbiddenException, Req, BadRequestException } from '@nestjs/common';
+import * as multer from 'multer';
 import { UserInterestDto } from './dto/interest-user.dto';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guard/role.guard';
 import { UserRole } from 'src/enum/user-role.enum';
-import { CreateAdminDto } from './dto/register-admin-user.dto';
 
 @ApiTags('User')
 @Controller('user')
@@ -112,35 +110,39 @@ export class UserController {
   }
 
   // ---------- Upload ----------
+
   @UseGuards(JwtAuthGuard)
   @Put('/update-profile/:id')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Update user profile and upload profile image' })
   @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads/profile',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+    storage: multer.memoryStorage(), // ✅ ใช้ memoryStorage สำหรับอัปโหลดไป Cloudinary
+    limits: {
+      fileSize: 5 * 1024 * 1024, // จำกัดขนาดไฟล์ 5MB
+    },
+    fileFilter: (req, file, cb) => {
+      if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
+        return cb(new BadRequestException('Only image files are allowed!'), false);
       }
-    }),
+      cb(null, true);
+    },
   }))
   async updateProfile(
     @Param('id') id: string,
     @Body() updateProfileDto: UpdateProfileDto,
     @UploadedFile() file?: Express.Multer.File
   ) {
-    const user = await this.userService.updateUserProfile(id, updateProfileDto, file?.filename);
-
+    const user = await this.userService.updateUserProfile(id, updateProfileDto, file);
+  
     const { password, refreshToken, ...userWithoutSensitiveInfo } = user.toObject();
-
+  
     return {
       statusCode: HttpStatus.OK,
       message: 'Profile updated successfully',
       data: userWithoutSensitiveInfo,
     };
   }
-
+    
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @Patch('/reset-password/:employeeId')
