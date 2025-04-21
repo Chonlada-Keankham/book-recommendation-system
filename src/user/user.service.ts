@@ -240,7 +240,6 @@ export class UserService {
     user.username = updateProfileDto.username || user.username;
     user.updated_at = new Date();
   
-    // ✅ ตรวจสอบและอัปโหลดไฟล์ภาพไปยัง Cloudinary
     if (profileFile) {
       const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
       if (!allowedMimeTypes.includes(profileFile.mimetype)) {
@@ -251,7 +250,6 @@ export class UserService {
       user.profileImage = result.secure_url;
     }
   
-    // ✅ เปลี่ยนรหัสผ่าน (ถ้ามี)
     if (updateProfileDto.password) {
       if (updateProfileDto.password !== updateProfileDto.confirmPassword) {
         throw new BadRequestException('Password and Confirm Password do not match.');

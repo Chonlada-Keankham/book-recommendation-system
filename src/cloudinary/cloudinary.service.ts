@@ -21,7 +21,7 @@ export class CloudinaryService {
         { folder },
         (error, result) => {
           if (error) return reject(error);
-          return resolve(result as UploadApiResponse); // 👈 บอก type ให้ชัดเจน
+          return resolve(result as UploadApiResponse);
         },
       );
 
