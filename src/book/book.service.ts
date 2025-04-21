@@ -86,7 +86,7 @@ export class BookService {
         imgPath = result.secure_url;
         imgPublicId = result.public_id;
       }
-  
+        
       const newBook = new this.bookModel({
         ...createBookDto,
         img: imgPath,
