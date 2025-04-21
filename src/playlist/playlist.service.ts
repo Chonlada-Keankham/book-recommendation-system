@@ -48,7 +48,7 @@ export class PlaylistService {
   async createOrUpdatePlaylist(createPlaylistDto: CreatePlaylistDto): Promise<iPlaylist> {
     const existing = await this.findPlaylist(createPlaylistDto.user.toString());
     let playlist: iPlaylist;
-  
+
     if (!existing) {
       playlist = await this.createPlaylist(createPlaylistDto);
     } else {
@@ -57,12 +57,19 @@ export class PlaylistService {
         authors: createPlaylistDto.authors,
       });
     }
-  
+
     return await this.playlistModel.findById(playlist._id)
-      .populate('recommendedBooks', 'book_th book_en img short_description author category view')
-      .lean(); 
+      .populate({
+        path: 'recommendedBooks',
+        match: {
+          status: { $ne: 'deleted' },
+          deleted_at: null,
+        },
+        select: 'book_th book_en img short_description author category view',
+      })
+      .lean();
   }
-  
+
   // -------------------------------------------------------------------
   // 🔁 UPDATE
   // -------------------------------------------------------------------
@@ -87,13 +94,20 @@ export class PlaylistService {
   // -------------------------------------------------------------------
   async getPlaylist(userId: string): Promise<iPlaylist> {
     const playlist = await this.playlistModel.findOne({ user: userId })
-      .populate('recommendedBooks', 'book_th book_en img short_description author category view')
+      .populate({
+        path: 'recommendedBooks',
+        match: {
+          status: { $ne: 'deleted' },
+          deleted_at: null,
+        },
+        select: 'book_th book_en img short_description author category view',
+      })
       .lean();
-  
+
     if (!playlist) throw new NotFoundException('Playlist not found for this user.');
     return playlist;
   }
-  
+
   // -------------------------------------------------------------------
   // 📚 RECOMMENDATIONS
   // -------------------------------------------------------------------
