@@ -1,28 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
-import { Readable } from 'stream';
+import { Express } from 'express';
 
 @Injectable()
 export class CloudinaryService {
-  async uploadImage(
-    file: Express.Multer.File,
-    folder: string = 'general', // ✅ ตั้ง default folder
-  ): Promise<UploadApiResponse> {
+  async uploadImage(file: Express.Multer.File, folder = 'book'): Promise<UploadApiResponse> {
     return new Promise((resolve, reject) => {
-      const upload = cloudinary.uploader.upload_stream(
-        { folder },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
+      cloudinary.uploader.upload_stream(
+        {
+          folder,
+          resource_type: 'image',
         },
-      );
-      const stream = Readable.from(file.buffer);
-      stream.pipe(upload);
+        (error, result) => {
+          if (error) {
+            console.error('❌ Upload error:', error);
+            reject(error);
+          } else {
+            resolve(result as UploadApiResponse);
+          }
+        },
+      ).end(file.buffer); // สำคัญมากสำหรับ memoryStorage
     });
   }
-  // cloudinary.service.ts
-async deleteImage(publicId: string): Promise<void> {
-  await cloudinary.uploader.destroy(publicId);
-}
 
+  async deleteImage(publicId: string): Promise<any> {
+    return cloudinary.uploader.destroy(publicId);
+  }
 }

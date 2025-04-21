@@ -69,31 +69,42 @@ export class BookService {
   // 🔸 CREATE
   // -------------------------------------------------------------------
   async createBook(createBookDto: CreateBookDto, file?: Express.Multer.File): Promise<iBook> {
-    const existing = await this.bookModel.findOne({
-      $or: [{ book_th: createBookDto.book_th }, { book_en: createBookDto.book_en }],
-    });
-    if (existing) throw new ConflictException('Book already exists.');
-
-    let imgPath = '';
-    if (file) {
-      const result = await this.cloudinaryService.uploadImage(file, 'book');
-      imgPath = result.secure_url;
+    try {
+      console.log('📥 DTO:', createBookDto);
+      console.log('📷 FILE:', file?.originalname, '| Size:', file?.size);
+  
+      const existing = await this.bookModel.findOne({
+        $or: [{ book_th: createBookDto.book_th }, { book_en: createBookDto.book_en }],
+      });
+      if (existing) throw new ConflictException('Book already exists.');
+  
+      let imgPath = '';
+      let imgPublicId = '';
+  
+      if (file) {
+        const result = await this.cloudinaryService.uploadImage(file, 'book');
+        imgPath = result.secure_url;
+        imgPublicId = result.public_id;
+      }
+  
+      const newBook = new this.bookModel({
+        ...createBookDto,
+        img: imgPath,
+        img_public_id: imgPublicId,
+        short_description: createBookDto.short_description || '',
+        deleted_at: null,
+      });
+  
+      const savedBook = await newBook.save();
+      await this.notificationService.notifyNewBookToMembers(savedBook);
+  
+      return savedBook;
+    } catch (err) {
+      console.error('❌ Error in createBook:', err);
+      throw new BadRequestException(err?.message || 'Failed to create book');
     }
-
-    const newBook = new this.bookModel({
-      ...createBookDto,
-      img: imgPath,
-      short_description: createBookDto.short_description || '',
-      deleted_at: null,
-    });
-
-    const savedBook = await newBook.save();
-
-    await this.notificationService.notifyNewBookToMembers(savedBook);
-
-    return savedBook;
   }
-
+  
   // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
@@ -221,7 +232,6 @@ export class BookService {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
 
-    // 🔥 ลบภาพเก่าออกจาก Cloudinary ถ้ามี
     if (book.img_public_id) {
       await this.cloudinaryService.deleteImage(book.img_public_id);
     }
