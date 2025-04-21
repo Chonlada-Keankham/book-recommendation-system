@@ -21,7 +21,7 @@ export class BookService {
     @Inject(forwardRef(() => NotificationService))
     private readonly notificationService: NotificationService,
     private readonly redisService: RedisService,
-    private readonly cloudinaryService : CloudinaryService,
+    private readonly cloudinaryService: CloudinaryService,
   ) { }
 
   // -------------------------------------------------------------------
@@ -72,21 +72,21 @@ export class BookService {
     try {
       console.log('📥 DTO:', createBookDto);
       console.log('📷 FILE:', file?.originalname, '| Size:', file?.size);
-  
+
       const existing = await this.bookModel.findOne({
         $or: [{ book_th: createBookDto.book_th }, { book_en: createBookDto.book_en }],
       });
       if (existing) throw new ConflictException('Book already exists.');
-  
+
       let imgPath = '';
       let imgPublicId = '';
-  
+
       if (file) {
         const result = await this.cloudinaryService.uploadImage(file, 'book');
         imgPath = result.secure_url;
         imgPublicId = result.public_id;
       }
-        
+
       const newBook = new this.bookModel({
         ...createBookDto,
         img: imgPath,
@@ -94,17 +94,17 @@ export class BookService {
         short_description: createBookDto.short_description || '',
         deleted_at: null,
       });
-  
+
       const savedBook = await newBook.save();
       await this.notificationService.notifyNewBookToMembers(savedBook);
-  
+
       return savedBook;
     } catch (err) {
       console.error('❌ Error in createBook:', err);
       throw new BadRequestException(err?.message || 'Failed to create book');
     }
   }
-  
+
   // -------------------------------------------------------------------
   // 🔸 READ
   // -------------------------------------------------------------------
@@ -188,7 +188,7 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------
-// -------------------------------------------------------------------
+  // -------------------------------------------------------------------
   // 🔄 UPDATE BOOK (พร้อมอัปโหลดรูปใหม่ และลบรูปเก่า)
   // -------------------------------------------------------------------
   async updateBook(
@@ -420,15 +420,12 @@ export class BookService {
 
     const shuffled = topBooks
       .map(book => {
-        if (book.img) {
-          if (book.img.startsWith('http')) {
-            try {
-              const url = new URL(book.img);
-              book.img = url.pathname;
-            } catch (err) {
-            }
-          }
+        // ✅ ใช้ Cloudinary URL ตรง ๆ ไม่ต้องตัด
+        // ✅ หากต้องการ fallback รูป default (optional)
+        if (!book.img?.startsWith('http')) {
+          book.img = '/default-book-cover.jpg'; // หรือระบุ URL เต็มก็ได้
         }
+
         return { book, sort: random() };
       })
       .sort((a, b) => a.sort - b.sort)
