@@ -86,11 +86,14 @@ export class PlaylistService {
   // 📄 READ
   // -------------------------------------------------------------------
   async getPlaylist(userId: string): Promise<iPlaylist> {
-    const playlist = await this.playlistModel.findOne({ user: userId });
+    const playlist = await this.playlistModel.findOne({ user: userId })
+      .populate('recommendedBooks', 'book_th book_en img short_description author category view')
+      .lean();
+  
     if (!playlist) throw new NotFoundException('Playlist not found for this user.');
     return playlist;
   }
-
+  
   // -------------------------------------------------------------------
   // 📚 RECOMMENDATIONS
   // -------------------------------------------------------------------
