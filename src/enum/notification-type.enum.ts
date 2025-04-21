@@ -1,4 +1,3 @@
-// src/notification/enum/notification-type.enum.ts
 
 export enum NotificationType {
     NEW_BOOK = 'new-book',

@@ -186,10 +186,7 @@ export class BookService {
   }
 
   // -------------------------------------------------------------------
-  // 🔸 UPDATE
-  // -------------------------------------------------------------------
-  // -------------------------------------------------------------------
-  // 🔄 UPDATE BOOK (พร้อมอัปโหลดรูปใหม่ และลบรูปเก่า)
+  // 🔄 UPDATE BOOK 
   // -------------------------------------------------------------------
   async updateBook(
     bookId: string,
@@ -206,12 +203,10 @@ export class BookService {
     if (updateBookDto.short_description !== undefined) book.short_description = updateBookDto.short_description;
 
     if (file) {
-      // 🔥 ลบภาพเก่าถ้ามี
       if (book.img_public_id) {
         await this.cloudinaryService.deleteImage(book.img_public_id);
       }
 
-      // ✅ อัปโหลดภาพใหม่
       const result = await this.cloudinaryService.uploadImage(file, 'book');
       book.img = result.secure_url;
       book.img_public_id = result.public_id;
@@ -222,7 +217,7 @@ export class BookService {
   }
 
   // -------------------------------------------------------------------
-  // 🆕 UPLOAD BOOK COVER (ใหม่) - ใช้ไฟล์แทน filename
+  // 🆕 UPLOAD BOOK COVER 
   // -------------------------------------------------------------------
   async uploadBookCover(
     bookId: string,
@@ -420,10 +415,8 @@ export class BookService {
 
     const shuffled = topBooks
       .map(book => {
-        // ✅ ใช้ Cloudinary URL ตรง ๆ ไม่ต้องตัด
-        // ✅ หากต้องการ fallback รูป default (optional)
         if (!book.img?.startsWith('http')) {
-          book.img = '/default-book-cover.jpg'; // หรือระบุ URL เต็มก็ได้
+          book.img = '/default-book-cover.jpg'; 
         }
 
         return { book, sort: random() };
