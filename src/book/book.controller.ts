@@ -260,20 +260,4 @@ export class BookController {
     };
   }
 
-  //-----------------------------------
-  @Put('/update-cover-by-category')
-  @UseInterceptors(FileInterceptor('file', {
-    storage: memoryStorage(), 
-  }))
-  async updateBookCoverByCategory(
-    @Query('category') category: string,
-    @UploadedFile() file: Express.Multer.File
-  ) {
-    const updatedBooks = await this.bookService.updateBookCoverByCategory(category, file);
-    return {
-      statusCode: 200,
-      message: 'Book covers updated successfully',
-      data: updatedBooks,
-    };
-  }
 }  

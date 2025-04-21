@@ -45,6 +45,9 @@ export class Book {
     max_length: 500, 
   })
   short_description: string;
+
+  @Prop({ required: false })
+img_public_id: string; 
 }
 
 

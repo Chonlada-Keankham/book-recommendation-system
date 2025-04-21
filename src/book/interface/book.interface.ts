@@ -13,5 +13,6 @@ export interface iBook {
   created_at: Date;
   updated_at: Date;
   deleted_at?: Date;
+  img_public_id: string ,
   short_description?: string;
 }

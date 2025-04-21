@@ -177,10 +177,13 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 UPDATE
   // -------------------------------------------------------------------
-async updateBook(
+// -------------------------------------------------------------------
+  // 🔄 UPDATE BOOK (พร้อมอัปโหลดรูปใหม่ และลบรูปเก่า)
+  // -------------------------------------------------------------------
+  async updateBook(
     bookId: string,
     updateBookDto: UpdateBookDto,
-    file?: Express.Multer.File
+    file?: Express.Multer.File,
   ): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
@@ -192,19 +195,40 @@ async updateBook(
     if (updateBookDto.short_description !== undefined) book.short_description = updateBookDto.short_description;
 
     if (file) {
+      // 🔥 ลบภาพเก่าถ้ามี
+      if (book.img_public_id) {
+        await this.cloudinaryService.deleteImage(book.img_public_id);
+      }
+
+      // ✅ อัปโหลดภาพใหม่
       const result = await this.cloudinaryService.uploadImage(file, 'book');
       book.img = result.secure_url;
+      book.img_public_id = result.public_id;
     }
 
     const updatedBook = await book.save();
     return updatedBook;
   }
 
- async uploadBookCover(bookId: string, filename: string, shortDescription?: string): Promise<iBook> {
+  // -------------------------------------------------------------------
+  // 🆕 UPLOAD BOOK COVER (ใหม่) - ใช้ไฟล์แทน filename
+  // -------------------------------------------------------------------
+  async uploadBookCover(
+    bookId: string,
+    file: Express.Multer.File,
+    shortDescription?: string,
+  ): Promise<iBook> {
     const book = await this.bookModel.findById(bookId);
     if (!book) throw new NotFoundException('Book not found');
 
-    book.img = filename; // ควรจะส่ง Cloudinary URL มาตรง ๆ
+    // 🔥 ลบภาพเก่าออกจาก Cloudinary ถ้ามี
+    if (book.img_public_id) {
+      await this.cloudinaryService.deleteImage(book.img_public_id);
+    }
+
+    const result = await this.cloudinaryService.uploadImage(file, 'book');
+    book.img = result.secure_url;
+    book.img_public_id = result.public_id;
 
     if (shortDescription) {
       book.short_description = shortDescription;
@@ -212,6 +236,7 @@ async updateBook(
 
     return await book.save();
   }
+
   // -------------------------------------------------------------------
   // 🔸 RECOMMENDATION
   // -------------------------------------------------------------------
@@ -423,27 +448,7 @@ async updateBook(
     return true;
   }
 
-  //------------------------------------
-  async updateBookCoverByCategory(category: string, file: Express.Multer.File): Promise<iBook[]> {
-    // อัปโหลดภาพขึ้น Cloudinary
-    const result = await this.cloudinaryService.uploadImage(file, 'book');
-  
-    // ค้นหาหนังสือทั้งหมดในหมวดหมู่ที่กำหนด
-    const books = await this.bookModel.find({ category });
-  
-    if (!books || books.length === 0) {
-      throw new NotFoundException('No books found in this category.');
-    }
-  
-    // อัปเดตรูปภาพทุกเล่มในหมวดหมู่นี้
-    for (let book of books) {
-      book.img = result.secure_url; // ใช้ URL จาก Cloudinary
-      await book.save();
-    }
-  
-    return books;
-  }
-  
+
   // -------------------------------------------------------------------
   // 🔸 INCREASE VIEW AFTER DELAY (NEW)
   // -------------------------------------------------------------------
