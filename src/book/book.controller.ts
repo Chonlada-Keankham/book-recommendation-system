@@ -1,6 +1,6 @@
 import { extname } from 'path';
 import { BookCategory } from 'src/enum/book-category.enum';
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query, Req, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query, Req, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { BookService } from './book.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateBookDto } from './dto/create-book.dto';
@@ -268,7 +268,12 @@ export class BookController {
     @UploadedFiles() files: Express.Multer.File[],
     @Body('themeColor') themeColor?: string,
   ) {
-    const books = JSON.parse(booksRaw);
-    return this.bookService.createMultipleBooks({ books, themeColor }, files);
+    try {
+      const books = JSON.parse(booksRaw);
+      return this.bookService.createMultipleBooks({ books, themeColor }, files);
+    } catch (error) {
+      console.error('❌ JSON parse error:', error.message);
+      throw new BadRequestException('Invalid JSON in "books" field');
+    }
   }
-  }  
+    }  
