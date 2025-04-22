@@ -1,6 +1,6 @@
 import { InjectModel } from '@nestjs/mongoose';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
-import { Model, Types } from 'mongoose';
+import { HydratedDocument, Model, Types } from 'mongoose';
 import { iBook } from './interface/book.interface';
 import { CreateBookDto } from './dto/create-book.dto';
 import { Status } from 'src/enum/status.enum';
@@ -11,6 +11,7 @@ import { RedisService } from 'src/redis/redis.service';
 import { Request } from 'express';
 import { NotificationService } from 'src/notification/notification.service';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { CreateMultipleBooksDto } from './dto/create-multiple-book.dto';
 
 @Injectable()
 export class BookService {
@@ -416,7 +417,7 @@ export class BookService {
     const shuffled = topBooks
       .map(book => {
         if (!book.img?.startsWith('http')) {
-          book.img = '/default-book-cover.jpg'; 
+          book.img = '/default-book-cover.jpg';
         }
 
         return { book, sort: random() };
@@ -481,4 +482,69 @@ export class BookService {
     await this.redisService.set(redisKey, 'true', 300);
     return book;
   }
+
+  // -------------------------------------------------------------------
+  // 🔸 CREATE MULTIPLE BOOKS
+  // -------------------------------------------------------------------
+async createMultipleBooks(
+  dto: CreateMultipleBooksDto,
+  files?: Express.Multer.File[],
+): Promise<iBook[]> {
+  try {
+    const { books, themeColor } = dto;
+
+    if (!books || books.length === 0) {
+      throw new BadRequestException('No books provided.');
+    }
+
+    if (files && files.length !== books.length) {
+      throw new BadRequestException('Number of files must match number of books.');
+    }
+
+    const titles = books.map(b => b.book_th);
+    const existingBooks = await this.bookModel.find({ book_th: { $in: titles } });
+    if (existingBooks.length > 0) {
+      const duplicates = existingBooks.map(b => b.book_th).join(', ');
+      throw new ConflictException(`Duplicate book(s): ${duplicates}`);
+    }
+
+    const newBooks = [];
+
+    for (let i = 0; i < books.length; i++) {
+      const book = books[i];
+      let img = '';
+      let img_public_id = '';
+
+      if (files?.[i]) {
+        const result = await this.cloudinaryService.uploadImage(files[i], 'book');
+        img = result.secure_url;
+        img_public_id = result.public_id;
+      }
+
+      newBooks.push({
+        ...book,
+        themeColor,
+        img,
+        img_public_id,
+        short_description: book.short_description || '',
+        deleted_at: null,
+      });
+    }
+
+    const inserted = await this.bookModel.insertMany(newBooks);
+
+    // ✅ Convert documents to plain objects (iBook)
+    const plainBooks: iBook[] = inserted.map(doc => doc.toObject());
+
+    // ✅ Notify members per book
+    for (const book of plainBooks) {
+      await this.notificationService.notifyNewBookToMembers(book);
+    }
+
+    return plainBooks;
+  } catch (error) {
+    console.error('❌ Error in createMultipleBooks:', error);
+    throw new BadRequestException(error?.message || 'Failed to create books');
+  }
+}
 }

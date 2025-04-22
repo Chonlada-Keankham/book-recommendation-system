@@ -5,13 +5,14 @@ import { BookService } from './book.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateBookDto } from './dto/create-book.dto';
 import { diskStorage, memoryStorage } from 'multer';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guard/role.guard';
 import { Roles } from 'src/decorator/roles.decorator';
 import { UserRole } from 'src/enum/user-role.enum';
 import { UpdateBookDto } from './dto/update-book.dto';
+import { CreateMultipleBooksDto } from './dto/create-multiple-book.dto';
 
 @ApiTags('Book')
 @Controller('book')
@@ -259,5 +260,13 @@ export class BookController {
       data: book
     };
   }
-
+  // ---------- Create Multiple Books ----------
+  @Post('/create-multiple')
+  @UseInterceptors(FilesInterceptor('files')) 
+  async createMultipleBooks(
+    @Body() dto: CreateMultipleBooksDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    return this.bookService.createMultipleBooks(dto, files);
+  }
 }  
