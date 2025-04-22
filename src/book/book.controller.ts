@@ -262,7 +262,7 @@ export class BookController {
   }
   // ---------- Create Multiple Books ----------
   @Post('/create-multiple')
-  @UseInterceptors(FilesInterceptor('files')) 
+  @UseInterceptors(FilesInterceptor('files'))
   async createMultipleBooks(
     @Body() dto: CreateMultipleBooksDto,
     @UploadedFiles() files: Express.Multer.File[],

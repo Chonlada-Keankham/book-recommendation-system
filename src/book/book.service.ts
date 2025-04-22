@@ -486,65 +486,71 @@ export class BookService {
   // -------------------------------------------------------------------
   // 🔸 CREATE MULTIPLE BOOKS
   // -------------------------------------------------------------------
-async createMultipleBooks(
-  dto: CreateMultipleBooksDto,
-  files?: Express.Multer.File[],
-): Promise<iBook[]> {
-  try {
-    const { books, themeColor } = dto;
+  async createMultipleBooks(
+    dto: CreateMultipleBooksDto,
+    files?: Express.Multer.File[],
+  ): Promise<iBook[]> {
+    try {
+      const { books, themeColor } = dto;
 
-    if (!books || books.length === 0) {
-      throw new BadRequestException('No books provided.');
-    }
-
-    if (files && files.length !== books.length) {
-      throw new BadRequestException('Number of files must match number of books.');
-    }
-
-    const titles = books.map(b => b.book_th);
-    const existingBooks = await this.bookModel.find({ book_th: { $in: titles } });
-    if (existingBooks.length > 0) {
-      const duplicates = existingBooks.map(b => b.book_th).join(', ');
-      throw new ConflictException(`Duplicate book(s): ${duplicates}`);
-    }
-
-    const newBooks = [];
-
-    for (let i = 0; i < books.length; i++) {
-      const book = books[i];
-      let img = '';
-      let img_public_id = '';
-
-      if (files?.[i]) {
-        const result = await this.cloudinaryService.uploadImage(files[i], 'book');
-        img = result.secure_url;
-        img_public_id = result.public_id;
+      if (!books || books.length === 0) {
+        throw new BadRequestException('No books provided.');
       }
 
-      newBooks.push({
-        ...book,
-        themeColor,
-        img,
-        img_public_id,
-        short_description: book.short_description || '',
-        deleted_at: null,
-      });
+      if (files && files.length !== books.length) {
+        throw new BadRequestException('Number of files must match number of books.');
+      }
+
+      const titles = books.map(b => b.book_th);
+      const existingBooks = await this.bookModel.find({ book_th: { $in: titles } });
+      if (existingBooks.length > 0) {
+        const duplicates = existingBooks.map(b => b.book_th).join(', ');
+        throw new ConflictException(`Duplicate book(s): ${duplicates}`);
+      }
+
+      const newBooks = [];
+
+      for (let i = 0; i < books.length; i++) {
+        const book = books[i];
+        const category = book.category?.toLowerCase();
+
+        if (
+          !['novel', 'business', 'sport', 'travel', 'education'].includes(category)
+        ) {
+          throw new BadRequestException(`Invalid category: ${category}`);
+        }
+
+        let img = '';
+        let img_public_id = '';
+
+        if (files?.[i]) {
+          const result = await this.cloudinaryService.uploadImage(files[i], 'book');
+          img = result.secure_url;
+          img_public_id = result.public_id;
+        }
+
+        newBooks.push({
+          ...book,
+          themeColor,
+          category,
+          img,
+          img_public_id,
+          short_description: book.short_description || '',
+          deleted_at: null,
+        });
+      }
+
+      const inserted = await this.bookModel.insertMany(newBooks);
+      const plainBooks: iBook[] = inserted.map(doc => doc.toObject());
+
+      for (const book of plainBooks) {
+        await this.notificationService.notifyNewBookToMembers(book);
+      }
+
+      return plainBooks;
+    } catch (error) {
+      console.error('❌ Error in createMultipleBooks:', error);
+      throw new BadRequestException(error?.message || 'Failed to create books');
     }
-
-    const inserted = await this.bookModel.insertMany(newBooks);
-
-    // ✅ Convert documents to plain objects (iBook)
-    const plainBooks: iBook[] = inserted.map(doc => doc.toObject());
-
-    // ✅ Notify members per book
-    for (const book of plainBooks) {
-      await this.notificationService.notifyNewBookToMembers(book);
-    }
-
-    return plainBooks;
-  } catch (error) {
-    console.error('❌ Error in createMultipleBooks:', error);
-    throw new BadRequestException(error?.message || 'Failed to create books');
   }
-}
 }
