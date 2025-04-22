@@ -261,12 +261,14 @@ export class BookController {
     };
   }
   // ---------- Create Multiple Books ----------
-  @Post('/create-multiple')
+  @Post('create-multiple')
   @UseInterceptors(FilesInterceptor('files'))
   async createMultipleBooks(
-    @Body() dto: CreateMultipleBooksDto,
+    @Body('books') booksRaw: string,
     @UploadedFiles() files: Express.Multer.File[],
+    @Body('themeColor') themeColor?: string,
   ) {
-    return this.bookService.createMultipleBooks(dto, files);
+    const books = JSON.parse(booksRaw);
+    return this.bookService.createMultipleBooks({ books, themeColor }, files);
   }
-}  
+  }  
