@@ -339,64 +339,41 @@ export class BookService {
   
     let recommendedBooks: iBook[] = [];
   
-    if (!playlist || (!playlist.categories?.length && !playlist.authors?.length)) {
-      // ➡️ ไม่มีความสนใจ ➔ แนะนำจากหมวดของ currentBook
-      recommendedBooks = await this.bookModel.find({
-        category: currentBook.category,
+    const queries: any[] = [];
+  
+    if (playlist) {
+      if (playlist.categories?.length > 0) {
+        queries.push({ category: { $in: playlist.categories } });
+      }
+      if (playlist.authors?.length > 0) {
+        queries.push({ author: { $in: playlist.authors } });
+      }
+    }
+  
+    if (currentBook.category) {
+      queries.push({ category: currentBook.category });
+    }
+  
+    if (queries.length > 0) {
+      const books = await this.bookModel.find({
+        $or: queries,
         _id: { $nin: [...viewedBooks, bookId] },
         status: { $ne: Status.DELETED },
         deleted_at: null,
       }).sort({ view: -1 }).exec();
-    } else {
-      let booksByCategory: iBook[] = [];
-      let booksByAuthor: iBook[] = [];
   
-      if (playlist.categories?.length > 0) {
-        booksByCategory = await this.bookModel.find({
-          category: { $in: playlist.categories },
-          _id: { $nin: [...viewedBooks, bookId] },
-          status: { $ne: Status.DELETED },
-          deleted_at: null,
-        }).sort({ view: -1 }).exec();
-      }
-  
-      if (playlist.authors?.length > 0) {
-        booksByAuthor = await this.bookModel.find({
-          author: { $in: playlist.authors },
-          _id: { $nin: [...viewedBooks, bookId] },
-          status: { $ne: Status.DELETED },
-          deleted_at: null,
-        }).sort({ view: -1 }).exec();
-      }
-  
-      const combinedBooks = [...booksByCategory, ...booksByAuthor];
-  
-      if (combinedBooks.length === 0) {
-        // ไม่มีหนังสือตามที่สนใจเลย ➔ fallback ไปใช้หมวดของหนังสือปัจจุบัน
-        recommendedBooks = await this.bookModel.find({
-          category: currentBook.category,
-          _id: { $nin: [...viewedBooks, bookId] },
-          status: { $ne: Status.DELETED },
-          deleted_at: null,
-        }).sort({ view: -1 }).exec();
-      } else {
-        // 🔥 เอาแบบ deduplicate และ sort ตาม view มาก ➔ น้อย
-        const seen = new Set<string>();
-        const deduplicated = combinedBooks.filter((b) => {
-          const id = b._id.toString();
-          if (seen.has(id)) return false;
-          seen.add(id);
-          return true;
-        });
-  
-        recommendedBooks = deduplicated;
-      }
+      const seen = new Set<string>();
+      recommendedBooks = books.filter((b) => {
+        const id = b._id.toString();
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
     }
   
     return { currentBook, recommendedBooks };
   }
   
-
   async getDailyRecommendedBooks(topN = 50): Promise<iBook[]> {
     const topBooks = await this.bookModel.find({
       status: { $ne: Status.DELETED },
