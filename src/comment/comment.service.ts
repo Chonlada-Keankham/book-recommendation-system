@@ -50,9 +50,10 @@ export class CommentService {
           ownerId,
           comment.bookId.toString(),
           book?.book_th || 'หนังสือ',
-          comment._id.toString()
+          comment._id.toString(),
+          userId  
         );
-      }
+              }
   
       await comment.save();
     }
@@ -97,7 +98,6 @@ export class CommentService {
       reply.likedBy.push(uid);
       await comment.save();
   
-      // ✅ ปรับตรงนี้ให้รองรับทั้งกรณี populate และไม่ populate
       const replyOwnerId =
         (reply.userId as any)?._id?.toString?.() || reply.userId.toString();
   
@@ -112,9 +112,10 @@ export class CommentService {
           replyOwnerId,
           bookId,
           bookTitle,
-          comment._id.toString()
+          comment._id.toString(),
+          userId 
         );
-      }
+              }
     }
   
     return {
@@ -235,9 +236,10 @@ export class CommentService {
       originalUserId,
       bookId,
       bookTitle,
-      comment._id.toString()
+      comment._id.toString(),
+      userId  
     );
-
+    
     return comment;
   }
 

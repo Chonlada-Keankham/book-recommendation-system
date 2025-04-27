@@ -22,7 +22,7 @@ export class NotificationService {
 
     @Inject(forwardRef(() => CommentService))
     private readonly commentService: CommentService,
-  ) {}
+  ) { }
 
   // -------------------------------------------------------------------
   // 🔸 CREATE NOTIFICATIONS
@@ -32,9 +32,9 @@ export class NotificationService {
   async notifyNewBookToMembers(book: iBook): Promise<void> {
     const playlists = await this.playlistService.findPlaylistsByCategory(book.category);
     const memberIds = playlists.map(p => p.user.toString());
-  
+
     if (!memberIds.length) return;
-  
+
     const notifications = memberIds.map(userId => ({
       userId,
       type: NotificationType.NEW_BOOK,
@@ -43,7 +43,7 @@ export class NotificationService {
       isRead: false,
       created_at: new Date(),
     }));
-  
+
     await this.notificationModel.insertMany(notifications);
   }
 
@@ -53,7 +53,9 @@ export class NotificationService {
     bookId: string,
     bookTitle: string,
     commentId: string,
+    senderId: string,
   ): Promise<void> {
+    if (userId === senderId) return;
     await this.notificationModel.create({
       userId,
       bookId,
@@ -71,8 +73,11 @@ export class NotificationService {
     bookId: string,
     bookTitle: string,
     commentId: string,
+    senderId: string,
   ): Promise<void> {
+    if (userId === senderId) return; 
     await this.notificationModel.create({
+
       userId,
       bookId,
       commentId,
@@ -89,7 +94,9 @@ export class NotificationService {
     bookId: string,
     bookTitle: string,
     commentId: string,
+    senderId: string,
   ): Promise<void> {
+    if (originalUserId === senderId) return;
     await this.notificationModel.create({
       userId: originalUserId,
       bookId,
