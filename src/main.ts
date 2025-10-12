@@ -16,16 +16,12 @@ async function bootstrap() {
     .map(s => s.trim())
     .filter(Boolean);
 
-  app.enableCors({
-    origin: (origin, cb) => {
-      // allow server-to-server (no Origin header)
-      if (!origin) return cb(null, true);
-      cb(null, origins.includes(origin));
-    },
-    credentials: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Authorization',
-  });
+ app.enableCors({
+  origin: ['https://bookrecommand-fontend.onrender.com'],
+  credentials: true,
+  allowedHeaders: 'Content-Type,Authorization',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+});
 
   const config = new DocumentBuilder()
     .setTitle('API Documentation')
