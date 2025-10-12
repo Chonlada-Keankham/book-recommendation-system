@@ -11,12 +11,21 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
+  const origins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, cb) => {
+      // allow server-to-server (no Origin header)
+      if (!origin) return cb(null, true);
+      cb(null, origins.includes(origin));
+    },
     credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Authorization',
   });
-
-
 
   const config = new DocumentBuilder()
     .setTitle('API Documentation')
@@ -26,10 +35,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
-
-  // ❌ ลบ FileInterceptor global ออก ไม่จำเป็นอีกต่อไป
-  // ✅ ให้ใช้ memoryStorage เฉพาะใน controller ที่ต้องอัปโหลดไฟล์
+  SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(process.env.PORT || 5000, '0.0.0.0');
 }
