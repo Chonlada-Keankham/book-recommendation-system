@@ -11,23 +11,18 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  const origins = (process.env.FRONTEND_URL || 'http://localhost:3000')
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean);
+const origins = (process.env.FRONTEND_URL || '').split(',').map(s => s.trim()).filter(Boolean);
 
- app.enableCors({
-  origin: ['https://bookrecommand-fontend.onrender.com'],
-  credentials: true,
-  allowedHeaders: 'Content-Type,Authorization',
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+app.enableCors({
+  origin: origins,                              
+  methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
 });
 
   const config = new DocumentBuilder()
     .setTitle('API Documentation')
     .setDescription('API description')
     .setVersion('1.0')
-    .addTag('example')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
