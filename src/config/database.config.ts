@@ -27,7 +27,7 @@ export const fileConfig = {
 
 export const redisConfig = {
   useRedis: process.env.USE_REDIS === 'true',
-  url: process.env.REDIS_URL || 'rediss://default:AVq7AAIncDIwOWU5NjBkZTc3NWU0ZjIwYjE0MmVhYzRjYzZmNTUyMXAyMjMyMjc@deep-coral-23227.upstash.io:6379',
+  url: process.env.REDIS_URL || 'rediss://default:gQAAAAAAARNYAAIncDExNzI5YjFlZTAxNjI0NTE3YWIyMzBlYjllNTBmYmQ5ZXAxNzA0ODg@dominant-yak-70488.upstash.io:6379',
   host: process.env.REDIS_HOST,
   port: parseInt(process.env.REDIS_PORT || '6379', 10),
   password: process.env.REDIS_PASSWORD,
